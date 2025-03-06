@@ -32,7 +32,7 @@ nextflow run workflow/main.nf -profile local
 
 ## Directory Structure
 
-.
+```bash
 ├── LICENSE
 ├── README.md
 ├── bin
@@ -66,6 +66,7 @@ nextflow run workflow/main.nf -profile local
     └── pull_cellxgene.nf
 
 9 directories, 23 files
+```
 
 
 ## AWS Batch Configuration Parameters
