@@ -1,0 +1,40 @@
+name: scrnaseq_silhouette
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  # Python dependencies
+  - python=3.9
+  - numpy
+  - pandas
+  - scanpy
+  - scikit-learn
+  - requests
+  - jupyterlab
+  - ipykernel
+  - matplotlib
+  - seaborn
+  - sphinx
+  - sphinx-rtd-theme
+  - sphinx-autodoc-typehints
+  - nextflow
+
+  # R Kernel and R dependencies
+  - r-base
+  - r-irkernel
+  - r-tidyverse
+  - r-seurat
+  - r-ggplot2
+  - r-dplyr
+  - r-matrix
+  - r-devtools
+
+  # Bash Kernel
+  - bash_kernel
+
+  # Additional utilities
+  - pip
+  - pip:
+      - jupyterlab-git
