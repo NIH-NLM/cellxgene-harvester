@@ -7,6 +7,7 @@ channels:
 dependencies:
   # Python dependencies
   - python=3.9
+  - emacs
   - numpy
   - pandas
   - scanpy

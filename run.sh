@@ -1,10 +1,15 @@
 #!/bin/bash
 
-# Activate environment
+# Ensure working directory is quoted
+PROJECT_DIR="$(pwd)"
+export PATH="$PROJECT_DIR/bin:$PATH"
+
+# Create logs directory if it doesn't exist
+mkdir -p "$PROJECT_DIR/logs"
+
+# Activate Conda environment
 conda activate scrnaseq_silhouette
 
-# Run Nextflow pipeline
-nextflow run workflow/main.nf -profile local
+# Run Nextflow with quoted paths
+nextflow run "$PROJECT_DIR/workflow/main.nf" -profile local --test_mode true | tee "$PROJECT_DIR/logs/nextflow.log"
 
-# Start Jupyter Lab for additional analysis
-jupyter lab

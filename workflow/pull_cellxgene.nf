@@ -7,6 +7,6 @@ process fetchDatasets {
 
     script:
     """
-    python bin/fetch_cellxgene.py ${test_mode_flag}
+    python "bin/fetch_cellxgene.py" "${test_mode_flag}"
     """
 }
