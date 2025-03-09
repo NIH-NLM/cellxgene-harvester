@@ -4,15 +4,17 @@ process mergeResults {
 
     output:
         path "${launchDir}/results/output.csv"
+        path "${launchDir}/results/cluster_silhouette_plot.png"
 
     script:
     """
-    if [ -f ${scores} ]; then
-        mkdir -p "${launchDir}/results"
-        mv ${scores} "${launchDir}/results/output.csv"
-    else
-        echo "Error: silhouette_scores.csv not found!" >&2
-        exit 1
-    fi
+    mkdir -p "${launchDir}/results"
+
+    # Move the results
+    mv ${scores} "${launchDir}/results/output.csv"
+
+    # Generate plots using Python
+    python "${launchDir}/bin/generate_plots.py" "${launchDir}/results/output.csv" "${launchDir}/results/cluster_silhouette_plot.png"
     """
 }
+
