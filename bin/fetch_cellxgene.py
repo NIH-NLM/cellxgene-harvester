@@ -51,7 +51,13 @@ def fetch_smallest_dataset():
     if response.status_code != 200:
         raise Exception(f"Failed to fetch smallest dataset metadata: {response.status_code}")
 
-    dataset_info = response.json()
+    dataset_list = response.json()  # Expecting a list, not a dictionary
+
+    if not isinstance(dataset_list, list) or len(dataset_list) == 0:
+        raise Exception("Unexpected API response: dataset list is empty or not formatted correctly.")
+
+    # Extract the first dataset from the list
+    dataset_info = dataset_list[0]  # Fix: Select first dataset
 
     return [{
         "collection_id": dataset_info.get("collection_id", "N/A"),
@@ -87,3 +93,4 @@ if __name__ == "__main__":
     test_mode = test_mode_flag.lower() == "true"
 
     save_dataset_metadata(test_mode)
+

@@ -3,10 +3,16 @@ process mergeResults {
         path scores
 
     output:
-        path "results/output.csv"
+        path "${launchDir}/results/output.csv"
 
     script:
     """
-    mv silhouette_scores.csv results/output.csv
+    if [ -f ${scores} ]; then
+        mkdir -p "${launchDir}/results"
+        mv ${scores} "${launchDir}/results/output.csv"
+    else
+        echo "Error: silhouette_scores.csv not found!" >&2
+        exit 1
+    fi
     """
 }

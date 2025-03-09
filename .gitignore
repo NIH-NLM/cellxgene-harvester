@@ -1,0 +1,8 @@
+dag*
+logs/
+.nextflow.*
+.nextflow/
+timeline*
+trace*
+results/
+work/

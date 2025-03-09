@@ -1,41 +1,58 @@
 import json
 import pandas as pd
 import scanpy as sc
-import numpy as np
 import sklearn.metrics as skm
+import sys
 
-def compute_silhouette(input_file, output_file):
-    with open(input_file, "r") as f:
-        datasets = json.load(f)
+def compute_silhouette(input_json, output_csv):
+    """
+    Computes silhouette scores for datasets and saves to a CSV file.
+    """
+    try:
+        # Load dataset metadata
+        with open(input_json, 'r') as f:
+            datasets = json.load(f)
 
-    results = []
-    
-    for dataset in datasets:
-        dataset_url = dataset['dataset_url']
-        print(f"Fetching dataset: {dataset_url}")
+        results = []
 
-        try:
-            adata = sc.read(dataset_url)
+        for dataset in datasets:
+            dataset_id = dataset['dataset_id']
+            dataset_url = dataset['dataset_url']
+
+            print(f"Processing dataset: {dataset_id}")
+
+            # Load dataset from URL
+            adata = sc.read(dataset_url)  # Ensure this URL is accessible
+
+            # Compute PCA
             sc.tl.pca(adata, svd_solver="arpack")
-            pca = adata.obsm["X_pca"]
-            labels = adata.obs["author_cell_type"]
+            pca = adata.obsm['X_pca']
+            labels = adata.obs['author_cell_type']
 
-            silhouette_score = skm.silhouette_score(pca, labels, metric="cosine")
+            # Compute silhouette score
+            silhouette_score = skm.silhouette_score(pca, labels, metric='cosine')
 
-            dataset["silhouette_score"] = silhouette_score
-            results.append(dataset)
-        except Exception as e:
-            print(f"Failed to process {dataset_url}: {e}")
+            results.append({
+                "dataset_id": dataset_id,
+                "dataset_url": dataset_url,
+                "silhouette_score": silhouette_score
+            })
 
-    df = pd.DataFrame(results)
-    df.to_csv(output_file, index=False)
+        # Save results to CSV
+        df = pd.DataFrame(results)
+        df.to_csv(output_csv, index=False)
+        print(f"Silhouette scores saved to: {output_csv}")
+
+    except Exception as e:
+        print(f"Error computing silhouette scores: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    import argparse
+    if len(sys.argv) < 3:
+        print("Usage: python compute_silhouette.py <input_json> <output_csv>")
+        sys.exit(1)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="Input JSON file with dataset metadata")
-    parser.add_argument("--output", required=True, help="Output CSV file with silhouette scores")
+    input_json = sys.argv[1]
+    output_csv = sys.argv[2]
 
-    args = parser.parse_args()
-    compute_silhouette(args.input, args.output)
+    compute_silhouette(input_json, output_csv)
