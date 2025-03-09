@@ -1,11 +1,14 @@
-process fetchCellxgene {
+process fetchDatasets {
+    input:
+        val test_mode_flag
+
     output:
-    path "collections_info.json"
+        path "collections_info.json"
 
     script:
     """
-    python "${launchDir}/bin/fetch_cellxgene.py"
-    echo "🔹 DEBUG: Collections info saved to collections_info.json"
+    python "${launchDir}/bin/fetch_cellxgene.py" ${test_mode_flag}
     """
 }
+
 

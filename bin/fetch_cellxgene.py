@@ -1,107 +1,73 @@
-import requests
 import json
-import pandas as pd
 import sys
-from jsonpath_ng import parse
-import pooch
+import requests
 
-# API Endpoints
+# Define smallest test dataset
+SMALLEST_DATASET_ID = "0895c838-e550-48a3-a777-dbcd35d30272"
+SMALLEST_DATASET_URL = f"https://api.cellxgene.cziscience.com/curation/v1/datasets/{SMALLEST_DATASET_ID}/versions"
+
 COLLECTIONS_API = "https://api.cellxgene.cziscience.com/curation/v1/collections?visibility=PUBLIC"
-COLLECTION_DETAILS_API = "https://api.cellxgene.cziscience.com/curation/v1/collections/"
-
-# Cache directory for datasets
-CACHE_DIR = pooch.os_cache("cellxgene")
 
 def fetch_collections():
     """
-    Fetch all publicly available dataset collections from CellxGene.
+    Fetches collections from the CellxGene API.
+    If test mode is enabled, fetches only the smallest dataset.
     """
     response = requests.get(COLLECTIONS_API)
-
+    
     if response.status_code != 200:
-        print(f"❌ Error fetching collections: {response.status_code}")
-        print(f"Response body: {response.text}")
-        raise Exception(f"Failed to fetch collections: {response.status_code}")
+        print(f"❌ ERROR: Failed to fetch collections! Status: {response.status_code}", file=sys.stderr)
+        sys.exit(1)
 
-    collections_json = response.json()  # Expecting a list, not a dictionary
+    collections_data = response.json()["collections"]
+    return collections_data
 
-    # 🔹 DEBUG: Print first 3 entries to verify structure
-    print(f"DEBUG: First 3 collections:\n{json.dumps(collections_json[:3], indent=2)}", file=sys.stderr)
-
-    if not isinstance(collections_json, list):
-        raise Exception(f"Unexpected API response format: {type(collections_json)}")
-
-    # Convert to Pandas DataFrame
-    collections_df = pd.DataFrame.from_records(collections_json)
-
-    return collections_df
-
-def fetch_datasets_for_collection(collection_id):
+def fetch_test_dataset():
     """
-    Fetch dataset assets for a given collection.
+    Fetch only the smallest test dataset.
     """
-    response = requests.get(f"{COLLECTION_DETAILS_API}{collection_id}")
-
+    response = requests.get(SMALLEST_DATASET_URL)
+    
     if response.status_code != 200:
-        print(f"❌ Error fetching datasets for collection {collection_id}: {response.status_code}")
-        print(f"Response body: {response.text}")
-        return []
+        print(f"❌ ERROR: Failed to fetch test dataset! Status: {response.status_code}", file=sys.stderr)
+        sys.exit(1)
 
-    rec = response.json()
+    dataset_info = response.json()
+    return [{
+        "collection_id": "TEST_COLLECTION",
+        "collection_url": "https://cellxgene.cziscience.com/collections/test",
+        "dataset_id": dataset_info["id"],
+        "dataset_version_id": dataset_info["version_id"],
+        "dataset_url": dataset_info["dataset_assets"][0]["url"],  # Assuming the first asset is the H5AD file
+    }]
 
-    # Use JSONPath to extract datasets
-    collection_assets = [
-        x.value for x in parse("datasets[*].dataset_assets[*]").find(rec)
-        if x.value["filetype"] == "H5AD"
-    ]
-
-    return collection_assets
-
-def save_collections_metadata(test_mode=False):
+def save_datasets_metadata(test_mode):
     """
-    Fetches collections and saves metadata including datasets.
+    Fetch datasets from CellxGene and save as JSON.
     """
-    collections_df = fetch_collections()
+    if test_mode.lower() == "true":
+        print("🔹 Running in TEST MODE: Fetching only the smallest dataset.")
+        datasets = fetch_test_dataset()
+    else:
+        print("🔹 Running in FULL MODE: Fetching all datasets.")
+        collections = fetch_collections()
+        datasets = [
+            {
+                "collection_id": col["collection_id"],
+                "collection_url": col["collection_url"],
+                "dataset_id": ds["dataset_id"],
+                "dataset_version_id": ds["dataset_version_id"],
+                "dataset_url": ds["dataset_assets"][0]["url"],
+            }
+            for col in collections for ds in col["datasets"]
+        ]
 
-    # ✅ Print DataFrame column names to confirm `collection_id` exists
-    print(f"\n🔹 DEBUG: DataFrame Columns -> {collections_df.columns.tolist()}")
+    with open("datasets_info.json", "w", encoding="utf-8") as f:
+        json.dump(datasets, f, indent=4)
 
-    collections_metadata = []
-    for _, collection in collections_df.iterrows():
-        # ✅ Print available row keys
-        print(f"\n🔹 DEBUG: Row Keys -> {collection.keys()}")
-
-        # ✅ Try using `.id` if `collection_id` is missing
-        collection_id = collection.get("id", collection.get("collection_id", "UNKNOWN"))
-        collection_version_id = collection.get("collection_version_id", "N/A")
-        collection_url = collection.get("collection_url", "N/A")
-        
-        print(f"🔹 Processing Collection: {collection_id}")  # Debug output
-
-        # Fetch datasets for this collection
-        datasets = collection.get("datasets", [])
-
-        collections_metadata.append({
-            "collection_id": collection_id,
-            "collection_version_id": collection_version_id,
-            "collection_url": collection_url,
-            "datasets": datasets
-        })
-
-    # ✅ Debug print before saving
-    print("\n🔹 DEBUG: JSON Data Before Saving")
-    print(json.dumps(collections_metadata[:3], indent=2))  # Print first 3 entries
-
-    # Save collections metadata
-    with open("collections_info.json", "w") as f:
-        json.dump(collections_metadata, f, indent=4)
-
-    print(f"✅ Collection metadata saved. Total collections: {len(collections_metadata)}")
+    print(f"✅ Dataset metadata saved. Total datasets: {len(datasets)}")
 
 if __name__ == "__main__":
-    try:
-        save_collections_metadata()
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        sys.exit(1)
+    test_mode_flag = sys.argv[1]
+    save_datasets_metadata(test_mode_flag)
 
