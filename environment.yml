@@ -40,3 +40,4 @@ dependencies:
   - pip
   - pip:
       - jupyterlab-git
+      - jsonpath_ng
