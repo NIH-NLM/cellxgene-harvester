@@ -10,7 +10,7 @@ SMALLEST_DATASET_URL = f"https://api.cellxgene.cziscience.com/curation/v1/datase
 def fetch_all_datasets():
     """
     Fetches all datasets available in CellxGene.
-    Returns a list of dataset metadata with full details.
+    Ensures dataset URLs are valid.
     """
     response = requests.get(CELLXGENE_API)
     
@@ -26,13 +26,19 @@ def fetch_all_datasets():
         collection_url = collection["url"]
 
         for dataset in collection["datasets"]:
+            dataset_url = dataset.get("url", "").strip()
+
+            if not dataset_url:
+                print(f"Warning: Dataset {dataset['id']} has no valid dataset URL", file=sys.stderr)
+                continue  # Skip datasets without a URL
+
             datasets.append({
                 "collection_id": collection_id,
                 "collection_version_id": collection_version_id,
                 "collection_url": collection_url,
                 "dataset_id": dataset["id"],
                 "dataset_version_id": dataset["version_id"],
-                "dataset_url": dataset["url"],
+                "dataset_url": dataset_url,  # Ensure this is not empty!
                 "dataset_title": dataset["title"],
                 "organism": dataset.get("organism", "N/A"),
                 "tissue": dataset.get("tissue", "N/A"),
@@ -45,7 +51,7 @@ def fetch_all_datasets():
 
 def fetch_smallest_dataset():
     """
-    Fetches full metadata for the smallest dataset (147 cells).
+    Fetches metadata for the smallest dataset (147 cells) and ensures dataset URL exists.
     """
     response = requests.get(SMALLEST_DATASET_URL)
     
@@ -58,6 +64,10 @@ def fetch_smallest_dataset():
         raise Exception("Unexpected API response: dataset list is empty or not formatted correctly.")
 
     dataset_info = dataset_list[0]
+    dataset_url = dataset_info.get("dataset_url", "").strip()
+
+    if not dataset_url:
+        raise Exception(f"Dataset {dataset_info['id']} is missing a valid dataset URL!")
 
     return [{
         "collection_id": dataset_info.get("collection_id", "N/A"),
@@ -65,7 +75,7 @@ def fetch_smallest_dataset():
         "collection_url": f"https://cellxgene.cziscience.com/collections/{dataset_info.get('collection_id', '')}",
         "dataset_id": dataset_info.get("id", "N/A"),
         "dataset_version_id": dataset_info.get("version_id", "N/A"),
-        "dataset_url": dataset_info.get("dataset_url", "N/A"),
+        "dataset_url": dataset_url,  # Ensure dataset URL is valid!
         "dataset_title": dataset_info.get("name", "N/A"),
         "organism": dataset_info.get("organism", "N/A"),
         "tissue": dataset_info.get("tissue", "N/A"),
@@ -76,7 +86,7 @@ def fetch_smallest_dataset():
 
 def save_dataset_metadata(test_mode=False):
     """
-    Fetches dataset metadata based on test_mode flag.
+    Fetches dataset metadata and ensures dataset URLs exist.
     Saves the dataset metadata to a JSON file.
     """
     datasets = fetch_smallest_dataset() if test_mode else fetch_all_datasets()
