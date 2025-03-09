@@ -9,13 +9,13 @@ workflow {
     collections = fetchCollections(params.test_mode)
 
     // Step 2: Extract datasets from collections & Fan-Out at Dataset Level
-    dataset_channel = Channel
-        .from(collections)
-        .map { collection -> collection.datasets }  // Extract dataset lists from each collection
-        .flatten()  // Convert list of dataset lists into a single list of datasets
+    dataset_channel = collections
+        .map { collection -> collection.datasets }
+        .flatten()
+        .map { dataset -> groovy.json.JsonOutput.toJson(dataset) } // Convert dataset object to JSON string
 
     // Step 3: Fan-Out datasets into processDataset (Parallel Execution)
-    results = processDataset(dataset_channel)  // Each dataset runs as an independent Nextflow task
+    results = processDataset(dataset_channel)
 
     // Step 4: Merge results (Fan-In)
     mergeResults(results)

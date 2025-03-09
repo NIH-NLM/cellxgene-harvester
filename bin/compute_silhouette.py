@@ -8,34 +8,33 @@ import sys
 
 CACHE_DIR = os.path.expanduser("~/.cellxgene_cache")
 
-def download_dataset(dataset_url, dataset_id):
-    """
-    Uses pooch to fetch datasets from CellxGene.
-    """
-    return pooch.retrieve(
-        url=dataset_url,
-        fname=f"{dataset_id}.h5ad",
-        path=CACHE_DIR,
-        known_hash=None
-    )
-
 def compute_silhouette(dataset_json_str, output_csv):
     """
     Computes silhouette scores per cluster for a single dataset.
     """
     try:
-        dataset = json.loads(dataset_json_str)
+        # Ensure the input JSON is not empty
+        if not dataset_json_str or dataset_json_str.strip() == "":
+            raise ValueError("Received empty dataset JSON string")
 
-        dataset_id = dataset['dataset_id']
-        dataset_url = dataset['dataset_url']
+        dataset = json.loads(dataset_json_str)  # Convert JSON string to dict
 
-        if not dataset_url.strip():
-            print(f"Skipping dataset {dataset_id}: Missing URL", file=sys.stderr)
-            sys.exit(1)
+        # Ensure dataset has valid fields
+        dataset_id = dataset.get('dataset_id', 'unknown_id')
+        dataset_url = dataset.get('dataset_url', '').strip()
+
+        if not dataset_url:
+            raise ValueError(f"Dataset {dataset_id} is missing a valid URL")
 
         print(f"Processing dataset: {dataset_id}")
 
-        dataset_path = download_dataset(dataset_url, dataset_id)
+        dataset_path = pooch.retrieve(
+            url=dataset_url,
+            fname=f"{dataset_id}.h5ad",
+            path=CACHE_DIR,
+            known_hash=None
+        )
+
         adata = sc.read_h5ad(dataset_path)
 
         sc.tl.pca(adata, svd_solver="arpack")
@@ -52,6 +51,10 @@ def compute_silhouette(dataset_json_str, output_csv):
 
         df = pd.DataFrame(cluster_scores)
         df.to_csv(output_csv, index=False)
+
+    except json.JSONDecodeError as e:
+        print(f"JSON decoding error: {e}. Input JSON: {dataset_json_str}", file=sys.stderr)
+        sys.exit(1)
 
     except Exception as e:
         print(f"Error processing dataset {dataset_id}: {str(e)}", file=sys.stderr)
