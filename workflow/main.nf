@@ -15,11 +15,9 @@ workflow {
     // Step 3: Compute silhouette scores per dataset
     processed_datasets = computeSilhouette(datasets_json_file)
 
-    // Step 4: Merge all processed dataset results
-    merged_results = mergeResults(processed_datasets)
-
-    // Step 5: Print final output location
-    merged_results.view { result_file -> 
-        println "✅ Final results saved at: ${launchDir}/results/output.csv"
+    // Step 4: Print final output location
+    silhouette_scores.view { result_file -> 
+        println "✅ Final results saved at: ${launchDir}/results/silhouette_scores.json"
     }
+
 }
