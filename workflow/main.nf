@@ -1,16 +1,19 @@
 nextflow.enable.dsl = 2
 
-include { fetchDatasets } from './pull_cellxgene.nf'
-include { computeSilhouette } from './compute_silhouette.nf'
+include { fetchCollections } from './pull_cellxgene.nf'
+include { processDataset } from './compute_silhouette.nf'
 include { mergeResults } from './merge_results.nf'
 
 workflow {
-    // Ensure fetchDatasets receives the test mode flag
-    datasets = fetchDatasets(params.test_mode)
+    // Step 1: Fetch all collections (Fan-Out at Collection Level)
+    collections = fetchCollections(params.test_mode)
 
-    // Pass the datasets output to computeSilhouette
-    scores = computeSilhouette(datasets)
+    // Step 2: Extract datasets & Fan-Out at Dataset Level
+    datasets = collections.flatten().datasets.flatten() 
 
-    // Pass the computed scores to mergeResults
-    mergeResults(scores)
+    results = processDataset(datasets) // Explicitly pass datasets to processDataset
+
+    // Step 3: Merge results (Fan-In)
+    mergeResults(results)
 }
+

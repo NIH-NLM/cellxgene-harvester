@@ -1,13 +1,13 @@
-process computeSilhouette {
+process processDataset {
     input:
-        path datasets_info_json
+        val dataset
 
     output:
-        path "silhouette_scores.csv"
+        path "silhouette_scores_${dataset.dataset_id}.csv"
 
     script:
     """
-    python "${launchDir}/bin/compute_silhouette.py" "${datasets_info_json}" "silhouette_scores.csv"
+    python "${launchDir}/bin/compute_silhouette.py" '${dataset}' "silhouette_scores_${dataset.dataset_id}.csv"
     """
 }
 
