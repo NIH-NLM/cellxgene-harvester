@@ -1,13 +1,14 @@
 process mergeResults {
     input:
-        path scores
+    path silhouette_scores_csv_files
 
     output:
-        path "${launchDir}/results/output.csv"
+    path "output.csv"
 
     script:
     """
-    cat silhouette_scores_*.csv > "${launchDir}/results/output.csv"
+    cat silhouette_scores_*.csv > output.csv
+    mv output.csv "${launchDir}/results/output.csv"
     """
 }
 
