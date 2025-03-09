@@ -3,7 +3,6 @@ nextflow.enable.dsl = 2
 include { fetchCellxgene } from './fetch_cellxgene.nf'
 include { parseCollections } from './parse_collections.nf'
 include { computeSilhouette } from './compute_silhouette.nf'
-include { mergeResults } from './merge_results.nf'
 
 workflow {
     // Step 1: Fetch collections (outputs collections_info.json)
