@@ -10,6 +10,7 @@ dependencies:
   - emacs
   - numpy
   - pandas
+  - pooch
   - scanpy
   - scikit-learn
   - requests
