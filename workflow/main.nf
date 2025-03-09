@@ -7,14 +7,21 @@ include { computeSilhouette } from './compute_silhouette.nf'
 workflow {
     collections_json_file = fetchCellxgene()
     datasets_json_file = parseCollections(collections_json_file)
-    tuple(silhouette_scores, collection_scores) = computeSilhouette(datasets_json_file)
+    
+    // Compute silhouette scores
+    results = computeSilhouette(datasets_json_file)
 
-    silhouette_scores.view { result_file -> 
+    // Extract named outputs
+    silhouette_scores = results.silhouette_scores
+    collection_scores = results.collection_scores
+
+    // Print output paths
+    silhouette_scores.view { file -> 
         println "✅ Silhouette scores saved at: ${launchDir}/results/silhouette_scores.json"
     }
 
-    collection_scores.view { result_dir -> 
-        println "📂 Per-collection scores saved in directory: ${launchDir}/results/collections/"
+    collection_scores.view { dir -> 
+        println "📂 Per-collection scores saved in: ${launchDir}/results/collections/"
     }
 }
 
