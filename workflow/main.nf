@@ -16,6 +16,10 @@ workflow {
     processed_datasets = computeSilhouette(datasets_json_file)
 
     // Step 4: Merge all processed dataset results
-    mergeResults(processed_datasets)
-}
+    merged_results = mergeResults(processed_datasets)
 
+    // Step 5: Print final output location
+    merged_results.view { result_file -> 
+        println "✅ Final results saved at: ${launchDir}/results/output.csv"
+    }
+}
