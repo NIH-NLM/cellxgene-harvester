@@ -1,4 +1,4 @@
-process processDataset {
+process computeSilhouette {
     input:
         val dataset_json_str
 
