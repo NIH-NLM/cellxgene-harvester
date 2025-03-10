@@ -2,48 +2,75 @@ import requests
 import json
 import sys
 
-# ✅ Standard API endpoints
+# Define API endpoints
 COLLECTIONS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections?visibility=PUBLIC"
-DATASET_API_BASE = "https://api.cellxgene.cziscience.com/curation/v1/datasets"
+DATASET_API_BASE_URL = "https://api.cellxgene.cziscience.com/curation/v1/datasets/"
 
-# ✅ Smallest dataset for testing
-TEST_DATASET_ID = "0895c838-e550-48a3-a777-dbcd35d30272"
 
 def fetch_collections():
-    """ Fetch all collections from the API """
+    """Fetch all collections from CellxGene API and store in JSON."""
     print(f"🔹 Fetching collections from: {COLLECTIONS_API_URL}")
     response = requests.get(COLLECTIONS_API_URL)
     if response.status_code != 200:
         raise Exception(f"❌ ERROR: Failed to fetch collections (HTTP {response.status_code})")
-    return response.json()["collections"]
 
-def fetch_datasets_from_collections(collections, test_mode):
-    """ Extract dataset information from collections """
-    datasets = []
-    for collection in collections:
-        for dataset in collection.get("datasets", []):
-            if test_mode and dataset["dataset_id"] != TEST_DATASET_ID:
-                continue  # ✅ In test mode, only include the small dataset
-            datasets.append({
-                "collection_id": collection["collection_id"],
-                "dataset_id": dataset["dataset_id"],
-                "dataset_version_id": dataset["dataset_version_id"],
-                "dataset_url": f"https://cellxgene.cziscience.com/d/{dataset['dataset_id']}"
-            })
-    return datasets
+    collections = response.json()["collections"]
+    with open("collections_info.json", "w") as f:
+        json.dump(collections, f, indent=4)
+    print("✅ Saved collections info to collections_info.json")
 
-def save_datasets_metadata(test_mode):
-    """ Save dataset metadata; only fetch one dataset in test mode """
-    collections = fetch_collections()
-    datasets = fetch_datasets_from_collections(collections, test_mode)
 
+def fetch_dataset_info(dataset_id):
+    """Fetch dataset details for a given dataset ID."""
+    dataset_url = f"{DATASET_API_BASE_URL}{dataset_id}/versions"
+    response = requests.get(dataset_url, headers={"accept": "application/json"})
+
+    if response.status_code != 200:
+        raise Exception(f"❌ ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
+
+    dataset_info = response.json()
+    dataset_version_id = dataset_info[0]["dataset_version_id"]
+    dataset_assets = dataset_info[0].get("assets", [])
+    h5ad_file = next((asset for asset in dataset_assets if asset["filetype"] == "H5AD"), None)
+
+    if not h5ad_file:
+        raise Exception(f"❌ ERROR: No H5AD file found for dataset {dataset_id}!")
+
+    return {
+        "dataset_id": dataset_id,
+        "dataset_version_id": dataset_version_id,
+        "dataset_url": h5ad_file["url"]
+    }
+
+
+def save_datasets_metadata(dataset_id):
+    """Fetch and save metadata for a single dataset (Nextflow will handle parallel execution)."""
+    dataset_info = fetch_dataset_info(dataset_id)
+    
+    # Append or create datasets_info.json
+    try:
+        with open("datasets_info.json", "r") as f:
+            datasets = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        datasets = []
+
+    datasets.append(dataset_info)
+    
     with open("datasets_info.json", "w") as f:
         json.dump(datasets, f, indent=4)
     
-    print(f"✅ Saved {len(datasets)} datasets to datasets_info.json")
+    print(f"✅ Saved dataset {dataset_id} to datasets_info.json")
 
-# ✅ Run the script
+
+# ✅ Run script
 if __name__ == "__main__":
-    test_mode_flag = sys.argv[1].lower() == "true"
-    save_datasets_metadata(test_mode_flag)
+    action = sys.argv[1].lower()
+
+    if action == "fetch_collections":
+        fetch_collections()
+    elif action == "fetch_dataset":
+        dataset_id = sys.argv[2]
+        save_datasets_metadata(dataset_id)
+    else:
+        print("❌ ERROR: Invalid action. Use 'fetch_collections' or 'fetch_dataset <dataset_id>'.")
 
