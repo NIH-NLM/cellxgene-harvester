@@ -1,26 +1,27 @@
 nextflow.enable.dsl = 2
 
+// Include separate workflow steps
 include { fetchDatasets } from './fetch_cellxgene.nf'
 include { parseCollections } from './parse_collections.nf'
 include { computeSilhouette } from './compute_silhouette.nf'
 
 workflow {
-    // Pass test_mode to the fetch process
+    // Fetch dataset (in test mode, only fetches smallest dataset)
     datasets_json_file = fetchDatasets(params.test_mode)
 
-    // Extract datasets from JSON
+    // Extract dataset metadata
     parsed_datasets = parseCollections(datasets_json_file)
 
-    // Compute silhouette scores
-    silhouette_scores = computeSilhouette(parsed_datasets)
+    // Compute silhouette scores (output has two named outputs)
+    results = computeSilhouette(parsed_datasets)
 
-    // Print result
-    silhouette_scores.view { file -> 
+    // Access each output separately using emit names
+    results.silhouette_scores.view { file -> 
         println "✅ Silhouette scores saved at: ${launchDir}/results/silhouette_scores.json"
     }
 
-    collection_scores.view { dir -> 
-        println "📂 Per-collection scores saved in: ${launchDir}/results/collections/"
+    results.collection_scores.view { dir -> 
+        println "📂 Per-collection scores saved in directory: ${launchDir}/results/collections/"
     }
 }
 
