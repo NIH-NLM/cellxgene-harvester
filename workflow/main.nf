@@ -15,10 +15,7 @@ workflow {
     // Step 3: Parse collections to extract dataset information
     datasets_json_file = parseCollections(collections_json_file)
 
-    // Step 4: Compute silhouette scores per dataset (outputs silhouette_scores.json)
+    // Step 4: Compute silhouette scores per dataset
     silhouette_scores_file = computeSilhouette(datasets_json_file, test_mode_flag)
-
-    // Step 5: Print output file for validation
-    silhouette_scores_file.view()
 }
 

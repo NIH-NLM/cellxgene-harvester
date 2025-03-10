@@ -1,13 +1,15 @@
 process parseCollections {
     input:
-    path collections_json_file  // Pass collections_info.json as input
+        path collections_json_file
 
     output:
-    path "datasets_info.json"  // Output parsed datasets as JSON
+        path "datasets_info.json"
 
     script:
     """
-    python "${launchDir}/bin/parse_collections.py" "$collections_json_file" "datasets_info.json"
+    python "${launchDir}/bin/parse_collections.py" ${collections_json_file} "datasets_info.json"
     """
-}
 
+    // ✅ Ensure datasets_info.json is stored properly
+    publishDir "${launchDir}/results/", mode: 'copy'
+}
