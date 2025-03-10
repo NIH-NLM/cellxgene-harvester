@@ -1,16 +1,15 @@
 process computeSilhouette {
     input:
-    path datasets_json_file
+        path datasets_json_file
+        val test_mode
 
     output:
-    path "silhouette_scores.json", emit: silhouette_scores
-    path "collections/", emit: collection_scores
-
-    publishDir "${launchDir}/results", mode: 'copy'
+        path "silhouette_scores.json"
+        path "collections/"
 
     script:
     """
-    python "${launchDir}/bin/compute_silhouette.py" "$datasets_json_file" "silhouette_scores.json" "collections/"
+    python "${launchDir}/bin/compute_silhouette.py" '${datasets_json_file}' "silhouette_scores.json" "collections/" '${test_mode}'
     """
 }
 

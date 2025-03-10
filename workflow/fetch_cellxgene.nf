@@ -1,4 +1,4 @@
-process fetchDatasets {
+process fetchCellxgene {
     input:
         val test_mode_flag
 
