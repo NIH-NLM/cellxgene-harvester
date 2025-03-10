@@ -5,12 +5,12 @@ process computeSilhouette {
 
     output:
         path "silhouette_scores.json"
+        path "collections/"
+
+    publishDir "${launchDir}/results/", mode: 'copy'
 
     script:
     """
-    python "${launchDir}/bin/compute_silhouette.py" ${datasets_json_file} "silhouette_scores.json" "${launchDir}/results/collections/"
+    python "${launchDir}/bin/compute_silhouette.py" ${datasets_json_file} "silhouette_scores.json" "${launchDir}/results/collections/" ${test_mode_flag}
     """
-
-    // ✅ Ensure silhouette_scores.json and per-collection scores are stored properly
-    publishDir "${launchDir}/results/", mode: 'copy'
 }

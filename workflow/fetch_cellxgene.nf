@@ -5,13 +5,11 @@ process fetchCellxgene {
     output:
         path "collections_info.json"
 
+    // ✅ `publishDir` must be outside `script:`
+    publishDir "${launchDir}/results/", mode: 'copy'
+
     script:
     """
     python "${launchDir}/bin/fetch_cellxgene.py" ${test_mode_flag}
     """
-
-    // ✅ Nextflow will copy collections_info.json to ${launchDir}/results/
-    publishDir "${launchDir}/results/", mode: 'copy'
 }
-
-
