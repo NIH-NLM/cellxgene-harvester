@@ -1,7 +1,7 @@
 process computeSilhouette {
     tag 'computeSilhouette'
 
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.launchDir}/${params.outdir}", mode: 'copy'
 
     input:
         path dataset_jsons
@@ -13,6 +13,6 @@ process computeSilhouette {
     """
     echo "Computing Silhouette Scores for datasets"
 
-    python "${launchDir}/bin/compute_silhouette.py $dataset_jsons"
+    python "${params.launchDir}/bin/compute_silhouette.py" "$dataset_jsons"
     """
 }

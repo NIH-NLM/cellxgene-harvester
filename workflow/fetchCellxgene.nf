@@ -1,7 +1,7 @@
 process fetchCellxgene {
     tag 'fetchCellxgene'
 
-    publishDir "${params.datadir}", mode: 'copy'
+    publishDir "${params.launchDir}/${params.datadir}", mode: 'copy'
 
     input:
         val test_mode

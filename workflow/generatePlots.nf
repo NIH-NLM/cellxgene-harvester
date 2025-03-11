@@ -1,7 +1,7 @@
 process generatePlots {
     tag 'generatePlots'
 
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.launchDir}/${params.outdir}", mode: 'copy'
 
     input:
         path scores_csv
@@ -13,6 +13,6 @@ process generatePlots {
     """
     echo "Generating plots from silhouette scores"
 
-    python "${launchDir}/bin/generate_plots.py $scores_csv"
+    python "${params.launchDir}/bin/generate_plots.py" "$scores_csv"
     """
 }
