@@ -1,5 +1,5 @@
-process fetchCollections {
-    tag 'fetch_collections'
+process fetchCellxgene {
+    tag 'fetchCellxgene'
 
     publishDir "${launchDir}/results/", mode: 'copy'
 

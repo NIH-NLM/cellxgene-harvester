@@ -1,5 +1,5 @@
 process parseCollections {
-    tag 'parse_collections'
+    tag 'parseCollections'
 
     publishDir "${launchDir}/results/", mode: 'copy'
 

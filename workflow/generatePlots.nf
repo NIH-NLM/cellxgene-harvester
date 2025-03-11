@@ -1,5 +1,5 @@
 process generatePlots {
-    tag 'generate_plots'
+    tag 'generatePlots'
 
     publishDir "${launchDir}/results/", mode: 'copy'
 

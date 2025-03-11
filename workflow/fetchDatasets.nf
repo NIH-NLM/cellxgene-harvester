@@ -1,5 +1,5 @@
 process fetchDatasets {
-    tag 'fetch_datasets'
+    tag 'fetchDatasets'
 
     publishDir "${launchDir}/results/", mode: 'copy'
 

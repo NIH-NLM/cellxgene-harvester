@@ -1,5 +1,5 @@
 process computeSilhouette {
-    tag 'compute_silhouette'
+    tag 'computeSilhouette'
 
     publishDir "${launchDir}/results/", mode: 'copy'
 
