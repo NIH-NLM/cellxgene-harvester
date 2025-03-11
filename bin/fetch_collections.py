@@ -31,4 +31,5 @@ if __name__ == "__main__":
         sys.exit(1)
     
     output_filename = sys.argv[1]
+    print(f"output file name is {output_filename}")
     fetch_collections(output_filename)

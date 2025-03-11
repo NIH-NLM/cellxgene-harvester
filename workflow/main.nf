@@ -1,8 +1,8 @@
 // Define base directories
-params.datadir          = "data"
-params.outdir           = "results"
-params.collections_info = "collections_info.json"
-params.test_mode        = false
+params.datadir              = "data"
+params.outdir               = "results"
+params.collections_filename = "collections_info.json"
+params.test_mode            = false
 
 // Ensure output directories exist
 // Ensure output directories exist inside the workflow, not inside a process
@@ -33,7 +33,7 @@ workflow {
     makeDirs()
 
     // Step 2: Fetch Collections (Runs Once)
-    collections_json = fetchCollections(params.test_mode)
+    collections_json = fetchCollections(params.collections_filename)
 
     // Step 3: Parse Collections to Extract Dataset IDs (Runs Once)
     datasets_info_json = parseCollections(collections_json, params.test_mode)
