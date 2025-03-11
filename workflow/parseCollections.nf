@@ -1,7 +1,7 @@
 process parseCollections {
     tag 'parseCollections'
 
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${launchDir}/${params.outdir}", mode: 'copy'
 
     input:
         path collections_json
