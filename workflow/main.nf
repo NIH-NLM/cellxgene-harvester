@@ -1,7 +1,8 @@
 // Define base directories
-params.datadir   = "data"
-params.outdir    = "results"
-params.test_mode = false
+params.datadir          = "data"
+params.outdir           = "results"
+params.collections_info = "collections_info.json"
+params.test_mode        = false
 
 // Ensure output directories exist
 // Ensure output directories exist inside the workflow, not inside a process
@@ -20,7 +21,7 @@ process makeDirs {
 }
 
 // Import Workflow Modules
-include { fetchCellxgene    } from './fetchCellxgene.nf'
+include { fetchCollections  } from './fetchCollections.nf'
 include { parseCollections  } from './parseCollections.nf'
 include { fetchDatasets     } from './fetchDatasets.nf'
 include { computeSilhouette } from './computeSilhouette.nf'
@@ -32,7 +33,7 @@ workflow {
     makeDirs()
 
     // Step 2: Fetch Collections (Runs Once)
-    collections_json = fetchCellxgene(params.test_mode)
+    collections_json = fetchCollections(params.test_mode)
 
     // Step 3: Parse Collections to Extract Dataset IDs (Runs Once)
     datasets_info_json = parseCollections(collections_json, params.test_mode)
