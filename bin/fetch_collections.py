@@ -15,14 +15,10 @@ def fetch_collections(output_filename):
     
     collections = response.json()
 
-    # Ensure the output directory exists
-    os.makedirs("data", exist_ok=True)
-    output_path = os.path.join("data", output_filename)
-    
-    with open(output_path, "w") as f:
+    with open(output_filename, "w") as f:
         json.dump(collections, f, indent=2)
     
-    print(f"Saved collections info to {output_path}")
+    print(f"Saved collections info to {output_filename}")
 
 # Run script
 if __name__ == "__main__":
@@ -33,3 +29,4 @@ if __name__ == "__main__":
     output_filename = sys.argv[1]
     print(f"output file name is {output_filename}")
     fetch_collections(output_filename)
+

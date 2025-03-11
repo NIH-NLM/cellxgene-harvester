@@ -41,3 +41,6 @@ dependencies:
   - pip:
       - jupyterlab-git
       - jsonpath_ng
+      - pdfkit
+      - jinja2
+      - weasyprint
