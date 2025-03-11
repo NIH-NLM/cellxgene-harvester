@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import sys
@@ -9,15 +10,18 @@ DATASET_API_BASE_URL = "https://api.cellxgene.cziscience.com/curation/v1/dataset
 
 def fetch_collections():
     """Fetch all collections from CellxGene API and store in JSON."""
-    print(f"🔹 Fetching collections from: {COLLECTIONS_API_URL}")
+    print(f"Fetching collections from: {COLLECTIONS_API_URL}")
     response = requests.get(COLLECTIONS_API_URL)
-    if response.status_code != 200:
-        raise Exception(f"❌ ERROR: Failed to fetch collections (HTTP {response.status_code})")
 
-    collections = response.json()["collections"]
-    with open("collections_info.json", "w") as f:
-        json.dump(collections, f, indent=4)
-    print("✅ Saved collections info to collections_info.json")
+    if response.status_code != 200:
+        raise Exception(f"ERROR: Failed to fetch collections (HTTP {response.status_code})")
+
+    collections = response.json()  # Assuming response.json() is a list
+
+    output_path = os.path.join("data", "collections_info.json")
+    with open(output_path, "w") as f:
+        json.dump(collections, f, indent=2)
+    print(f"Saved collections info to {output_path}")
 
 
 def fetch_dataset_info(dataset_id):
@@ -26,7 +30,7 @@ def fetch_dataset_info(dataset_id):
     response = requests.get(dataset_url, headers={"accept": "application/json"})
 
     if response.status_code != 200:
-        raise Exception(f"❌ ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
+        raise Exception(f" ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
 
     dataset_info = response.json()
     dataset_version_id = dataset_info[0]["dataset_version_id"]
@@ -34,7 +38,7 @@ def fetch_dataset_info(dataset_id):
     h5ad_file = next((asset for asset in dataset_assets if asset["filetype"] == "H5AD"), None)
 
     if not h5ad_file:
-        raise Exception(f"❌ ERROR: No H5AD file found for dataset {dataset_id}!")
+        raise Exception(f"ERROR: No H5AD file found for dataset {dataset_id}!")
 
     return {
         "dataset_id": dataset_id,
@@ -42,6 +46,40 @@ def fetch_dataset_info(dataset_id):
         "dataset_url": h5ad_file["url"]
     }
 
+import requests
+
+DATASET_API_BASE_URL = "https://api.cellxgene.cziscience.com/curation/v1/datasets/"
+
+def fetch_dataset_info(dataset_id):
+    """Fetch dataset details for a given dataset ID."""
+    dataset_url = f"{DATASET_API_BASE_URL}{dataset_id}/versions"
+    response = requests.get(dataset_url, headers={"accept": "application/json"})
+
+    if response.status_code != 200:
+        raise Exception(f"ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
+
+    dataset_info_list = response.json()  # API returns a list
+
+    if not dataset_info_list:
+        raise Exception(f"ERROR: No dataset versions found for dataset {dataset_id}!")
+
+    # Get the latest dataset version (assuming the first entry is the latest)
+    dataset_info = dataset_info_list[0]  
+
+    dataset_version_id = dataset_info.get("dataset_version_id")
+    dataset_assets = dataset_info.get("assets", [])
+
+    # Find the H5AD file
+    h5ad_file = next((asset for asset in dataset_assets if asset.get("filetype") == "H5AD"), None)
+
+    if not h5ad_file:
+        raise Exception(f"ERROR: No H5AD file found for dataset {dataset_id}!")
+
+    return {
+        "dataset_id": dataset_id,
+        "dataset_version_id": dataset_version_id,
+        "dataset_url": h5ad_file.get("url")
+    }
 
 def save_datasets_metadata(dataset_id):
     """Fetch and save metadata for a single dataset (Nextflow will handle parallel execution)."""
@@ -59,10 +97,10 @@ def save_datasets_metadata(dataset_id):
     with open("datasets_info.json", "w") as f:
         json.dump(datasets, f, indent=4)
     
-    print(f"✅ Saved dataset {dataset_id} to datasets_info.json")
+    print(f"Saved dataset {dataset_id} to datasets_info.json")
 
 
-# ✅ Run script
+# Run script
 if __name__ == "__main__":
     action = sys.argv[1].lower()
 
@@ -72,5 +110,5 @@ if __name__ == "__main__":
         dataset_id = sys.argv[2]
         save_datasets_metadata(dataset_id)
     else:
-        print("❌ ERROR: Invalid action. Use 'fetch_collections' or 'fetch_dataset <dataset_id>'.")
+        print("ERROR: Invalid action. Use 'fetch_collections' or 'fetch_dataset <dataset_id>'.")
 
