@@ -7,7 +7,7 @@ process fetchCellxgene {
         val test_mode
 
     output:
-        path "${params.datadir}/collections_info.json", emit: collections_json
+        path "collections_info.json", emit: collections_json
 
     script:
     """

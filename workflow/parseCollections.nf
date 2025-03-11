@@ -8,7 +8,7 @@ process parseCollections {
         val test_mode
 
     output:
-        path "${params.outdir}/datasets_info.json", emit: datasets_json
+        path "datasets_info.json", emit: datasets_json
 
     script:
     """

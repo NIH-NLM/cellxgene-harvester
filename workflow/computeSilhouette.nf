@@ -7,7 +7,7 @@ process computeSilhouette {
         path dataset_jsons
 
     output:
-        path "${params.outdir}/silhouette_scores.csv", emit: scores_csv
+        path "silhouette_scores.csv", emit: scores_csv
 
     script:
     """
