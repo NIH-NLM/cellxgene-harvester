@@ -1,13 +1,13 @@
 process generatePlots {
     tag 'generatePlots'
 
-    publishDir "${launchDir}/results/", mode: 'copy'
+    publishDir "${params.outdir}", mode: 'copy'
 
     input:
         path scores_csv
 
     output:
-        path "${launchDir}/results/final_plots.png", emit: final_plots
+        path "${params.outdir}/final_plots.png", emit: final_plots
 
     script:
     """

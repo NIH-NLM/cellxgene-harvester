@@ -1,13 +1,13 @@
 process fetchCellxgene {
     tag 'fetchCellxgene'
 
-    publishDir "${launchDir}/results/", mode: 'copy'
+    publishDir "${params.datadir}", mode: 'copy'
 
     input:
         val test_mode
 
     output:
-        path "${launchDir}/data/collections_info.json", emit: collections_json
+        path "${params.datadir}/collections_info.json", emit: collections_json
 
     script:
     """

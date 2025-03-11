@@ -1,14 +1,14 @@
 process parseCollections {
     tag 'parseCollections'
 
-    publishDir "${launchDir}/results/", mode: 'copy'
+    publishDir "${params.outdir}", mode: 'copy'
 
     input:
         path collections_json
         val test_mode
 
     output:
-        path "${launchDir}/data/datasets_info.json", emit: datasets_json
+        path "${params.outdir}/datasets_info.json", emit: datasets_json
 
     script:
     """

@@ -1,14 +1,14 @@
 process fetchDatasets {
     tag 'fetchDatasets'
 
-    publishDir "${launchDir}/results/", mode: 'copy'
+    publishDir "${params.datadir}", mode: 'copy'
 
     input:
         path datasets_json
         val test_mode
 
     output:
-        path "${launchDir}/data/dataset_jsons/", emit: dataset_jsons
+        path "${params.datadir}/dataset_info.json", emit: dataset_jsons
 
     script:
     """

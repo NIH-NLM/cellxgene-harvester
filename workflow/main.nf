@@ -1,26 +1,30 @@
 // Define base directories
-params.datadir = "${launchDir}/data"
-params.outdir = "${launchDir}/results"
+params.datadir   = "data"
+params.outdir    = "results"
+params.test_mode = false
 
 // Ensure output directories exist
+// Ensure output directories exist inside the workflow, not inside a process
 process makeDirs {
+    tag 'create_directories'
+    
     output:
         path params.datadir, emit: datadir
         path params.outdir, emit: outdir
 
     script:
     """
-    mkdir -p ${params.datadir}
-    mkdir -p ${params.outdir}
+    mkdir -p data
+    mkdir -p results
     """
 }
 
 // Import Workflow Modules
-include { fetchCollections  } from './workflow/fetchCellxgene.nf'
-include { parseCollections  } from './workflow/parseCollections.nf'
-include { fetchDatasets     } from './workflow/fetchDatasets.nf'
-include { computeSilhouette } from './workflow/computeSilhouette.nf'
-include { generatePlots     } from './workflow/generatePlots.nf'
+include { fetchCellxgene    } from './fetchCellxgene.nf'
+include { parseCollections  } from './parseCollections.nf'
+include { fetchDatasets     } from './fetchDatasets.nf'
+include { computeSilhouette } from './computeSilhouette.nf'
+include { generatePlots     } from './generatePlots.nf'
 
 // Define Workflow Execution Order
 workflow {
@@ -28,13 +32,13 @@ workflow {
     makeDirs()
 
     // Step 2: Fetch Collections (Runs Once)
-    collections_json = fetchCollections(test_mode)
+    collections_json = fetchCellxgene(params.test_mode)
 
     // Step 3: Parse Collections to Extract Dataset IDs (Runs Once)
-    datasets_info_json = parseCollections(collections_json, test_mode)
+    datasets_info_json = parseCollections(collections_json, params.test_mode)
 
     // Step 4: Fetch Datasets (Runs in Parallel for Each Dataset)
-    dataset_jsons = fetchDatasets(datasets_info_json, test_mode)
+    dataset_jsons = fetchDatasets(datasets_info_json, params.test_mode)
 
     // Step 5: Compute Silhouette Scores (Runs in Parallel for Each Dataset)
     scores_csv = computeSilhouette(dataset_jsons)
