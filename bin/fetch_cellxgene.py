@@ -21,7 +21,8 @@ def fetch_collections():
     os.makedirs("data", exist_ok=True)
 
     # Save collections to the correct path
-    output_path = os.path.join("data", "collections_info.json")
+    output_filename = sys.argv[2] # Expecting filename as an argument
+    output_path = os.path.join(os.getcwd(), output_filename)
     with open(output_path, "w") as f:
         json.dump(collections, f, indent=2)
     
