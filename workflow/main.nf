@@ -1,21 +1,44 @@
-nextflow.enable.dsl = 2
+// Define base directories
+params.datadir = "${launchDir}/data"
+params.outdir = "${launchDir}/results"
 
-// Include Nextflow processes
-include { fetchCellxgene } from './fetch_cellxgene.nf'
-include { parseCollections } from './parse_collections.nf'
-include { computeSilhouette } from './compute_silhouette.nf'
+// Ensure output directories exist
+process makeDirs {
+    output:
+        path params.datadir, emit: datadir
+        path params.outdir, emit: outdir
 
-workflow {
-    // Step 1: Get the test mode flag from Nextflow parameters (default = false)
-    test_mode_flag = params.test_mode ?: "false"
-
-    // Step 2: Fetch collections data (outputs collections_info.json)
-    collections_json_file = fetchCellxgene(test_mode_flag)
-
-    // Step 3: Parse collections to extract dataset information
-    datasets_json_file = parseCollections(collections_json_file)
-
-    // Step 4: Compute silhouette scores per dataset
-    silhouette_scores_file = computeSilhouette(datasets_json_file, test_mode_flag)
+    script:
+    """
+    mkdir -p ${params.datadir}
+    mkdir -p ${params.outdir}
+    """
 }
 
+// Import Workflow Modules
+include { fetchCollections  } from './workflow/fetchCellxgene.nf'
+include { parseCollections  } from './workflow/parseCollections.nf'
+include { fetchDatasets     } from './workflow/fetchDatasets.nf'
+include { computeSilhouette } from './workflow/computeSilhouette.nf'
+include { generatePlots     } from './workflow/generatePlots.nf'
+
+// Define Workflow Execution Order
+workflow {
+    // Step 1: Ensure directories exist
+    makeDirs()
+
+    // Step 2: Fetch Collections (Runs Once)
+    collections_json = fetchCollections(test_mode)
+
+    // Step 3: Parse Collections to Extract Dataset IDs (Runs Once)
+    datasets_info_json = parseCollections(collections_json, test_mode)
+
+    // Step 4: Fetch Datasets (Runs in Parallel for Each Dataset)
+    dataset_jsons = fetchDatasets(datasets_info_json, test_mode)
+
+    // Step 5: Compute Silhouette Scores (Runs in Parallel for Each Dataset)
+    scores_csv = computeSilhouette(dataset_jsons)
+
+    // Step 6: Generate Final Plots (Runs Once)
+    generatePlots(scores_csv)
+}
