@@ -1,32 +1,34 @@
+import os
 import json
-import sys
 
-def extract_datasets(collections_json_file, output_file):
-    """
-    Parses collections JSON and extracts datasets.
-    """
-    with open(collections_json_file, "r") as f:
-        collections_data = json.load(f)
+def parse_collections(collections_file, test_mode):
+    """Parse collections and extract dataset IDs, saving to datasets_info.json."""
+    
+    # Ensure output directory exists
+    os.makedirs("results", exist_ok=True)
 
-    datasets_list = []
-    for collection in collections_data:
-        collection_id = collection.get("collection_id", "UNKNOWN")
-        for dataset in collection.get("datasets", []):
-            dataset_entry = {
-                "collection_id": collection_id,
-                "dataset_id": dataset.get("dataset_id", "UNKNOWN"),
-                "dataset_version_id": dataset.get("dataset_version_id", "UNKNOWN"),
-                "dataset_url": f"https://cellxgene.cziscience.com/d/{dataset.get('dataset_id', 'UNKNOWN')}"
-            }
-            datasets_list.append(dataset_entry)
+    # Correct output file path
+    output_path = os.path.join("results", "datasets_info.json")
 
-    with open(output_file, "w") as f:
-        json.dump(datasets_list, f, indent=4)
+    # Read collections file
+    with open(collections_file, "r") as f:
+        collections = json.load(f)
 
-    print(f"✅ Parsed {len(datasets_list)} datasets into {output_file}")
+    # Extract dataset IDs
+    datasets = []
+    for collection in collections:
+        datasets.extend(collection.get("datasets", []))
 
+    # Write datasets info to the correct output path
+    with open(output_path, "w") as f:
+        json.dump(datasets, f, indent=2)
+
+    print(f"Parsed {len(datasets)} datasets and saved to {output_path}")
+
+# Call the function (assuming CLI arguments)
 if __name__ == "__main__":
-    collections_json_file = sys.argv[1]
-    output_file = sys.argv[2]
-    extract_datasets(collections_json_file, output_file)
+    import sys
+    collections_file = sys.argv[1]
+    test_mode = sys.argv[2].lower() == "true"
+    parse_collections(collections_file, test_mode)
 
