@@ -1,6 +1,7 @@
-params.datadir = "data"
-params.outdir = "results"
-params.collection_info = "${params.datadir}/collections_info.json"
+params.datadir         = "data"
+params.outdir          = "results"
+params.test_mode       = false
+params.collection_info = "collections_info.json"
 
 // Ensure output directories exist
 process makeDirs {
@@ -33,13 +34,13 @@ workflow {
     makeDirs()
 
     // Step 2: Fetch Collections (Runs Once)
-    collections_json = fetchCollections()
+    collections_json = fetchCollections("${params.collection_info}")
 
     // Step 3: Split Collections into separate JSON files (Fan-out)
     collection_jsons = splitCollections(collections_json)
 
     // Step 4: Fetch Datasets for each Collection (Fan-out)
-    dataset_jsons = fetchDatasets(collection_jsons, test_mode)
+    dataset_jsons = fetchDatasets(collection_jsons, "${params.test_mode}")
 
     // Step 5: Split Datasets into individual JSONs (Fan-out)
     split_datasets_jsons = splitDatasets(dataset_jsons)

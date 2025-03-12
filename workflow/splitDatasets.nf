@@ -9,7 +9,7 @@ process splitDatasets {
 
     script:
     """
-    bash ${launchDir}/bin/splitDatasets.sh 
+    bash "${launchDir}/bin/splitDatasets.sh"
     """
 }
 

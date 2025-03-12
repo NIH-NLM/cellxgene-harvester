@@ -9,7 +9,7 @@ process splitCollections {
 
     script:
     """
-    bash ${launchDir}/bin/splitCollections.sh 
+    bash "${launchDir}/bin/splitCollections.sh"
     """
 }
 
