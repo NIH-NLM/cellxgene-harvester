@@ -1,56 +1,60 @@
 import os
-import requests
-import json
 import sys
+import json
+import requests
 
-# Define API endpoint
-DATASET_API_BASE_URL = "https://api.cellxgene.cziscience.com/curation/v1/datasets/"
+# Constants
+DATASETS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/datasets"
 SMALLEST_DATASET_ID = "0895c838-e550-48a3-a777-dbcd35d30272"
-SMALLEST_DATASET_URL = f"https://api.cellxgene.cziscience.com/curation/v1/datasets/{SMALLEST_DATASET_ID}/versions"
+SMALLEST_DATASET_URL = f"{DATASETS_API_URL}/{SMALLEST_DATASET_ID}/versions"
 
-def fetch_dataset_info(dataset_id, test_mode):
-    """Fetch dataset details for a given dataset ID."""
-    dataset_url = f"{DATASET_API_BASE_URL}{dataset_id}/versions"
-    response = requests.get(dataset_url, headers={"accept": "application/json"})
-
+def fetch_dataset(dataset_id):
+    """Fetch dataset metadata from CellxGene API."""
+    url = f"{DATASETS_API_URL}/{dataset_id}/versions"
+    response = requests.get(url, headers={"accept": "application/json"})
+    
     if response.status_code != 200:
-        raise Exception(f"ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
+        print(f"ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})", file=sys.stderr)
+        return None
 
-    dataset_info_list = response.json()
-    
-    if not dataset_info_list:
-        raise Exception(f"ERROR: No dataset versions found for dataset {dataset_id}!")
-    
-    return dataset_info_list
+    return response.json()
 
-def save_datasets_metadata(dataset_ids, output_filename):
-    """Fetch and save dataset metadata for multiple datasets."""
-    datasets_metadata = {}
-    
-    for dataset_id in dataset_ids:
-        datasets_metadata[dataset_id] = fetch_dataset_info(dataset_id)
-    
-    os.makedirs("data/datasets", exist_ok=True)
-    output_path = os.path.join("data/datasets", output_filename)
-    
-    with open(output_path, "w") as f:
-        json.dump(datasets_metadata, f, indent=2)
-    
-    print(f"Saved dataset metadata to {output_path}")
+def fetch_datasets(datasets_json, test_mode):
+    """Fetch datasets from the API based on the dataset JSON file."""
+    print(f"Fetching datasets from CellxGene API (Test Mode: {test_mode})")
 
-# Run script
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python fetch_datasets.py <datasets_info.json> <output_filename>")
-        sys.exit(1)
-    
-    datasets_info_file = sys.argv[1]
-    output_filename = sys.argv[2]
-    
-    # Load dataset IDs from input JSON
-    with open(datasets_info_file, "r") as f:
+    # Load dataset IDs from JSON file
+    with open(datasets_json, "r") as f:
         datasets_info = json.load(f)
-        dataset_ids = datasets_info.get("dataset_ids", [])
-    
-    save_datasets_metadata(dataset_ids, output_filename)
+
+    results = []
+
+    if test_mode:
+        # Fetch only the smallest dataset for testing
+        print(f"Fetching test dataset: {SMALLEST_DATASET_ID}")
+        dataset_data = fetch_dataset(SMALLEST_DATASET_ID)
+        if dataset_data:
+            results.append(dataset_data)
+    else:
+        # Fetch all datasets
+        for dataset in datasets_info:
+            dataset_id = dataset.get("dataset_id")
+            if dataset_id:
+                print(f"Fetching dataset: {dataset_id}")
+                dataset_data = fetch_dataset(dataset_id)
+                if dataset_data:
+                    results.append(dataset_data)
+
+    # Output dataset JSON (printed, so Nextflow handles file output)
+    print(json.dumps(results, indent=4))
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("ERROR: Usage: python fetch_datasets.py <datasets_json> <test_mode>")
+        sys.exit(1)
+
+    datasets_json = sys.argv[1]
+    test_mode = sys.argv[2].lower() == "true"
+
+    fetch_datasets(datasets_json, test_mode)
 
