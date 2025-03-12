@@ -1,6 +1,8 @@
 api*
 collections*
 dag*
+data*
+data/
 logs/
 .nextflow.*
 .nextflow/

@@ -5,8 +5,10 @@ import sys
 
 # Define API endpoint
 DATASET_API_BASE_URL = "https://api.cellxgene.cziscience.com/curation/v1/datasets/"
+SMALLEST_DATASET_ID = "0895c838-e550-48a3-a777-dbcd35d30272"
+SMALLEST_DATASET_URL = f"https://api.cellxgene.cziscience.com/curation/v1/datasets/{SMALLEST_DATASET_ID}/versions"
 
-def fetch_dataset_info(dataset_id):
+def fetch_dataset_info(dataset_id, test_mode):
     """Fetch dataset details for a given dataset ID."""
     dataset_url = f"{DATASET_API_BASE_URL}{dataset_id}/versions"
     response = requests.get(dataset_url, headers={"accept": "application/json"})
