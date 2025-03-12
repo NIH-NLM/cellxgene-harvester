@@ -14,6 +14,6 @@ process fetchDatasets {
     """
     echo "Fetching datasets from CellxGene API (Test Mode: $test_mode)"
     
-    python "${launchDir}/bin/fetch_cellxgene.py" fetch_datasets "$datasets_info_json" "$test_mode"
+    python "${launchDir}/bin/fetch_datasets.py" "$datasets_info_json" "$test_mode"
     """
 }

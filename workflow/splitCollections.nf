@@ -1,6 +1,8 @@
 process splitCollections {
     tag 'split_collections'
-    
+
+    publishDir "${launchDir}/${params.datadir}/${collections_split}"
+
     input:
         path collections_json
         

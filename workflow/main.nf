@@ -1,7 +1,9 @@
-params.datadir         = "data"
-params.outdir          = "results"
-params.test_mode       = false
-params.collection_info = "collections_info.json"
+params.collections_split ="collections"
+params.datasets_split    ="datasets"
+params.datadir           = "data"
+params.outdir            = "results"
+params.test_mode         = false
+params.collection_info   = "collections_info.json"
 
 // Ensure output directories exist
 process makeDirs {
@@ -13,10 +15,10 @@ process makeDirs {
 
     script:
     """
-    mkdir -p ${params.datadir}
-    mkdir -p ${params.outdir}
-    mkdir -p ${params.datadir}/collections_split
-    mkdir -p ${params.datadir}/datasets_split
+    mkdir -p "${params.datadir}"
+    mkdir -p "${params.outdir}"
+    mkdir -p "${params.datadir}/${params.collections_split}"
+    mkdir -p "${params.datadir}/${params.datasets_split}"
     """
 }
 
