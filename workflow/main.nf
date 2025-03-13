@@ -1,7 +1,11 @@
-params.datadir = "data"
-params.outdir = "results"
-params.test_mode = false
-params.collection_info = "collections_info.json"
+params.datadir           = "data"
+params.outdir            = "results"
+params.test_mode         = false
+params.collection_info   = "collections_info.json"
+params.collections_split = "collections"
+params.datasets_split    = "datasets"
+params.final_report_pdf  = "final_report.pdf"
+params.final_report_html = "final_report.html"
 
 // Ensure output directories exist
 include { makeDirs } from './makeDirs.nf'
@@ -33,11 +37,12 @@ workflow {
     // Step 6: Compute Silhouette Scores per dataset
     scores_csv = computeSilhouette(split_datasets_jsons).flatten()
 
-    // Step 7: Merge Results for final report
-    final_report = mergeResults(scores_csv)
+    // Step 7: Generate Plots for each cluster for each dataset
+    final_plots = generatePlots(scores_csv).flatten()
 
-    // Print outputs
-    scores_csv.view()
+    // Step 8: Merge Results for final report
+    final_report = mergeResults(final_plots).flatten())
+
     final_report.view()
 }
 

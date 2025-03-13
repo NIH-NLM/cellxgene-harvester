@@ -7,7 +7,7 @@ process generatePlots {
         path scores_csv
 
     output:
-        path "final_plots.png", emit: final_plots
+        path "final_plots_*.png", emit: final_plots
 
     script:
     """

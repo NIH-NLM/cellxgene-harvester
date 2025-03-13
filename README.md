@@ -29,6 +29,22 @@ To execute locally:
 ```bash
 nextflow run workflow/main.nf -profile local
 ```
+## Silhouette Score Calculation
+
+### Evaluating clustering results
+One metric for evaluating clustering results, which is provided by the scikit-learn API, is the silhouette_score.
+
+The definition of the silhouette_score is 
+ 
+. The score can take on values between -1 and 1, with -1 being the worst, and +1 being the best scores. 0 indicates overlapping clusters.
+
+From the scikit-learn API documentation:
+
+```
+The Silhouette Coefficient is calculated using the mean intra-cluster distance a and the mean nearest-cluster distance b for each sample. The Silhouette Coefficient for a sample is (b - a) / max(a, b). To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of. Note that Silhouette Coefficent is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
+```
+
+
 
 ## Directory Structure
 
