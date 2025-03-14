@@ -11,21 +11,25 @@ SMALLEST_DATASET_URL = f"{DATASETS_API_URL}/{SMALLEST_DATASET_ID}/versions"
 def fetch_dataset(dataset_id):
     """Fetch dataset metadata from CellxGene API."""
     url = f"{DATASETS_API_URL}/{dataset_id}/versions"
-    response = requests.get(url, headers={"accept": "application/json"})
-    
+    response = requests.get(url)
+
     if response.status_code != 200:
-        print(f"ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})", file=sys.stderr)
-        return None
+        raise Exception(f"ERROR: Failed to fetch dataset {dataset_id} (HTTP {response.status_code})")
+    
+    datasets = response.json ()
 
-    return response.json()
+    output_filename = f"data_{data_version_id}.json"
 
-def fetch_datasets(datasets_json, test_mode):
-    """Fetch datasets from the API based on the dataset JSON file."""
-    print(f"Fetching datasets from CellxGene API (Test Mode: {test_mode})")
+    with open(output_filename, "w") as f:
+        json.dump(datasets, f, indent=2)
+
+def fetch_datasets(collection_json, test_mode):
+    """Fetch datasets from the API based on the collection JSON file."""
+    print(f"Fetching datasets for a collection from CellxGene API (Test Mode will retrieve only the smallest dataset: {test_mode})")
 
     # Load dataset IDs from JSON file
-    with open(datasets_json, "r") as f:
-        datasets_info = json.load(f)
+    with open(collection_json, "r") as f:
+        collection_info = json.load(f)
 
     results = []
 
@@ -37,16 +41,10 @@ def fetch_datasets(datasets_json, test_mode):
             results.append(dataset_data)
     else:
         # Fetch all datasets
-        for dataset in datasets_info:
-            dataset_id = dataset.get("dataset_id")
-            if dataset_id:
-                print(f"Fetching dataset: {dataset_id}")
-                dataset_data = fetch_dataset(dataset_id)
-                if dataset_data:
-                    results.append(dataset_data)
-
-    # Output dataset JSON (printed, so Nextflow handles file output)
-    print(json.dumps(results, indent=4))
+        print(f"Fetching all datasets: {dataset_id}")
+        dataset_data = fetch_dataset(dataset_id)
+        if dataset_data:
+            results.append(dataset_data)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

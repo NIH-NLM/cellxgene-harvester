@@ -44,8 +44,8 @@ def generate_pdf_report(html_file, pdf_file):
 
 if __name__ == "__main__":
     dataset_plots = glob.glob("*.png")  # Get all dataset plots in the directory
-    output_pdf = sys.argv[sys.argv.index("--pdf") + 1] if "--pdf" in sys.argv else "final_report.pdf"
-    output_html = sys.argv[sys.argv.index("--html") + 1] if "--html" in sys.argv else "final_report.html"
+    output_pdf = sys.argv[1]
+    output_html = sys.argv[2]
 
     generate_html_report(dataset_plots, output_html)
     generate_pdf_report(output_html, output_pdf)

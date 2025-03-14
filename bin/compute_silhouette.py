@@ -27,14 +27,14 @@ def download_h5ad(url, dataset_version_id):
 
     return file_path if os.path.exists(file_path) else None
 
-def compute_silhouette(datasets_info_file, output_file, output_dir):
+def compute_silhouette(dataset_info_file):
     """
     Computes silhouette scores for each dataset for each cluster.
     """
     print(f"Reading dataset info from '{datasets_info_file}'...")
     
-    with open(datasets_info_file, "r") as f:
-        datasets = json.load(f)
+    with open(dataset_info_file, "r") as f:
+        dataset = json.load(f)
 
     results = []
     
@@ -53,12 +53,15 @@ def compute_silhouette(datasets_info_file, output_file, output_dir):
         #        adata_df = pd.DataFrame(.raw_data)
         #        silhouette_score = silhouette_score(seq_df, ap_cluster_labels)
         silhouette_score = 0.75  # Replace with real computation
-        
-        results.append({"dataset_version_id": dataset_version_id, "silhouette_score": silhouette_score})
+        cluster_name = "cluster name" #replace with real cluster name
+        results.append({"dataset_version_id": dataset_version_id,
+                        "cluster_name": cluster_name,
+                        "silhouette_score": silhouette_score})
     
     except Exception as e:
         print(f"ERROR: Failed processing dataset {dataset_version_id}: {e}", file=sys.stderr)
-    
+
+    output_file = f"{dataset_version_id}_silhouette_score.csv"
     # Save results
     with open(output_file, "w") as f:
         json.dump(results, f, indent=4)
@@ -67,8 +70,6 @@ def compute_silhouette(datasets_info_file, output_file, output_dir):
 
 if __name__ == "__main__":
     datasets_info_json = sys.argv[1]
-    output_json = sys.argv[2]
-    output_dir = sys.argv[3]  # Collection results directory
     
-    compute_silhouette(datasets_info_json, output_json, output_dir)
+    compute_silhouette(dataset_info_json)
 
