@@ -32,7 +32,6 @@ CSV_HEADER = [
     "tissue",
     "disease",
     "author_cell_type",
-    "created_at",
     "cell_count",
     "filter_normal",
     "metric",
