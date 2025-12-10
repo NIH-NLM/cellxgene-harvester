@@ -69,7 +69,7 @@ This doesn't yet give us our h5ad file we will use as input to the quality contr
 Using another api we can grab the h5ad file that fits this combination and it is unique
 
 ```bash
-pythone3 bin/append_h5ad_urls.py
+python3 bin/append_h5ad_urls.py
 ```
 
 This routine takes awhile and generates the `all_datasets_h5ad.csv`
