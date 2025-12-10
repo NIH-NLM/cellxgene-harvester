@@ -1,102 +1,77 @@
-# scRNAseq Silhouette Score
+# cellxgene harvester
 
-This Nextflow pipeline retrieves scRNA-seq datasets from **CellxGene**, computes **cosine silhouette scores**, and outputs the results as a CSV file.
+There are 4 steps in this process
 
-# Setting Up the Environment
-
-## Install Conda
-
-Ensure you have Conda installed. If not, install **Miniconda**:
-```bash
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
-```
-
-## Creating the environment
-
-All the scripts dependencies are in the **`environment.yml`** file
-A fresh environment is created.
+1.  First we get all the collections in cellxgene - at the time of this writing there were 377
 
 ```bash
-conda env create -f environment.yml
-conda activate scrnaseq_silhouette
+python3 bin/fetch_collections.py
 ```
 
+This data now is located at `data/collections.json`
 
-## Running the Nextflow Workflow
-
-To execute locally:
-```bash
-nextflow run workflow/main.nf -profile local
-```
-## Silhouette Score Calculation
-
-### Evaluating clustering results
-One metric for evaluating clustering results, which is provided by the scikit-learn API, is the silhouette_score.
-
-The definition of the silhouette_score is 
- 
-. The score can take on values between -1 and 1, with -1 being the worst, and +1 being the best scores. 0 indicates overlapping clusters.
-
-From the scikit-learn API documentation:
-
-```
-The Silhouette Coefficient is calculated using the mean intra-cluster distance a and the mean nearest-cluster distance b for each sample. The Silhouette Coefficient for a sample is (b - a) / max(a, b). To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of. Note that Silhouette Coefficent is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
-```
-
-
-
-## Directory Structure
+If you would like to inspect it and puruse it you can run
 
 ```bash
-├── LICENSE
-├── README.md
-├── bin
-│   ├── compute_silhouette.py
-│   └── fetch_cellxgene.py
-├── conf
-│   ├── aws.config
-│   └── slurm.config
-├── directory.md
-├── docs
-│   ├── build
-│   └── source
-│       ├── conf.py
-│       ├── index.rst
-│       ├── modules.rst
-│       ├── nextflow_docs.rst
-│       └── usage.rst
-├── environment.yml
-├── nextflow.config
-├── notebooks
-│   ├── analyze_silhoutte_scores.ipynb
-│   └── r_analysis.ipynb
-├── results
-├── run.sh
-├── setup.py
-├── sphinx_build.sh
-└── workflow
-    ├── compute_silhouette.nf
-    ├── main.nf
-    ├── merge_results.nf
-    └── pull_cellxgene.nf
-
-9 directories, 23 files
+jq -r data/colletions.json > data/collections_pp.json
 ```
 
+2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets.
 
-## AWS Batch Configuration Parameters
+```bash
+bash bin/splitCollections.sh
+```
 
-| Parameter            | Value                         | Description |
-|----------------------|-----------------------------|-------------|
-| **executor**        | `awsbatch`                   | Enables execution on **AWS Batch**. |
-| **queue**           | `nextflow-job-queue`         | Specifies the AWS Batch job queue. |
-| **memory**          | `32GB`                        | Allocates **32GB RAM** per job. |
-| **cpus**            | `8`                          | Allocates **8 vCPUs** per job. |
-| **time**            | `12h`                        | Limits job runtime to **12 hours**. |
-| **batch.queue**     | `nextflow-job-queue`         | Defines the **AWS Batch job queue**. |
-| **batch.compute_env** | `nextflow-compute-env`     | AWS Batch **Compute Environment**. |
-| **batch.job_role**  | `arn:aws:iam::123456789012:role/NextflowBatchJobRole` | IAM role for job execution. |
-| **batch.job_definition** | `nextflow-job-definition` | AWS Batch **Job Definition**. |
-| **wave.enabled**    | `true`                        | Enables **Wave container support** for efficiency. |
-| **pollInterval**    | `30 sec`                      | Nextflow checks AWS Batch job status **every 30 seconds**. |
+this will put each of the collections into separate json files.   You can ask questions of these files -- such what are the keys etc or look at them with a pretty print format.
+
+To look at `keys` you can run
+
+```bash
+jq 'keys' data/collection*json
+```
+
+To look at each json in a `pretty print` manner you can run
+
+```bash
+jq -r data/collection_00109df5-7810-4542-8db5-2288c46e0424.json > data/collection_00109df5-7810-4542-8db5-2288c46e0424_pretty.json
+```
+
+3. Next we want to process each of the collections
+
+what that means is that we will run this script
+
+```bash
+bash process_all_collections.sh
+```
+
+what that does is:
+
+* Pretty-print the collection
+
+* Extract the datasets array
+
+and finally
+
+* Split the datasets
+
+4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not
+
+```bash
+python3 bin/generate_csv_from_collections.py
+```
+
+This outputs a file `all_datasets.csv`
+
+This doesn't yet give us our h5ad file we will use as input to the quality control and other routines we will run to prepare it for loading into our knowledge base.
+
+5. Run the routine to grab the h5ad file for the combination of collection_uuid, collection_version_id, dataset_uuid, dataset_version_id
+
+Using another api we can grab the h5ad file that fits this combination and it is unique
+
+```bash
+pythone3 bin/append_h5ad_urls.py
+```
+
+This routine takes awhile and generates the `all_datasets_h5ad.csv`
+
+
