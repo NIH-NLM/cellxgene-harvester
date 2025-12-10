@@ -32,7 +32,7 @@ CSV_HEADER = [
     "tissue",
     "disease",
     "author_cell_type",
-    "cell_count",
+    "embedding",
     "filter_normal",
     "metric",
     "save_scores",
@@ -125,7 +125,7 @@ def main():
                 "tissue": ds["tissue"],
                 "disease": ds["disease"],
                 "author_cell_type": "",
-                "cell_count": "",
+                "embedding": "",
                 **STATIC_FIELDS,
             }
             rows.append(row)
