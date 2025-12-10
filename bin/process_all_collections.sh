@@ -35,4 +35,4 @@ for collection_file in "$DATA_DIR"/collection_*.json; do
     echo "✓ $collection_id done."
 done
 
-echo "🎉 All collections processed successfully."
+echo "All collections processed successfully."
