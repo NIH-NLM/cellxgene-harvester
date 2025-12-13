@@ -74,4 +74,58 @@ python3 bin/append_h5ad_urls.py
 
 This routine takes awhile and generates the `all_datasets_h5ad.csv`
 
+6. Segregate to just one species
+
+We are only interested in `Homo sapiens` at this time - so we take the entire collection down to just those with the organism `Homo sapiens`
+
+```bash
+grep -i 'homo sapiens` all_datasets_h5ad.csv > homo_sapiens_with_h5ad.csv
+```
+
+7. Now to segregate by specific tissue and with no preprints
+
+* pancreas
+
+With pancreas, two terms were used `pancreas` and `isle of langerhans` but actually only `isle` was necessary.  There is no control data element for the organ as deposited in cellxgene, so both these terms were used to screen the datasets out of the `all_datasets_h5ad.csv` file.
+
+```bash
+grep -i 'isle|pancreas' homo_sapiens_with_h5ad.csv > homo_sapiens_pancreas_harvester.csv
+```
+
+now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
+
+```bash
+grep -i 'false' homo_sapiens_pancreas_harvester.csv > homo_sapiens_pancreas_no_preprint.csv
+```
+
+This is the file which we will transfer to our google drive for inspection and editing.
+
+* kidney
+
+```bash
+grep -i 'kidney' homo_sapiens_with_h5ad.csv > homo_sapiens_kidney_harvester.csv
+```
+
+now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
+
+```bash
+grep -i 'false' homo_sapiens_kidney_harvester.csv > homo_sapiens_kidney_no_preprint.csv
+```
+
+This is the file which we will transfer to our google drive for inspection and editing.
+
+* lung
+
+```bash
+grep -i 'lung' homo_sapiens_with_h5ad.csv > homo_sapiens_lung_harvester.csv
+```
+
+now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
+
+```bash
+grep -i 'false' homo_sapiens_lung_harvester.csv > homo_sapiens_lung_no_preprint.csv
+```
+
+This is the file which we will transfer to our google drive for inspection and editing.
+
 
