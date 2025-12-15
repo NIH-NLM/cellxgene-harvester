@@ -98,6 +98,10 @@ now this hasn't yet screened for preprints - we will do so now.  The only files 
 grep -i 'false' homo_sapiens_pancreas_harvester.csv > homo_sapiens_pancreas_no_preprint.csv
 ```
 
+```bash
+cat data/header_with_h5ad.csv homo_sapiens_pancreas_no_preprint.csv > data/homo_sapiens_pancreas_harvester.csv
+```
+
 This is the file which we will transfer to our google drive for inspection and editing.
 
 * kidney
@@ -112,6 +116,10 @@ now this hasn't yet screened for preprints - we will do so now.  The only files 
 grep -i 'false' homo_sapiens_kidney_harvester.csv > homo_sapiens_kidney_no_preprint.csv
 ```
 
+```bash
+cat data/header_with_h5ad.csv homo_sapiens_kidney_no_preprint.csv > data/homo_sapiens_kidney_harvester.csv
+```
+
 This is the file which we will transfer to our google drive for inspection and editing.
 
 * lung
@@ -124,6 +132,12 @@ now this hasn't yet screened for preprints - we will do so now.  The only files 
 
 ```bash
 grep -i 'false' homo_sapiens_lung_harvester.csv > homo_sapiens_lung_no_preprint.csv
+```
+
+Finally, we need to add our header line to the now constructed no_preprint file reusing the `harvester` name
+
+```bash
+cat data/header_with_h5ad.csv homo_sapiens_lung_no_preprint.csv > data/homo_sapiens_lung_harvester.csv
 ```
 
 This is the file which we will transfer to our google drive for inspection and editing.
