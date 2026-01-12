@@ -10,7 +10,7 @@ python3 bin/fetch_collections.py data/collections.json
 
 This data now is located at `data/collections.json` and already in pp format
 
-2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets.
+2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets -- you need to supply the file name
 
 ```bash
 bash bin/splitCollections.sh data/collections.json
