@@ -5,7 +5,7 @@ There are 4 steps in this process
 1.  First we get all the collections in cellxgene - at the time of this writing there were 377
 
 ```bash
-python3 bin/fetch_collections.py
+python3 bin/fetch_collections.py data/collections.json
 ```
 
 This data now is located at `data/collections.json`
