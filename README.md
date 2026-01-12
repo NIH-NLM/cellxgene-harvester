@@ -48,7 +48,17 @@ and finally
 
 * Split the datasets
 
-4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not
+4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not.
+
+Important:  The python script assumes that the following packages are installed:
+```
+json
+os
+csv
+glob
+```
+
+Depending upon the platform you are running this on, you can use `pip3` or 'conda`
 
 ```bash
 python3 bin/generate_csv_from_collections.py
