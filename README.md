@@ -8,13 +8,7 @@ There are 4 steps in this process
 python3 bin/fetch_collections.py data/collections.json
 ```
 
-This data now is located at `data/collections.json`
-
-If you would like to inspect it and puruse it you can run
-
-```bash
-jq -r data/colletions.json > data/collections_pp.json
-```
+This data now is located at `data/collections.json` and already in pp format
 
 2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets.
 
