@@ -13,7 +13,7 @@ This data now is located at `data/collections.json` and already in pp format
 2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets.
 
 ```bash
-bash bin/splitCollections.sh
+bash bin/splitCollections.sh data/collections.json
 ```
 
 this will put each of the collections into separate json files.   You can ask questions of these files -- such what are the keys etc or look at them with a pretty print format.
