@@ -83,7 +83,7 @@ This routine takes awhile and generates the `all_datasets_h5ad.csv`
 We are only interested in `Homo sapiens` at this time - so we take the entire collection down to just those with the organism `Homo sapiens`
 
 ```bash
-grep -i 'homo sapiens` all_datasets_h5ad.csv > homo_sapiens_with_h5ad.csv
+grep -i 'homo sapiens` all_datasets_with_h5ad.csv > homo_sapiens_with_h5ad.csv
 ```
 
 7. Now to segregate by specific tissue and with no preprints
