@@ -5,21 +5,15 @@ There are 4 steps in this process
 1.  First we get all the collections in cellxgene - at the time of this writing there were 377
 
 ```bash
-python3 bin/fetch_collections.py
+python3 bin/fetch_collections.py data/collections.json
 ```
 
-This data now is located at `data/collections.json`
+This data now is located at `data/collections.json` and already in pp format
 
-If you would like to inspect it and puruse it you can run
-
-```bash
-jq -r data/colletions.json > data/collections_pp.json
-```
-
-2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets.
+2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets -- you need to supply the file name
 
 ```bash
-bash bin/splitCollections.sh
+bash bin/splitCollections.sh data/collections.json
 ```
 
 this will put each of the collections into separate json files.   You can ask questions of these files -- such what are the keys etc or look at them with a pretty print format.
@@ -54,7 +48,17 @@ and finally
 
 * Split the datasets
 
-4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not
+4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not.
+
+Important:  The python script assumes that the following packages are installed:
+```
+json
+os
+csv
+glob
+```
+
+Depending upon the platform you are running this on, you can use `pip3` or 'conda`
 
 ```bash
 python3 bin/generate_csv_from_collections.py
@@ -79,7 +83,7 @@ This routine takes awhile and generates the `all_datasets_h5ad.csv`
 We are only interested in `Homo sapiens` at this time - so we take the entire collection down to just those with the organism `Homo sapiens`
 
 ```bash
-grep -i 'homo sapiens` all_datasets_h5ad.csv > homo_sapiens_with_h5ad.csv
+grep -i 'homo sapiens` all_datasets_with_h5ad.csv > homo_sapiens_with_h5ad.csv
 ```
 
 7. Now to segregate by specific tissue and with no preprints
