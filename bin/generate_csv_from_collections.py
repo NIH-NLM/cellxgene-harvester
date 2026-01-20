@@ -40,10 +40,21 @@ CSV_HEADER = [
     "save_annotation",
 ]
 
-def safe_label(entry):
-    if isinstance(entry, list) and entry:
-        return entry[0].get("label", "")
+#def safe_label(entry):
+#    if isinstance(entry, list) and entry:
+#        return entry[0].get("label", "")
+#    return ""
+
+def safe_label(entry, sep=" | "):
+    if isinstance(entry, list):
+        return sep.join(
+            item.get("label", "")
+            for item in entry
+            if isinstance(item, dict)
+        )
     return ""
+
+
 
 def main():
     rows = []
