@@ -13,7 +13,7 @@ for collection_file in "$DATA_DIR"/collection_*.json; do
     collection_id=${collection_basename#collection_}
     outdir="$DATA_DIR/$collection_basename"
 
-    echo "→ Processing $collection_id..."
+    echo "Processing $collection_id..."
 
     mkdir -p "$outdir"
 
@@ -32,7 +32,7 @@ for collection_file in "$DATA_DIR"/collection_*.json; do
         jq '.' "$outdir/dataset_${dataset_version_id}.json" > "$outdir/dataset_${dataset_version_id}.pretty.json"
     done
 
-    echo "✓ $collection_id done."
+    echo "$collection_id done."
 done
 
 echo "All collections processed successfully."
