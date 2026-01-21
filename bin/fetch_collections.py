@@ -4,7 +4,7 @@ import json
 import sys
 
 # Define API endpoint
-COLLECTIONS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections?visibility=PUBLIC"
+COLLECTIONS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections"
 
 def fetch_collections(output_filename):
     """Fetch collections from CellxGene API and save to collections_info.json."""
