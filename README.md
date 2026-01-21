@@ -1,149 +1,129 @@
-# cellxgene harvester
+# CellxGene Data Harvester
 
-There are 4 steps in this process
+A streamlined pipeline for harvesting metadata and H5AD file URLs from the [CellxGene Data Portal](https://cellxgene.cziscience.com/).
 
-1.  First we get all the collections in cellxgene - at the time of this writing there were 377
+## Overview
 
-```bash
-python3 bin/fetch_collections.py data/collections.json
-```
+This pipeline fetches collection and dataset metadata from the CellxGene API and generates a CSV file containing:
+- Collection metadata (name, ID, publication info)
+- Dataset metadata (title, ID, tissue, disease, organism)
+- H5AD file URLs and cell counts
+- Normal cell counts (cells from healthy/normal samples)
+- Filtering options by organism, tissue, and publication status
 
-This data now is located at `data/collections.json` and already in pp format
-
-2. Next we want to split the collections - this will allow us then to retrieve for each of the collections the datasets -- you need to supply the file name
-
-```bash
-bash bin/splitCollections.sh data/collections.json
-```
-
-this will put each of the collections into separate json files.   You can ask questions of these files -- such what are the keys etc or look at them with a pretty print format.
-
-To look at `keys` you can run
+## Requirements
 
 ```bash
-jq 'keys' data/collection*json
+pip install requests pandas scanpy
 ```
 
-To look at each json in a `pretty print` manner you can run
+## Quick Start
+
+### Run Complete Pipeline
 
 ```bash
-jq -r data/collection_00109df5-7810-4542-8db5-2288c46e0424.json > data/collection_00109df5-7810-4542-8db5-2288c46e0424_pretty.json
+bash bin/run_pipeline.sh
 ```
 
-3. Next we want to process each of the collections
+This executes all 5 steps and takes approximately 1-2 hours.
 
-what that means is that we will run this script
+### Individual Steps
 
 ```bash
-bash process_all_collections.sh
+# Step 1: Fetch collections (~30 seconds)
+python bin/1_fetch_collections.py
+
+# Step 2: Generate metadata CSV (~1 minute)
+python bin/2_generate_metadata_csv.py
+
+# Step 3: Add dataset details (~15-20 minutes)
+python bin/3_append_dataset_details.py
+
+# Step 4: Count normal cells (~30-60 minutes, downloads H5AD files)
+python bin/4_count_normal_cells.py
+
+# Step 5: Filter datasets (~1 second)
+python bin/5_filter_datasets.py --organism "Homo sapiens" --output filtered.csv
 ```
 
-what that does is:
+## Pipeline Steps Explained
 
-* Pretty-print the collection
+### Step 1: Fetch Collections
+Downloads metadata for all public collections (~377 collections).
+**Output:** `data/collections_metadata.json`
 
-* Extract the datasets array
+### Step 2: Generate Metadata CSV
+Extracts collection and dataset information.
+**Output:** `data/all_datasets.csv`
 
-and finally
+### Step 3: Add Dataset Details
+Fetches H5AD URLs, cell counts, and titles.
+**Output:** `data/all_datasets_complete.csv`
 
-* Split the datasets
+### Step 4: Count Normal Cells
+Downloads H5AD files and counts normal cells.
+**Output:** `data/all_datasets_with_normal_counts.csv`
 
-4. Next we want to extract the collection_uuid, collection_version_id, dataset_uuid, dataset_version_id,and other metadata about the file that we will use to decide if we will loadit into our Cell Knowledge base or not.
+### Step 5: Filter Datasets
+Filter by organism, tissue, and disease.
 
-Important:  The python script assumes that the following packages are installed:
-```
-json
-os
-csv
-glob
-```
+## Output CSV Columns
 
-Depending upon the platform you are running this on, you can use `pip3` or 'conda`
+- `collection_name` - Human-readable collection name
+- `dataset_title` - Human-readable dataset title
+- `organism` - Species
+- `tissue` - Tissue types
+- `disease` - Disease/condition
+- `cell_count` - Total cells
+- `normal_cell_count` - Normal/healthy cells only
+- `h5ad_url` - Direct download URL
+- Plus publication metadata (author, journal, year)
+
+## Common Filtering Examples
 
 ```bash
-python3 bin/generate_csv_from_collections.py
+# Lung datasets (no preprints)
+python bin/5_filter_datasets.py \
+  --organism "Homo sapiens" \
+  --tissue "lung" \
+  --no-preprints \
+  --output data/homo_sapiens_lung_harvester.csv
+
+# Pancreas datasets
+python bin/5_filter_datasets.py \
+  --organism "Homo sapiens" \
+  --tissue "pancreas|isle" \
+  --no-preprints \
+  --output data/homo_sapiens_pancreas_harvester.csv
 ```
 
-This outputs a file `all_datasets.csv`
+## File Structure
 
-This doesn't yet give us our h5ad file we will use as input to the quality control and other routines we will run to prepare it for loading into our knowledge base.
-
-5. Run the routine to grab the h5ad file for the combination of collection_uuid, collection_version_id, dataset_uuid, dataset_version_id
-
-Using another api we can grab the h5ad file that fits this combination and it is unique
-
-```bash
-python3 bin/append_h5ad_urls.py
+```
+.
+├── bin/                           # Scripts
+│   ├── 1_fetch_collections.py
+│   ├── 2_generate_metadata_csv.py
+│   ├── 3_append_dataset_details.py
+│   ├── 4_count_normal_cells.py
+│   ├── 5_filter_datasets.py
+│   └── run_pipeline.sh
+├── data/                          # Outputs
+│   ├── collections_metadata.json
+│   ├── all_datasets.csv
+│   ├── all_datasets_complete.csv
+│   ├── all_datasets_with_normal_counts.csv
+│   └── *_harvester.csv
+└── datasets_cache/                # H5AD cache (created by step 4)
 ```
 
-This routine takes awhile and generates the `all_datasets_h5ad.csv`
+## Notes
 
-6. Segregate to just one species
+- Step 4 is the longest (30-60 min) as it downloads H5AD files
+- H5AD files are cached in `datasets_cache/` to avoid re-downloading
+- Delete `datasets_cache/` after completion to free disk space
+- Normal cells identified by disease == "normal" or "PATO:0000461"
 
-We are only interested in `Homo sapiens` at this time - so we take the entire collection down to just those with the organism `Homo sapiens`
+## License
 
-```bash
-grep -i 'homo sapiens` all_datasets_with_h5ad.csv > homo_sapiens_with_h5ad.csv
-```
-
-7. Now to segregate by specific tissue and with no preprints
-
-* pancreas
-
-With pancreas, two terms were used `pancreas` and `isle of langerhans` but actually only `isle` was necessary.  There is no control data element for the organ as deposited in cellxgene, so both these terms were used to screen the datasets out of the `all_datasets_h5ad.csv` file.
-
-```bash
-grep -i 'isle|pancreas' homo_sapiens_with_h5ad.csv > homo_sapiens_pancreas_harvester.csv
-```
-
-now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
-
-```bash
-grep -i 'false' homo_sapiens_pancreas_harvester.csv > homo_sapiens_pancreas_no_preprint.csv
-```
-
-```bash
-cat data/header_with_h5ad.csv homo_sapiens_pancreas_no_preprint.csv > data/homo_sapiens_pancreas_harvester.csv
-```
-
-This is the file which we will transfer to our google drive for inspection and editing.
-
-* kidney
-
-```bash
-grep -i 'kidney' homo_sapiens_with_h5ad.csv > homo_sapiens_kidney_harvester.csv
-```
-
-now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
-
-```bash
-grep -i 'false' homo_sapiens_kidney_harvester.csv > homo_sapiens_kidney_no_preprint.csv
-```
-
-```bash
-cat data/header_with_h5ad.csv homo_sapiens_kidney_no_preprint.csv > data/homo_sapiens_kidney_harvester.csv
-```
-
-This is the file which we will transfer to our google drive for inspection and editing.
-
-* lung
-
-```bash
-grep -i 'lung' homo_sapiens_with_h5ad.csv > homo_sapiens_lung_harvester.csv
-```
-
-now this hasn't yet screened for preprints - we will do so now.  The only files we will keep is where there is a `false` and the only `false` that exists is for the preprints, so we don't need to isolate our search at a particular column which could be done - but it is unnecessary.
-
-```bash
-grep -i 'false' homo_sapiens_lung_harvester.csv > homo_sapiens_lung_no_preprint.csv
-```
-
-Finally, we need to add our header line to the now constructed no_preprint file reusing the `harvester` name
-
-```bash
-cat data/header_with_h5ad.csv homo_sapiens_lung_no_preprint.csv > data/homo_sapiens_lung_harvester.csv
-```
-
-This is the file which we will transfer to our google drive for inspection and editing.
-
-
+This pipeline accesses public data from CellxGene. Please cite original sources.
