@@ -4,12 +4,14 @@ A streamlined pipeline for harvesting metadata and H5AD file URLs from the [Cell
 
 ## Overview
 
-This pipeline fetches collection and dataset metadata from the CellxGene API and generates a CSV file containing:
+This pipeline fetches collection and dataset metadata from the CellxGene API and generates CSV files with:
 - Collection metadata (name, ID, publication info)
 - Dataset metadata (title, ID, tissue, disease, organism)
 - H5AD file URLs and cell counts
 - Normal cell counts (cells from healthy/normal samples)
-- Filtering options by organism, tissue, and publication status
+- Filtering by organism, tissue, and publication status
+
+**Key efficiency:** Step 5 only downloads H5AD files for your filtered datasets, not all 7,000+ datasets.
 
 ## Requirements
 
@@ -19,15 +21,13 @@ pip install requests pandas scanpy
 
 ## Quick Start
 
-### Run Complete Pipeline
-
 ```bash
 bash bin/run_pipeline.sh
 ```
 
-This executes all 5 steps and takes approximately 1-2 hours.
+This executes all 5 steps (takes 30-60 minutes depending on how many datasets pass your filters).
 
-### Individual Steps
+## Individual Steps
 
 ```bash
 # Step 1: Fetch collections (~30 seconds)
@@ -39,11 +39,15 @@ python bin/2_generate_metadata_csv.py
 # Step 3: Add dataset details (~15-20 minutes)
 python bin/3_append_dataset_details.py
 
-# Step 4: Count normal cells (~30-60 minutes, downloads H5AD files)
-python bin/4_count_normal_cells.py
+# Step 4: Filter datasets (~1 second)
+python bin/4_filter_datasets.py \
+  --organism "Homo sapiens" \
+  --tissue "lung" \
+  --no-preprints \
+  --output data/homo_sapiens_lung_harvester.csv
 
-# Step 5: Filter datasets (~1 second)
-python bin/5_filter_datasets.py --organism "Homo sapiens" --output filtered.csv
+# Step 5: Count normal cells ONLY for filtered datasets (~5-20 minutes)
+python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv
 ```
 
 ## Pipeline Steps Explained
@@ -53,76 +57,117 @@ Downloads metadata for all public collections (~377 collections).
 **Output:** `data/collections_metadata.json`
 
 ### Step 2: Generate Metadata CSV
-Extracts collection and dataset information.
-**Output:** `data/all_datasets.csv`
+Extracts collection and dataset information into CSV.
+**Output:** `data/all_datasets.csv` (~7,000 datasets)
 
 ### Step 3: Add Dataset Details
-Fetches H5AD URLs, cell counts, and titles.
+Fetches H5AD URLs, total cell counts, and titles from API.
 **Output:** `data/all_datasets_complete.csv`
+**Note:** Does NOT download H5AD files yet.
 
-### Step 4: Count Normal Cells
-Downloads H5AD files and counts normal cells.
-**Output:** `data/all_datasets_with_normal_counts.csv`
+### Step 4: Filter Datasets
+Filter by organism, tissue, disease, publication status.
+**Output:** `data/*_harvester.csv` (e.g., 50-100 datasets)
 
-### Step 5: Filter Datasets
-Filter by organism, tissue, and disease.
+### Step 5: Count Normal Cells
+Downloads H5AD files ONLY for filtered datasets and counts normal cells.
+**Input:** Filtered CSV from step 4
+**Output:** `*_with_normal_counts.csv`
+**Time:** Depends on number of filtered datasets (typically 5-20 minutes)
 
-## Output CSV Columns
+## Output CSV Column Order
 
-- `collection_name` - Human-readable collection name
-- `dataset_title` - Human-readable dataset title
-- `organism` - Species
-- `tissue` - Tissue types
-- `disease` - Disease/condition
-- `cell_count` - Total cells
-- `normal_cell_count` - Normal/healthy cells only
-- `h5ad_url` - Direct download URL
-- Plus publication metadata (author, journal, year)
+The final CSV has 26 columns ordered for easy viewing and editing:
 
-## Common Filtering Examples
+**Human-readable fields (1-6):**
+1. collection_name
+2. dataset_title
+3. total_cell_count
+4. author_cell_type (empty - fill in manually)
+5. embedding (empty - fill in manually)
 
+**After step 5, normal_cell_count is inserted as column 3:**
+1. collection_name
+2. dataset_title
+3. normal_cell_count
+4. total_cell_count
+5. author_cell_type
+6. embedding
+
+**Publication & biological (7-12):**
+7. first_author
+8. journal
+9. year
+10. collection_url
+11. tissue
+12. disease
+
+**Technical IDs (13-20):**
+13-20. collection_id, collection_version_id, dataset_id, dataset_version_id, is_preprint, revised_at, visibility, organism
+
+**Static fields (21-25):**
+21-25. filter_normal, metric, save_scores, save_cluster_summary, save_annotation
+
+**Download URL (26):**
+26. h5ad_url
+
+## Common Examples
+
+### Lung datasets
 ```bash
-# Lung datasets (no preprints)
-python bin/5_filter_datasets.py \
+python bin/4_filter_datasets.py \
   --organism "Homo sapiens" \
   --tissue "lung" \
   --no-preprints \
   --output data/homo_sapiens_lung_harvester.csv
 
-# Pancreas datasets
-python bin/5_filter_datasets.py \
+python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv
+```
+
+### Pancreas datasets
+```bash
+python bin/4_filter_datasets.py \
   --organism "Homo sapiens" \
   --tissue "pancreas|isle" \
   --no-preprints \
   --output data/homo_sapiens_pancreas_harvester.csv
+
+python bin/5_count_normal_cells.py data/homo_sapiens_pancreas_harvester.csv
 ```
 
 ## File Structure
 
 ```
 .
-├── bin/                           # Scripts
+├── bin/
 │   ├── 1_fetch_collections.py
 │   ├── 2_generate_metadata_csv.py
 │   ├── 3_append_dataset_details.py
-│   ├── 4_count_normal_cells.py
-│   ├── 5_filter_datasets.py
+│   ├── 4_filter_datasets.py
+│   ├── 5_count_normal_cells.py
 │   └── run_pipeline.sh
-├── data/                          # Outputs
+├── data/
 │   ├── collections_metadata.json
 │   ├── all_datasets.csv
 │   ├── all_datasets_complete.csv
-│   ├── all_datasets_with_normal_counts.csv
-│   └── *_harvester.csv
-└── datasets_cache/                # H5AD cache (created by step 4)
+│   ├── *_harvester.csv
+│   └── *_with_normal_counts.csv
+└── datasets_cache/  # H5AD files (created by step 5)
 ```
+
+## Key Benefits
+
+- **Efficient:** Only downloads H5AD files you need (step 5 after filtering)
+- **Fast:** Most steps complete in minutes; only step 5 downloads large files
+- **Flexible:** Filter by any combination of organism, tissue, disease
+- **Clean:** Empty author_cell_type and embedding fields ready for manual entry
 
 ## Notes
 
-- Step 4 is the longest (30-60 min) as it downloads H5AD files
-- H5AD files are cached in `datasets_cache/` to avoid re-downloading
-- Delete `datasets_cache/` after completion to free disk space
+- Step 5 caches H5AD files in `datasets_cache/`
+- Delete cache after completion to free disk space
 - Normal cells identified by disease == "normal" or "PATO:0000461"
+- Tissue names vary - use regex patterns (e.g., "pancreas|isle")
 
 ## License
 

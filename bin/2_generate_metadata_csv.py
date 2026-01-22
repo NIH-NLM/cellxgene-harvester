@@ -21,23 +21,36 @@ INPUT_FILE = os.path.join(DATA_DIR, "collections_metadata.json")
 OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
 
 # CSV header with collection_name and dataset_title placeholders
+# CSV header with user-friendly ordering
 CSV_HEADER = [
-    "collection_url",
-    "collection_id",
-    "collection_version_id",
+    # Human-readable fields first (for easy editing)
     "collection_name",
-    "dataset_id",
-    "dataset_version_id",
-    "dataset_title",  # Will be filled in step 3
+    "dataset_title",
+    "total_cell_count",
+    "author_cell_type",
+    "embedding",
     "first_author",
     "journal",
-    "is_preprint",
     "year",
+    "collection_url",
     "tissue",
     "disease",
-    "organism",
+    # Technical IDs and metadata
+    "collection_id",
+    "collection_version_id",
+    "dataset_id",
+    "dataset_version_id",
+    "is_preprint",
     "revised_at",
     "visibility",
+    "organism",
+    # Static processing fields
+    "filter_normal",
+    "metric",
+    "save_scores",
+    "save_cluster_summary",
+    "save_annotation",
+    "h5ad_url",
 ]
 
 
@@ -183,22 +196,30 @@ def generate_csv():
         # Create a row for each dataset
         for ds in latest_datasets.values():
             row = {
-                "collection_url": collection_url,
-                "collection_id": collection_id,
-                "collection_version_id": collection_version_id,
+                # Human-readable fields (will be filled in subsequent steps)
                 "collection_name": collection_name,
-                "dataset_id": ds["dataset_id"],
-                "dataset_version_id": ds["dataset_version_id"],
                 "dataset_title": "",  # Will be filled in step 3
+                "total_cell_count": "",  # Will be filled in step 3
+                "author_cell_type": "",  # Empty for user to fill in
+                "embedding": "",  # Empty for user to fill in
                 "first_author": pub_metadata["first_author"],
                 "journal": pub_metadata["journal"],
-                "is_preprint": pub_metadata["is_preprint"],
                 "year": pub_metadata["year"],
+                "collection_url": collection_url,
                 "tissue": ds["tissue"],
                 "disease": ds["disease"],
-                "organism": ds["organism"],
+                # Technical IDs and metadata
+                "collection_id": collection_id,
+                "collection_version_id": collection_version_id,
+                "dataset_id": ds["dataset_id"],
+                "dataset_version_id": ds["dataset_version_id"],
+                "is_preprint": pub_metadata["is_preprint"],
                 "revised_at": ds["revised_at"],
                 "visibility": visibility,
+                "organism": ds["organism"],
+                # Static processing fields
+                **STATIC_FIELDS,
+                "h5ad_url": "",  # Will be filled in step 3
             }
             rows.append(row)
     

@@ -4,8 +4,11 @@ Step 3: Append dataset details (H5AD URLs, cell counts, titles)
 
 Fetches detailed information for each dataset using the CellxGene API:
 - Dataset title
-- Cell count
+- Total cell count
 - H5AD file download URL
+
+NOTE: This step does NOT download H5AD files - it only gets the URLs.
+H5AD files are downloaded in step 5, after filtering.
 
 Usage:
     python bin/3_append_dataset_details.py
@@ -40,7 +43,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         dataset_id: Dataset UUID
         
     Returns:
-        Tuple of (dataset_title, cell_count, h5ad_url)
+        Tuple of (dataset_title, total_cell_count, h5ad_url)
     """
     url = API_TEMPLATE.format(
         collection_id=collection_id,
@@ -60,7 +63,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         dataset_title = data.get("title", "")
         
         # Extract cell count
-        cell_count = str(data.get("cell_count", ""))
+        total_cell_count = str(data.get("cell_count", ""))
         
         # Extract H5AD URL
         h5ad_url = ""
@@ -69,7 +72,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
                 h5ad_url = asset.get("url", "")
                 break
         
-        return dataset_title, cell_count, h5ad_url
+        return dataset_title, total_cell_count, h5ad_url
         
     except requests.exceptions.Timeout:
         print(f"  ⚠ Warning: Timeout for {dataset_id}", file=sys.stderr)
@@ -101,7 +104,7 @@ def append_details():
     
     # Add new columns if they don't exist
     fieldnames = original_fieldnames.copy()
-    new_fields = ["cell_count", "h5ad_url"]
+    new_fields = ["total_cell_count", "h5ad_url"]
     for field in new_fields:
         if field not in fieldnames:
             fieldnames.append(field)
@@ -124,17 +127,17 @@ def append_details():
         # Skip if missing IDs
         if not collection_id or not dataset_id:
             row["dataset_title"] = ""
-            row["cell_count"] = ""
+            row["total_cell_count"] = ""
             row["h5ad_url"] = ""
             failed += 1
             continue
         
         # Fetch details
-        dataset_title, cell_count, h5ad_url = fetch_dataset_details(collection_id, dataset_id)
+        dataset_title, total_cell_count, h5ad_url = fetch_dataset_details(collection_id, dataset_id)
         
         # Update row
         row["dataset_title"] = dataset_title
-        row["cell_count"] = cell_count
+        row["total_cell_count"] = total_cell_count
         row["h5ad_url"] = h5ad_url
         
         if h5ad_url:

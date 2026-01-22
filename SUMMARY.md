@@ -71,14 +71,13 @@ This installs required packages: requests, pandas, scanpy
 bash bin/run_pipeline.sh
 ```
 
-This takes approximately 1-2 hours and generates:
+This takes approximately 30-60 minutes and generates:
 - `data/collections_metadata.json` - Raw API data
-- `data/all_datasets.csv` - Basic metadata
+- `data/all_datasets.csv` - Basic metadata (~7,000 datasets)
 - `data/all_datasets_complete.csv` - With H5AD URLs and titles
-- `data/all_datasets_with_normal_counts.csv` - Final output with normal cell counts
-- `data/homo_sapiens_lung_harvester.csv` - Filtered lung datasets
-- `data/homo_sapiens_pancreas_harvester.csv` - Filtered pancreas datasets
-- `data/homo_sapiens_kidney_harvester.csv` - Filtered kidney datasets
+- `data/homo_sapiens_lung_harvester.csv` - Filtered lung datasets (~50 datasets)
+- `data/homo_sapiens_lung_harvester_with_normal_counts.csv` - With normal cell counts
+- Similar files for pancreas and kidney
 
 ### 3. Or Run Individual Steps
 
@@ -92,15 +91,15 @@ python bin/2_generate_metadata_csv.py
 # Step 3: Add H5AD URLs (~15-20 minutes)
 python bin/3_append_dataset_details.py
 
-# Step 4: Count normal cells (~30-60 minutes)
-python bin/4_count_normal_cells.py
-
-# Step 5: Filter datasets (~1 second)
-python bin/5_filter_datasets.py \
+# Step 4: Filter datasets (~1 second)
+python bin/4_filter_datasets.py \
   --organism "Homo sapiens" \
   --tissue "lung" \
   --no-preprints \
-  --output data/custom_output.csv
+  --output data/homo_sapiens_lung_harvester.csv
+
+# Step 5: Count normal cells (~5-20 minutes for filtered datasets only)
+python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv
 ```
 
 ## Understanding the Pipeline
@@ -119,46 +118,61 @@ python bin/5_filter_datasets.py \
 ### Step 3: Add Dataset Details
 - Makes API call for each dataset to get:
   - Dataset title (human-readable name)
-  - Cell count (total cells)
+  - Total cell count
   - H5AD file download URL
+- Does NOT download H5AD files - only gets the URLs
 - Rate limited: 0.2s between requests
 - Time: ~15-20 minutes for 7,000 datasets
 
-### Step 4: Count Normal Cells (NEW - Critical for Quality Control)
-- Downloads each H5AD file (cached for reuse)
-- Opens file with scanpy
-- Counts cells where disease annotation == "normal"
-- Adds `normal_cell_count` column
-- This tells you how many cells are from healthy samples vs diseased
-- Longest step: 30-60 minutes depending on internet speed
-- Files cached in `datasets_cache/` to avoid re-downloading
-
-### Step 5: Filter Datasets
+### Step 4: Filter Datasets
 - Filter by organism (e.g., "Homo sapiens")
 - Filter by tissue using regex (e.g., "lung", "pancreas|isle")
 - Filter by publication status (--no-preprints flag)
+- Reduces 7,000 datasets to typically 50-100 filtered datasets
 - Fast: <1 second
+
+### Step 5: Count Normal Cells (Only for Filtered Datasets)
+- Downloads H5AD files ONLY for datasets that passed filtering
+- Opens file with scanpy
+- Counts cells where disease annotation == "normal"
+- Adds `normal_cell_count` column
+- Much faster than old approach: 5-20 minutes instead of 1-2 hours
+- Files cached in `datasets_cache/` to avoid re-downloading
 
 ## Output CSV Structure
 
-Your final CSV now includes:
+Your final CSV columns are ordered with human-readable fields first:
 
 ```
-collection_name            - "Human Lung Cell Atlas"
-collection_id              - UUID
-dataset_title              - "Lung epithelial cells"
-dataset_id                 - UUID
-organism                   - "Homo sapiens"
-tissue                     - "lung"
-disease                    - "normal"
-cell_count                 - 347970 (total cells)
-normal_cell_count          - 295000 (normal cells only)
-h5ad_url                   - https://datasets.cellxgene.cziscience.com/...
-first_author               - "Smith"
-journal                    - "Nature"
-year                       - "2023"
-is_preprint                - "FALSE"
+1.  collection_name            - "Human Lung Cell Atlas"
+2.  dataset_title              - "Lung epithelial cells"
+3.  normal_cell_count          - 295000 (normal cells only)
+4.  total_cell_count           - 347970 (total cells)
+5.  author_cell_type           - (empty - fill in manually)
+6.  embedding                  - (empty - fill in manually)
+7.  first_author               - "Smith"
+8.  journal                    - "Nature"
+9.  year                       - "2023"
+10. collection_url             - https://cellxgene.cziscience.com/collections/...
+11. tissue                     - "lung"
+12. disease                    - "normal"
+13. collection_id              - UUID
+14. collection_version_id      - UUID
+15. dataset_id                 - UUID
+16. dataset_version_id         - UUID
+17. is_preprint                - "FALSE"
+18. revised_at                 - "2023-01-15T..."
+19. visibility                 - "PUBLIC"
+20. organism                   - "Homo sapiens"
+21. filter_normal              - "TRUE"
+22. metric                     - "euclidean"
+23. save_scores                - "TRUE"
+24. save_cluster_summary       - "TRUE"
+25. save_annotation            - "TRUE"
+26. h5ad_url                   - https://datasets.cellxgene.cziscience.com/...
 ```
+
+The first 6 columns are designed for easy viewing and manual editing.
 
 ## Example Workflows
 
@@ -234,6 +248,39 @@ Tissues aren't standardized, so use regex patterns:
 ```bash
 python fetch_collections.py
 bash splitCollections.sh
+bash process_all_collections.sh
+python generate_csv_from_collections.py
+python append_h5ad_urls.py
+# Download ALL 7,000 H5AD files (hours, huge disk space)
+grep -i 'homo sapiens' ... > ...
+grep -i 'lung' ... > ...
+grep -i 'false' ... > ...
+```
+
+### After
+```bash
+bash bin/run_pipeline.sh
+# OR individual steps:
+python bin/1_fetch_collections.py
+python bin/2_generate_metadata_csv.py
+python bin/3_append_dataset_details.py
+python bin/4_filter_datasets.py --organism "Homo sapiens" --tissue "lung" --output filtered.csv
+python bin/5_count_normal_cells.py filtered.csv  # Only downloads filtered datasets
+```
+
+### Key Improvements
+- **HUGE efficiency gain:** Only download H5AD files for filtered datasets (step 5 after step 4)
+- Pipeline time reduced from 1-2 hours to 30-60 minutes
+- Disk space: Only downloads ~50-100 files instead of 7,000+
+- Steps reduced from 7+ to 5 clear steps
+- No intermediate JSON files (7,000+ eliminated)
+- Filter BEFORE downloading (critical improvement)
+- Added collection names (fixed API bug)
+- Added dataset titles
+- Added normal cell counting (but only for datasets you need)
+- Replaced grep with Python filtering
+- Comprehensive error handling
+- Clear documentation
 bash process_all_collections.sh
 python generate_csv_from_collections.py
 python append_h5ad_urls.py

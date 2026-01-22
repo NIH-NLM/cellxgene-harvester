@@ -12,9 +12,9 @@ Usage:
 """
 
 import os
-import sys
-import json
 import requests
+import json
+import sys
 
 # API endpoint (no visibility filter - retrieves all public collections)
 COLLECTIONS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections"
@@ -29,12 +29,10 @@ def fetch_collections():
     print("Fetching collections from CellxGene API...")
     print(f"API URL: {COLLECTIONS_API_URL}")
     
-    try:
-        response = requests.get(COLLECTIONS_API_URL, timeout=30)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: Failed to fetch collections: {e}", file=sys.stderr)
-        sys.exit(1)
+    response = requests.get(COLLECTIONS_API_URL)
+    
+    if response.status_code != 200:
+        raise Exception(f"ERROR: Failed to fetch collections (HTTP {response.status_code})")
     
     collections = response.json()
     
