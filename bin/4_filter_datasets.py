@@ -28,7 +28,7 @@ DEFAULT_INPUT = os.path.join(DATA_DIR, "all_datasets_complete.csv")
 
 
 def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None, 
-                   no_preprints=False, disease=None):
+                   no_preprints=False, exclude_cancer=False, disease=None):
     """
     Filter datasets based on criteria.
     
@@ -38,6 +38,7 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
         organism: Organism to filter for (exact match, case-insensitive)
         tissue_pattern: Regex pattern for tissue filtering
         no_preprints: If True, exclude preprints
+        exclude_cancer: If True, exclude cancer/carcinoma datasets
         disease: Disease to filter for (substring match)
     """
     
@@ -77,6 +78,12 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
             if is_preprint.upper() != "FALSE":
                 continue
         
+        # Exclude cancer/carcinoma datasets (no normal cells expected)
+        if exclude_cancer:
+            row_disease = row.get("disease", "").lower()
+            if "cancer" in row_disease or "carcinoma" in row_disease:
+                continue
+        
         # Filter by disease
         if disease:
             row_disease = row.get("disease", "")
@@ -104,6 +111,8 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
         print(f"  - Tissue pattern: {tissue_pattern}")
     if no_preprints:
         print(f"  - Exclude preprints: Yes")
+    if exclude_cancer:
+        print(f"  - Exclude cancer/carcinoma: Yes")
     if disease:
         print(f"  - Disease: {disease}")
     print(f"\nOutput saved to: {output_csv}")
@@ -118,15 +127,15 @@ Examples:
   # Filter for Homo sapiens
   python 4_filter_datasets.py --organism "Homo sapiens" --output homo_sapiens.csv
   
-  # Filter for Homo sapiens lung tissue (no preprints)
+  # Filter for Homo sapiens lung tissue (no preprints, exclude cancer)
   python 4_filter_datasets.py --organism "Homo sapiens" --tissue "lung" \\
-    --no-preprints --output homo_sapiens_lung_harvester.csv
+    --no-preprints --exclude-cancer --output homo_sapiens_lung_harvester.csv
   
   # Filter for Homo sapiens pancreas (including islets)
   python 4_filter_datasets.py --organism "Homo sapiens" --tissue "pancreas|isle" \\
-    --no-preprints --output homo_sapiens_pancreas_harvester.csv
+    --no-preprints --exclude-cancer --output homo_sapiens_pancreas_harvester.csv
   
-  # Filter for disease datasets
+  # Filter for disease datasets (if you DO want cancer data)
   python 4_filter_datasets.py --organism "Homo sapiens" --disease "cancer" \\
     --output homo_sapiens_cancer.csv
         """
@@ -161,6 +170,12 @@ Examples:
     )
     
     parser.add_argument(
+        "--exclude-cancer",
+        action="store_true",
+        help="Exclude cancer/carcinoma datasets (no normal cells expected in these)"
+    )
+    
+    parser.add_argument(
         "--disease",
         help="Filter by disease (case-insensitive substring match)"
     )
@@ -168,7 +183,7 @@ Examples:
     args = parser.parse_args()
     
     # Validate that at least one filter is provided
-    if not any([args.organism, args.tissue, args.no_preprints, args.disease]):
+    if not any([args.organism, args.tissue, args.no_preprints, args.exclude_cancer, args.disease]):
         print("WARNING: No filters specified. Output will be identical to input.")
     
     print("=" * 70)
@@ -181,6 +196,7 @@ Examples:
         organism=args.organism,
         tissue_pattern=args.tissue,
         no_preprints=args.no_preprints,
+        exclude_cancer=args.exclude_cancer,
         disease=args.disease
     )
 

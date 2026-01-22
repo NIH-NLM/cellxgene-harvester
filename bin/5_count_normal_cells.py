@@ -2,11 +2,11 @@
 """
 Step 5: Count normal cells in filtered datasets
 
-Downloads H5AD files for FILTERED datasets only and counts cells where disease == "normal".
+Downloads H5AD files for FILTERED datasets and counts cells where disease == "normal".
 Adds normal_cell_count column to the CSV.
 
-This step only processes datasets that passed filtering in step 4,
-so you only download the H5AD files you actually need.
+NOTE: This step trusts the filtering from Step 4. If you used --no-preprints in Step 4,
+only peer-reviewed datasets (is_preprint=FALSE) will be in the input CSV.
 
 Usage:
     python bin/5_count_normal_cells.py <filtered_csv>
@@ -180,7 +180,12 @@ def add_normal_counts(input_csv, output_csv):
         
         if normal_count is not None:
             row["normal_cell_count"] = str(normal_count)
-            print(f"  Success: {normal_count:,} normal cells (out of {total_cells:,} total)")
+            # Convert total_cells to int for formatting
+            try:
+                total_cells_int = int(total_cells) if total_cells else 0
+                print(f"  Success: {normal_count:,} normal cells (out of {total_cells_int:,} total)")
+            except ValueError:
+                print(f"  Success: {normal_count:,} normal cells (out of {total_cells} total)")
             successful += 1
         else:
             row["normal_cell_count"] = ""
