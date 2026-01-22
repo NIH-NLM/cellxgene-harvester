@@ -5,7 +5,10 @@ Step 4: Filter datasets by organism, tissue, and publication status
 Filters the complete dataset CSV based on:
 - Organism (exact match)
 - Tissue (regex pattern matching)
-- Publication status (preprints vs peer-reviewed)
+- Publication status (--no-preprints flag)
+
+IMPORTANT: When using --no-preprints, ONLY is_preprint=FALSE is accepted.
+Blank values and TRUE are both filtered out for strict quality control.
 
 Usage:
     python bin/4_filter_datasets.py --organism "Homo sapiens" --output filtered.csv
@@ -67,10 +70,11 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
             if not re.search(tissue_pattern, row_tissue, re.IGNORECASE):
                 continue
         
-        # Filter by preprint status
+        # Filter by preprint status (strict: ONLY accept FALSE)
         if no_preprints:
-            is_preprint = row.get("is_preprint", "")
-            if is_preprint.upper() == "TRUE":
+            is_preprint = row.get("is_preprint", "").strip()
+            # ONLY accept explicit FALSE - reject TRUE or blank
+            if is_preprint.upper() != "FALSE":
                 continue
         
         # Filter by disease
