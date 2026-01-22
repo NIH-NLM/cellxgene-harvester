@@ -20,6 +20,14 @@ DATA_DIR = "data"
 INPUT_FILE = os.path.join(DATA_DIR, "collections_metadata.json")
 OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
 
+STATIC_FIELDS = {
+    "filter_normal": "TRUE",
+    "metric": "euclidean",
+    "save_scores": "TRUE",
+    "save_cluster_summary": "TRUE",
+    "save_annotation": "TRUE",
+}
+
 # CSV header with collection_name and dataset_title placeholders
 # CSV header with user-friendly ordering
 CSV_HEADER = [
