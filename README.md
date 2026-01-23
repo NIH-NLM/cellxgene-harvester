@@ -172,3 +172,8 @@ python bin/5_count_normal_cells.py data/homo_sapiens_pancreas_harvester.csv
 ## License
 
 This pipeline accesses public data from CellxGene. Please cite original sources.
+
+## Acknowledgements
+
+Pipeline development assisted by Claude (Anthropic).
+
