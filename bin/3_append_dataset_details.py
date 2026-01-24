@@ -34,7 +34,7 @@ API_TEMPLATE = (
 REQUEST_DELAY = 0.2  # seconds between requests
 
 
-def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str, str]:
+def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str, str, str]:
     """
     Fetch dataset details from CellxGene API.
     
@@ -43,7 +43,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         dataset_id: Dataset UUID
         
     Returns:
-        Tuple of (dataset_title, total_cell_count, h5ad_url)
+        Tuple of (dataset_title, total_cell_count, h5ad_url, explorer_url)
     """
     url = API_TEMPLATE.format(
         collection_id=collection_id,
@@ -55,7 +55,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         
         if response.status_code != 200:
             print(f"  ⚠ Warning: HTTP {response.status_code} for {dataset_id}", file=sys.stderr)
-            return "", "", ""
+            return "", "", "", ""
         
         data = response.json()
         
@@ -72,17 +72,20 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
                 h5ad_url = asset.get("url", "")
                 break
         
-        return dataset_title, total_cell_count, h5ad_url
+        # Extract explorer URL
+        explorer_url = data.get("explorer_url", "")
+        
+        return dataset_title, total_cell_count, h5ad_url, explorer_url
         
     except requests.exceptions.Timeout:
         print(f"  ⚠ Warning: Timeout for {dataset_id}", file=sys.stderr)
-        return "", "", ""
+        return "", "", "", ""
     except requests.exceptions.RequestException as e:
         print(f"  ⚠ Warning: Request failed for {dataset_id}: {e}", file=sys.stderr)
-        return "", "", ""
+        return "", "", "", ""
     except Exception as e:
         print(f"  ⚠ Warning: Unexpected error for {dataset_id}: {e}", file=sys.stderr)
-        return "", "", ""
+        return "", "", "", ""
 
 
 def append_details():
@@ -102,12 +105,9 @@ def append_details():
     
     print(f"Loaded {len(rows)} datasets")
     
-    # Add new columns if they don't exist
+    # Fieldnames should already be correct from step 2
+    # Just use them as-is to preserve column order
     fieldnames = original_fieldnames.copy()
-    new_fields = ["total_cell_count", "h5ad_url"]
-    for field in new_fields:
-        if field not in fieldnames:
-            fieldnames.append(field)
     
     # Process each dataset
     print(f"\nFetching dataset details from CellxGene API...")
@@ -129,16 +129,18 @@ def append_details():
             row["dataset_title"] = ""
             row["total_cell_count"] = ""
             row["h5ad_url"] = ""
+            row["explorer_url"] = ""
             failed += 1
             continue
         
         # Fetch details
-        dataset_title, total_cell_count, h5ad_url = fetch_dataset_details(collection_id, dataset_id)
+        dataset_title, total_cell_count, h5ad_url, explorer_url = fetch_dataset_details(collection_id, dataset_id)
         
         # Update row
         row["dataset_title"] = dataset_title
         row["total_cell_count"] = total_cell_count
         row["h5ad_url"] = h5ad_url
+        row["explorer_url"] = explorer_url
         
         if h5ad_url:
             successful += 1

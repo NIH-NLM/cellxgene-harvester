@@ -41,6 +41,7 @@ CSV_HEADER = [
     "journal",
     "year",
     "collection_url",
+    "explorer_url",
     "tissue",
     "disease",
     # Technical IDs and metadata
@@ -129,6 +130,7 @@ def get_latest_dataset_versions(datasets):
         Dict mapping dataset_id to latest version metadata
     """
     latest_versions = {}
+    version_counts = {}  # Track how many versions per dataset
     
     for ds in datasets:
         if not isinstance(ds, dict):
@@ -137,6 +139,9 @@ def get_latest_dataset_versions(datasets):
         ds_id = ds.get("dataset_id", "")
         if not ds_id:
             continue
+        
+        # Count versions
+        version_counts[ds_id] = version_counts.get(ds_id, 0) + 1
         
         ds_version_id = ds.get("dataset_version_id", "")
         revised_at = ds.get("revised_at", "")
@@ -152,6 +157,13 @@ def get_latest_dataset_versions(datasets):
                 "disease": safe_label(ds.get("disease")),
                 "revised_at": revised_at,
             }
+    
+    # Report datasets with multiple versions
+    multiple_versions = {k: v for k, v in version_counts.items() if v > 1}
+    if multiple_versions:
+        print(f"  Note: Found {len(multiple_versions)} datasets with multiple versions")
+        for ds_id, count in multiple_versions.items():
+            print(f"    {ds_id}: {count} versions")
     
     return latest_versions
 
@@ -214,6 +226,7 @@ def generate_csv():
                 "journal": pub_metadata["journal"],
                 "year": pub_metadata["year"],
                 "collection_url": collection_url,
+                "explorer_url": "",  # Will be filled in step 3
                 "tissue": ds["tissue"],
                 "disease": ds["disease"],
                 # Technical IDs and metadata
@@ -243,6 +256,7 @@ def generate_csv():
     print(f"  Collections skipped (no datasets): {skipped_collections}")
     print(f"  Datasets written: {len(rows)}")
     print(f"\nOutput saved to: {OUTPUT_CSV}")
+    print(f"\nNote: If any datasets had multiple versions, only the latest was included.")
 
 
 if __name__ == "__main__":
