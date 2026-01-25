@@ -2,8 +2,8 @@
 """
 Step 2: Generate metadata CSV from collections
 
-Extracts collection and dataset IDs plus available metadata.
-Dataset titles and cell counts require Step 3 API calls.
+Extracts collection and dataset information into a CSV file.
+Includes collection names and basic metadata for each dataset.
 
 Usage:
     python bin/2_generate_metadata_csv.py
@@ -12,16 +12,68 @@ Usage:
 import os
 import sys
 import json
-import pandas as pd
+import csv
 from datetime import datetime
 
+# Input/Output configuration
 DATA_DIR = "data"
-INPUT_FILE = os.path.join(DATA_DIR, "collections.json")
-OUTPUT_CSV = os.path.join(DATA_DIR, "cellxgene_metadata.csv")
+INPUT_FILE = os.path.join(DATA_DIR, "collections_metadata.json")
+OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
+
+STATIC_FIELDS = {
+    "filter_normal": "TRUE",
+    "metric": "euclidean",
+    "save_scores": "TRUE",
+    "save_cluster_summary": "TRUE",
+    "save_annotation": "TRUE",
+}
+
+# CSV header with collection_name and dataset_title placeholders
+# CSV header with user-friendly ordering
+CSV_HEADER = [
+    # Human-readable fields first (for easy editing)
+    "collection_name",
+    "dataset_title",
+    "total_cell_count",
+    "author_cell_type",
+    "embedding",
+    "first_author",
+    "journal",
+    "year",
+    "collection_url",
+    "explorer_url",
+    "tissue",
+    "disease",
+    # Technical IDs and metadata
+    "collection_id",
+    "collection_version_id",
+    "dataset_id",
+    "dataset_version_id",
+    "is_preprint",
+    "revised_at",
+    "visibility",
+    "organism",
+    # Static processing fields
+    "filter_normal",
+    "metric",
+    "save_scores",
+    "save_cluster_summary",
+    "save_annotation",
+    "h5ad_url",
+]
 
 
 def safe_label(entry, sep=" | "):
-    """Extract labels from CellxGene metadata fields"""
+    """
+    Extract labels from CellxGene metadata fields.
+    
+    Args:
+        entry: List of dicts with 'label' keys, or other type
+        sep: Separator for multiple labels
+        
+    Returns:
+        String of joined labels or empty string
+    """
     if isinstance(entry, list):
         labels = [
             item.get("label", "")
@@ -32,9 +84,14 @@ def safe_label(entry, sep=" | "):
     return ""
 
 
-def extract_publication_metadata(collection):
-    """Extract publication metadata from collection"""
-    publisher = collection.get("publisher_metadata") or {}
+def extract_publication_metadata(collection_data):
+    """
+    Extract publication metadata from collection.
+    
+    Returns:
+        dict with first_author, journal, is_preprint, year
+    """
+    publisher = collection_data.get("publisher_metadata") or {}
     
     metadata = {
         "first_author": "",
@@ -62,81 +119,149 @@ def extract_publication_metadata(collection):
     return metadata
 
 
-def generate_metadata():
-    """Generate metadata CSV from collections JSON"""
+def get_latest_dataset_versions(datasets):
+    """
+    Get the latest version of each dataset.
     
+    Args:
+        datasets: List of dataset dicts from collection
+        
+    Returns:
+        Dict mapping dataset_id to latest version metadata
+    """
+    latest_versions = {}
+    version_counts = {}  # Track how many versions per dataset
+    
+    for ds in datasets:
+        if not isinstance(ds, dict):
+            continue
+            
+        ds_id = ds.get("dataset_id", "")
+        if not ds_id:
+            continue
+        
+        # Count versions
+        version_counts[ds_id] = version_counts.get(ds_id, 0) + 1
+        
+        ds_version_id = ds.get("dataset_version_id", "")
+        revised_at = ds.get("revised_at", "")
+        
+        # Keep the latest version based on revised_at timestamp
+        current = latest_versions.get(ds_id)
+        if not current or revised_at > current.get("revised_at", ""):
+            latest_versions[ds_id] = {
+                "dataset_id": ds_id,
+                "dataset_version_id": ds_version_id,
+                "organism": safe_label(ds.get("organism")),
+                "tissue": safe_label(ds.get("tissue")),
+                "disease": safe_label(ds.get("disease")),
+                "revised_at": revised_at,
+            }
+    
+    # Report datasets with multiple versions
+    multiple_versions = {k: v for k, v in version_counts.items() if v > 1}
+    if multiple_versions:
+        print(f"  Note: Found {len(multiple_versions)} datasets with multiple versions")
+        for ds_id, count in multiple_versions.items():
+            print(f"    {ds_id}: {count} versions")
+    
+    return latest_versions
+
+
+def generate_csv():
+    """Generate metadata CSV from collections JSON."""
+    
+    # Load collections
     if not os.path.exists(INPUT_FILE):
-        print(f"ERROR: {INPUT_FILE} not found", file=sys.stderr)
-        print("Run Step 1 first: python bin/1_fetch_collections.py", file=sys.stderr)
+        print(f"ERROR: Input file not found: {INPUT_FILE}", file=sys.stderr)
+        print("Please run '1_fetch_collections.py' first.", file=sys.stderr)
         sys.exit(1)
     
     print(f"Loading collections from: {INPUT_FILE}")
     with open(INPUT_FILE) as f:
         collections = json.load(f)
     
+    if not isinstance(collections, list):
+        print("ERROR: Invalid collections format", file=sys.stderr)
+        sys.exit(1)
+    
     print(f"Processing {len(collections)} collections...")
     
     rows = []
+    skipped_collections = 0
     
     for collection in collections:
         collection_id = collection.get("collection_id", "")
         collection_version_id = collection.get("collection_version_id", "")
         collection_name = collection.get("name", "")
         collection_url = collection.get("collection_url", "")
+        revised_at = collection.get("revised_at", "")
         visibility = collection.get("visibility", "")
+        
+        if not collection_id:
+            skipped_collections += 1
+            continue
         
         # Extract publication metadata
         pub_metadata = extract_publication_metadata(collection)
         
-        # Process each dataset
-        for dataset in collection.get("datasets", []):
-            dataset_id = dataset.get("dataset_id", "")
-            dataset_version_id = dataset.get("dataset_version_id", "")
-            revised_at = dataset.get("revised_at", "")
-            
-            # Extract organism, tissue, disease from dataset
-            organism = safe_label(dataset.get("organism"))
-            tissue = safe_label(dataset.get("tissue"))
-            disease = safe_label(dataset.get("disease"))
-            
+        # Get latest version of each dataset
+        datasets = collection.get("datasets", [])
+        if not datasets:
+            skipped_collections += 1
+            continue
+        
+        latest_datasets = get_latest_dataset_versions(datasets)
+        
+        # Create a row for each dataset
+        for ds in latest_datasets.values():
             row = {
+                # Human-readable fields (will be filled in subsequent steps)
                 "collection_name": collection_name,
-                "collection_id": collection_id,
-                "collection_version_id": collection_version_id,
-                "collection_url": collection_url,
-                "dataset_id": dataset_id,
-                "dataset_version_id": dataset_version_id,
-                "organism": organism,
-                "tissue": tissue,
-                "disease": disease,
-                "visibility": visibility,
-                "revised_at": revised_at,
+                "dataset_title": "",  # Will be filled in step 3
+                "total_cell_count": "",  # Will be filled in step 3
+                "author_cell_type": "",  # Empty for user to fill in
+                "embedding": "",  # Empty for user to fill in
                 "first_author": pub_metadata["first_author"],
                 "journal": pub_metadata["journal"],
                 "year": pub_metadata["year"],
+                "collection_url": collection_url,
+                "explorer_url": "",  # Will be filled in step 3
+                "tissue": ds["tissue"],
+                "disease": ds["disease"],
+                # Technical IDs and metadata
+                "collection_id": collection_id,
+                "collection_version_id": collection_version_id,
+                "dataset_id": ds["dataset_id"],
+                "dataset_version_id": ds["dataset_version_id"],
                 "is_preprint": pub_metadata["is_preprint"],
+                "revised_at": ds["revised_at"],
+                "visibility": visibility,
+                "organism": ds["organism"],
+                # Static processing fields
+                **STATIC_FIELDS,
+                "h5ad_url": "",  # Will be filled in step 3
             }
             rows.append(row)
     
-    df = pd.DataFrame(rows)
-    df.to_csv(OUTPUT_CSV, index=False)
+    # Write CSV
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(OUTPUT_CSV, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_HEADER)
+        writer.writeheader()
+        writer.writerows(rows)
     
-    print(f"\nGenerated {len(df)} dataset rows")
-    print(f"Saved: {OUTPUT_CSV}")
-    
-    # Show sample
-    print(f"\nSample of first row:")
-    print(f"  Collection: {df.iloc[0]['collection_name']}")
-    print(f"  Organism: {df.iloc[0]['organism']}")
-    print(f"  Tissue: {df.iloc[0]['tissue']}")
+    print(f"\nResults:")
+    print(f"  Total collections processed: {len(collections)}")
+    print(f"  Collections skipped (no datasets): {skipped_collections}")
+    print(f"  Datasets written: {len(rows)}")
+    print(f"\nOutput saved to: {OUTPUT_CSV}")
+    print(f"\nNote: If any datasets had multiple versions, only the latest was included.")
 
 
 if __name__ == "__main__":
-    print("="*70)
+    print("=" * 70)
     print("CellxGene Data Harvester - Step 2: Generate Metadata CSV")
-    print("="*70)
-    
-    generate_metadata()
-    
-    print(f"\nNext step (fetches titles and cell counts):")
-    print(f"  python bin/3_append_dataset_details.py")
+    print("=" * 70)
+    generate_csv()
+    print("\nNext step: Run 'python bin/3_append_dataset_details.py'")
