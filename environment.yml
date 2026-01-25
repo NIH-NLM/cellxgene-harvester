@@ -1,6 +1,7 @@
 name: cellxgene
 channels:
   - conda-forge
+  - tiledb
   - defaults
 dependencies:
   - python=3.11
@@ -8,5 +9,6 @@ dependencies:
   - scanpy
   - pandas
   - requests
+  - cellxgene-census
   - gh
   
