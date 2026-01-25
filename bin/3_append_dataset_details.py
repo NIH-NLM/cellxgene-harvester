@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Step 3: Append dataset details via API
+Step 3: Append dataset details (H5AD URLs, cell counts, titles)
 
-Fetches detailed information for each dataset using the correct API endpoint:
+Fetches detailed information for each dataset using the CellxGene API:
 - Dataset title
-- Total cell count  
+- Total cell count
 - H5AD file download URL
-- Explorer URL
 
-API endpoint: /curation/v1/collections/{collection_id}/datasets/{dataset_id}
+NOTE: This step does NOT download H5AD files - it only gets the URLs.
+H5AD files are downloaded in step 5, after filtering.
 
 Usage:
     python bin/3_append_dataset_details.py
@@ -16,15 +16,17 @@ Usage:
 
 import os
 import sys
-import pandas as pd
-import requests
+import csv
 import time
+import requests
+from typing import Tuple
 
-# Configuration
+# Input/Output configuration
 DATA_DIR = "data"
-INPUT_CSV = os.path.join(DATA_DIR, "cellxgene_metadata.csv")
-OUTPUT_CSV = os.path.join(DATA_DIR, "cellxgene_complete_metadata.csv")
+INPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
+OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets_complete.csv")
 
+# API configuration
 API_TEMPLATE = (
     "https://api.cellxgene.cziscience.com/curation/v1/"
     "collections/{collection_id}/datasets/{dataset_id}"
@@ -32,12 +34,16 @@ API_TEMPLATE = (
 REQUEST_DELAY = 0.2  # seconds between requests
 
 
-def fetch_dataset_details(collection_id: str, dataset_id: str):
+def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str, str, str]:
     """
     Fetch dataset details from CellxGene API.
     
+    Args:
+        collection_id: Collection UUID
+        dataset_id: Dataset UUID
+        
     Returns:
-        dict with dataset_title, total_cell_count, h5ad_url, explorer_url
+        Tuple of (dataset_title, total_cell_count, h5ad_url, explorer_url)
     """
     url = API_TEMPLATE.format(
         collection_id=collection_id,
@@ -48,14 +54,16 @@ def fetch_dataset_details(collection_id: str, dataset_id: str):
         response = requests.get(url, headers={"accept": "application/json"}, timeout=30)
         
         if response.status_code != 200:
-            print(f"  Warning: HTTP {response.status_code} for {dataset_id}")
-            return None
+            print(f"  ⚠ Warning: HTTP {response.status_code} for {dataset_id}", file=sys.stderr)
+            return "", "", "", ""
         
         data = response.json()
         
-        # Extract fields
+        # Extract dataset title
         dataset_title = data.get("title", "")
-        total_cell_count = data.get("cell_count", 0)
+        
+        # Extract cell count
+        total_cell_count = str(data.get("cell_count", ""))
         
         # Extract H5AD URL
         h5ad_url = ""
@@ -64,81 +72,77 @@ def fetch_dataset_details(collection_id: str, dataset_id: str):
                 h5ad_url = asset.get("url", "")
                 break
         
+        # Extract explorer URL
         explorer_url = data.get("explorer_url", "")
         
-        return {
-            "dataset_title": dataset_title,
-            "total_cell_count": total_cell_count,
-            "h5ad_url": h5ad_url,
-            "explorer_url": explorer_url
-        }
+        return dataset_title, total_cell_count, h5ad_url, explorer_url
         
+    except requests.exceptions.Timeout:
+        print(f"  ⚠ Warning: Timeout for {dataset_id}", file=sys.stderr)
+        return "", "", "", ""
+    except requests.exceptions.RequestException as e:
+        print(f"  ⚠ Warning: Request failed for {dataset_id}: {e}", file=sys.stderr)
+        return "", "", "", ""
     except Exception as e:
-        print(f"  Warning: Failed to fetch {dataset_id}: {e}")
-        return None
+        print(f"  ⚠ Warning: Unexpected error for {dataset_id}: {e}", file=sys.stderr)
+        return "", "", "", ""
 
 
-def append_dataset_details():
-    """Append dataset details to metadata CSV"""
+def append_details():
+    """Append dataset details to the metadata CSV."""
     
-    # Load input
+    # Load input CSV
     if not os.path.exists(INPUT_CSV):
         print(f"ERROR: Input file not found: {INPUT_CSV}", file=sys.stderr)
+        print("Please run '2_generate_metadata_csv.py' first.", file=sys.stderr)
         sys.exit(1)
     
     print(f"Loading datasets from: {INPUT_CSV}")
-    df = pd.read_csv(INPUT_CSV)
-    print(f"Loaded {len(df)} datasets")
+    with open(INPUT_CSV, newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        original_fieldnames = reader.fieldnames or []
     
-    # Add columns for details
-    df['dataset_title'] = ''
-    df['total_cell_count'] = 0
-    df['h5ad_url'] = ''
-    df['explorer_url'] = ''
+    print(f"Loaded {len(rows)} datasets")
     
-    # Also add fields that will be populated later
-    df['author_cell_type'] = ''
-    df['embedding'] = ''
-    df['first_author'] = ''
-    df['journal'] = ''
-    df['year'] = ''
-    df['tissue'] = ''
-    df['disease'] = ''
-    df['is_preprint'] = ''
-    df['revised_at'] = ''
-    df['visibility'] = ''
-    df['organism'] = ''
-    df['filter_normal'] = 'TRUE'
-    df['metric'] = 'euclidean'
-    df['save_scores'] = 'FALSE'
-    df['save_cluster_summary'] = 'FALSE'
-    df['save_annotation'] = 'FALSE'
+    # Fieldnames should already be correct from step 2
+    # Just use them as-is to preserve column order
+    fieldnames = original_fieldnames.copy()
     
-    print(f"\nFetching dataset details from API...")
-    print(f"(This takes ~{len(df) * REQUEST_DELAY / 60:.1f} minutes)")
+    # Process each dataset
+    print(f"\nFetching dataset details from CellxGene API...")
+    print(f"(This will take ~{len(rows) * REQUEST_DELAY / 60:.1f} minutes)")
     
     successful = 0
     failed = 0
     
-    for idx, row in df.iterrows():
-        collection_id = row['collection_id']
-        dataset_id = row['dataset_id']
+    for i, row in enumerate(rows, 1):
+        collection_id = row.get("collection_id", "")
+        dataset_id = row.get("dataset_id", "")
         
-        if (idx + 1) % 50 == 0:
-            print(f"Progress: {idx + 1}/{len(df)} ({(idx + 1)/len(df)*100:.1f}%)")
+        # Progress indicator
+        if i % 50 == 0:
+            print(f"Progress: {i}/{len(rows)} ({i/len(rows)*100:.1f}%)")
         
+        # Skip if missing IDs
         if not collection_id or not dataset_id:
+            row["dataset_title"] = ""
+            row["total_cell_count"] = ""
+            row["h5ad_url"] = ""
+            row["explorer_url"] = ""
             failed += 1
             continue
         
-        # Fetch details using BOTH collection_id and dataset_id
-        details = fetch_dataset_details(collection_id, dataset_id)
+        # Fetch details
+        dataset_title, total_cell_count, h5ad_url, explorer_url = fetch_dataset_details(collection_id, dataset_id)
         
-        if details:
-            df.at[idx, 'dataset_title'] = details['dataset_title']
-            df.at[idx, 'total_cell_count'] = details['total_cell_count']
-            df.at[idx, 'h5ad_url'] = details['h5ad_url']
-            df.at[idx, 'explorer_url'] = details['explorer_url']
+        # Update row
+        row["dataset_title"] = dataset_title
+        row["total_cell_count"] = total_cell_count
+        row["h5ad_url"] = h5ad_url
+        row["explorer_url"] = explorer_url
+        
+        if h5ad_url:
             successful += 1
         else:
             failed += 1
@@ -146,27 +150,22 @@ def append_dataset_details():
         # Rate limiting
         time.sleep(REQUEST_DELAY)
     
-    # Save
-    df.to_csv(OUTPUT_CSV, index=False)
+    # Write output CSV
+    with open(OUTPUT_CSV, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
     
     print(f"\nResults:")
-    print(f"  Total datasets: {len(df)}")
+    print(f"  Total datasets: {len(rows)}")
     print(f"  Successfully fetched: {successful}")
-    print(f"  Failed: {failed}")
-    print(f"\nSaved: {OUTPUT_CSV}")
-    
-    # Show sample
-    print(f"\nSample of first row:")
-    print(f"  Title: {df.iloc[0]['dataset_title']}")
-    print(f"  Cell count: {df.iloc[0]['total_cell_count']}")
+    print(f"  Failed/skipped: {failed}")
+    print(f"\nOutput saved to: {OUTPUT_CSV}")
 
 
 if __name__ == "__main__":
-    print("="*70)
+    print("=" * 70)
     print("CellxGene Data Harvester - Step 3: Append Dataset Details")
-    print("="*70)
-    
-    append_dataset_details()
-    
-    print(f"\nNext step:")
-    print(f"  python bin/4_filter_datasets.py --input data/cellxgene_complete_metadata.csv --organism 'Homo sapiens' --tissue lung --output filtered.csv")
+    print("=" * 70)
+    append_details()
+    print("\nNext step: Run 'python bin/4_filter_datasets.py' to filter results")
