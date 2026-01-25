@@ -107,7 +107,11 @@ Filter by organism, tissue, disease, and publication status.
 Queries CellxGene Census API for filtered datasets and counts normal adult cells.
 **Input:** Filtered CSV from step 4
 **Output:** `*_with_normal_counts.csv`
-**Captures:** Development stage labels and ontology IDs for each dataset
+**Populates from Census:** 
+- Embeddings (e.g., "umap|tsne|pca")
+- tissue_general (organ), development_stage
+- All ontology IDs (tissue, assay, cell_type, disease, development_stage, sex)
+- is_primary_data, donor_id_count, development_stage_summary
 **Filters:** Age >= 18 years (parsed from stage labels like "18-year-old") OR contains "adult"
 **Excludes:** Embryonic, fetal, child, adolescent stages
 **Time:** Fast! 1-5 minutes (no file downloads)
@@ -115,43 +119,43 @@ Queries CellxGene Census API for filtered datasets and counts normal adult cells
 
 ## Output CSV Column Order
 
-The final CSV has 30 columns ordered for easy viewing and editing:
+The final CSV has 39 columns organized with **human-readable fields first** (easy viewing) and **technical IDs last**:
 
-**Human-readable fields (1-6):**
-1. collection_name
-2. dataset_title
-3. total_cell_count
-4. author_cell_type (empty - fill in manually)
-5. embedding (empty - fill in manually)
-
-**After step 5, normal_cell_count and development stage columns are added:**
+**Columns 1-6: Core dataset info**
 1. collection_name
 2. dataset_title
 3. normal_cell_count (adult normal cells - added by step 5)
 4. total_cell_count
-5. author_cell_type
-6. embedding
+5. author_cell_type (empty - fill in manually)
+6. embedding (populated by step 5: e.g., "umap|tsne|pca")
 
-**Publication & biological (7-13):**
-7. first_author
-8. journal
-9. year
-10. collection_url
-11. explorer_url (dataset viewer URL)
-12. tissue
-13. disease
+**Columns 7-15: Human-readable metadata (VISIBLE - for easy review)**
+7. tissue_general (organ from Census - e.g., "lung", "kidney")
+8. tissue (specific tissue from Collections API)
+9. disease (from Collections API)
+10. development_stage (from Census - e.g., "adult", "25-year-old")
+11. first_author
+12. journal
+13. year
+14. collection_url
+15. explorer_url
 
-**Technical IDs (14-21):**
-14-21. collection_id, collection_version_id, dataset_id, dataset_version_id, is_preprint, revised_at, visibility, organism
+**Columns 16-29: Dataset technical IDs and processing fields**
+16-23. collection_id, collection_version_id, dataset_id, dataset_version_id, is_preprint, revised_at, visibility, organism
+24-28. filter_normal, metric, save_scores, save_cluster_summary, save_annotation
+29. h5ad_url
 
-**Static fields (22-26):**
-22-26. filter_normal, metric, save_scores, save_cluster_summary, save_annotation
-
-**Download & Development Stage Info (27-30):**
-27. h5ad_url
-28. development_stage_summary (e.g., "adult: 45000; fetal: 5000")
-29. primary_development_stage (most common stage label)
-30. primary_stage_ontology_id (HsapDv ID for primary stage)
+**Columns 30-39: Census ontology IDs and technical fields (RIGHT SIDE)**
+30. tissue_general_ontology_term_id
+31. tissue_ontology_term_id
+32. assay_ontology_term_id
+33. cell_type_ontology_term_id
+34. disease_ontology_term_id
+35. development_stage_ontology_term_id
+36. sex_ontology_term_id
+37. is_primary_data
+38. donor_id_count (number of unique donors)
+39. development_stage_summary (e.g., "adult: 45,000; 25-year-old: 3,000")
 
 ## Common Examples
 
@@ -212,7 +216,8 @@ python bin/5_count_normal_cells.py data/homo_sapiens_pancreas_harvester.csv
 - **Cancer filtering:** Step 4 with --exclude-cancer removes datasets with "cancer" or "carcinoma" in disease field
 - **Age-based filtering:** Step 5 counts cells with age >= 18 years (parsed from development stage labels like "18-year-old")
 - **Adult stage filtering:** Step 5 also includes any stage containing "adult"
-- **Development stage info:** Step 5 captures stage labels and HsapDv ontology IDs for review
+- **Census metadata:** Step 5 automatically populates embedding types, tissue_general (organ), development_stage, and all ontology IDs from Census
+- **Column organization:** Human-readable fields (cols 1-15) for easy viewing, technical fields and IDs (cols 16+) on the right
 - Blank or TRUE values are filtered out in Step 4 for quality control
 - Step 5 uses CellxGene Census API - no file downloads required!
 - Normal cells identified by disease == "normal" or "PATO:0000461"
