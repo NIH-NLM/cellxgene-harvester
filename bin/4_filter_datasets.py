@@ -20,8 +20,7 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
     
     # Filter by organism
     if organism:
-        # Handle NaN values by filling with empty string
-        df = df[df['organism'].fillna('').str.lower() == organism.lower()]
+        df = df[df['organism'].astype(str).str.lower() == organism.lower()]
         print(f"After organism filter: {len(df)} datasets")
     
     # Filter by tissue pattern (checks 'tissue' field from Collections API)
@@ -29,19 +28,19 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
     if tissue_pattern:
         pattern = re.compile(tissue_pattern, re.IGNORECASE)
         
-        # Check tissue field (from Collections API) - handle NaN
-        tissue_match = df['tissue'].fillna('').str.contains(pattern, na=False)
+        # Check tissue field (from Collections API) - convert to string to avoid dtype issues
+        tissue_match = df['tissue'].astype(str).str.contains(pattern, na=False)
         
         # Also check tissue_general if it exists (defensive coding)
         if 'tissue_general' in df.columns:
-            tissue_general_match = df['tissue_general'].fillna('').str.contains(pattern, na=False)
+            tissue_general_match = df['tissue_general'].astype(str).str.contains(pattern, na=False)
             df = df[tissue_match | tissue_general_match]
         else:
             df = df[tissue_match]
         
         print(f"After tissue filter: {len(df)} datasets")
     
-    # Exclude preprints (handle both boolean False and string "FALSE")
+    # Filter by preprint status
     if no_preprints:
         # Convert to string and compare case-insensitively
         preprint_values = df['is_preprint'].astype(str).str.lower()
@@ -51,8 +50,8 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
     # Exclude cancer
     if exclude_cancer:
         cancer_mask = (
-            df['disease'].fillna('').str.lower().str.contains('cancer', na=False) |
-            df['disease'].fillna('').str.lower().str.contains('carcinoma', na=False)
+            df['disease'].astype(str).str.lower().str.contains('cancer', na=False) |
+            df['disease'].astype(str).str.lower().str.contains('carcinoma', na=False)
         )
         df = df[~cancer_mask]
         print(f"After cancer filter: {len(df)} datasets")
@@ -64,28 +63,25 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
         
         spatial_mask = pd.Series([False] * len(df), index=df.index)
         for term in spatial_terms:
-            spatial_mask |= df['dataset_title'].fillna('').str.lower().str.contains(term, na=False)
-            spatial_mask |= df['disease'].fillna('').str.lower().str.contains(term, na=False)
-            spatial_mask |= df['tissue'].fillna('').str.lower().str.contains(term, na=False)
+            spatial_mask |= df['dataset_title'].astype(str).str.lower().str.contains(term, na=False)
+            spatial_mask |= df['disease'].astype(str).str.lower().str.contains(term, na=False)
+            spatial_mask |= df['tissue'].astype(str).str.lower().str.contains(term, na=False)
         
         df = df[~spatial_mask]
         print(f"After spatial filter: {len(df)} datasets")
     
     # Filter by disease
     if disease:
-        df = df[df['disease'].fillna('').str.lower().str.contains(disease.lower(), na=False)]
+        df = df[df['disease'].astype(str).str.lower().str.contains(disease.lower(), na=False)]
         print(f"After disease filter: {len(df)} datasets")
     
-    # Save
+    # Save filtered results
     df.to_csv(output_csv, index=False)
     
-    print(f"\n{'='*70}")
-    print(f"Filtering complete")
-    print(f"{'='*70}")
-    print(f"Initial datasets: {initial_count}")
-    print(f"Final datasets: {len(df)}")
-    print(f"Removed: {initial_count - len(df)}")
-    
+    print(f"\nFiltering Summary:")
+    print(f"  Original datasets: {initial_count}")
+    print(f"  Filtered datasets: {len(df)}")
+    print(f"  Removed: {initial_count - len(df)}")
     print(f"\nFilters applied:")
     if organism:
         print(f"  - Organism: {organism}")
