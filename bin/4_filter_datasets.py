@@ -20,15 +20,16 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
     
     # Filter by organism
     if organism:
-        df = df[df['organism'].str.lower() == organism.lower()]
+        # Handle NaN values by filling with empty string
+        df = df[df['organism'].fillna('').str.lower() == organism.lower()]
         print(f"After organism filter: {len(df)} datasets")
     
     # Filter by tissue pattern (checks 'tissue' field from Collections API)
-    # Note: 'tissue_general' is populated in Step 4 (Census), not available yet
+    # Note: 'tissue_general' is populated in Step 5 (Census), not available yet
     if tissue_pattern:
         pattern = re.compile(tissue_pattern, re.IGNORECASE)
         
-        # Check tissue field (from Collections API)
+        # Check tissue field (from Collections API) - handle NaN
         tissue_match = df['tissue'].fillna('').str.contains(pattern, na=False)
         
         # Also check tissue_general if it exists (defensive coding)
@@ -50,8 +51,8 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
     # Exclude cancer
     if exclude_cancer:
         cancer_mask = (
-            df['disease'].str.lower().str.contains('cancer', na=False) |
-            df['disease'].str.lower().str.contains('carcinoma', na=False)
+            df['disease'].fillna('').str.lower().str.contains('cancer', na=False) |
+            df['disease'].fillna('').str.lower().str.contains('carcinoma', na=False)
         )
         df = df[~cancer_mask]
         print(f"After cancer filter: {len(df)} datasets")
@@ -63,16 +64,16 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
         
         spatial_mask = pd.Series([False] * len(df), index=df.index)
         for term in spatial_terms:
-            spatial_mask |= df['dataset_title'].str.lower().str.contains(term, na=False)
-            spatial_mask |= df['disease'].str.lower().str.contains(term, na=False)
-            spatial_mask |= df['tissue'].str.lower().str.contains(term, na=False)
+            spatial_mask |= df['dataset_title'].fillna('').str.lower().str.contains(term, na=False)
+            spatial_mask |= df['disease'].fillna('').str.lower().str.contains(term, na=False)
+            spatial_mask |= df['tissue'].fillna('').str.lower().str.contains(term, na=False)
         
         df = df[~spatial_mask]
         print(f"After spatial filter: {len(df)} datasets")
     
     # Filter by disease
     if disease:
-        df = df[df['disease'].str.lower().str.contains(disease.lower(), na=False)]
+        df = df[df['disease'].fillna('').str.lower().str.contains(disease.lower(), na=False)]
         print(f"After disease filter: {len(df)} datasets")
     
     # Save
@@ -110,18 +111,18 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Filter for Homo sapiens lung tissue (recommended)
-  python 4_filter_datasets.py --input data/cellxgene_complete_metadata.csv \\
+  python 4_filter_datasets.py --input data/all_datasets_complete.csv \\
     --organism "Homo sapiens" --tissue "lung" \\
     --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_lung.csv
   
   # Filter for pancreas
-  python 4_filter_datasets.py --input data/cellxgene_complete_metadata.csv \\
+  python 4_filter_datasets.py --input data/all_datasets_complete.csv \\
     --organism "Homo sapiens" --tissue "pancreas|isle" \\
     --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_pancreas.csv
         """
     )
     
-    parser.add_argument("--input", default="data/cellxgene_full_metadata.csv")
+    parser.add_argument("--input", default="data/all_datasets_complete.csv")
     parser.add_argument("--output", required=True)
     parser.add_argument("--organism")
     parser.add_argument("--tissue")

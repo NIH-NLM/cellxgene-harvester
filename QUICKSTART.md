@@ -1,26 +1,20 @@
-# Quick Start Guide
+# Quick Start - Final Working Pipeline
 
-## New 4-Step Pipeline
-
-**Steps 2 and 3 have been consolidated!** Old Step 3 is gone. Steps renumbered:
-
-1. **Step 1:** Fetch collections
-2. **Step 2:** Generate complete metadata (includes everything!)
-3. **Step 3:** Filter datasets (was Step 4)
-4. **Step 4:** Count normal cells (was Step 5)
-
-## Quick Run
+## 5-Step Pipeline
 
 ```bash
-# Step 1: Fetch collections
+# Step 1: Fetch collections (5 seconds)
 python bin/1_fetch_collections.py
 
-# Step 2: Generate COMPLETE metadata
+# Step 2: Generate metadata CSV (10 seconds)
 python bin/2_generate_metadata_csv.py
 
-# Step 3: Filter datasets
-python bin/3_filter_datasets.py \
-  --input data/cellxgene_full_metadata.csv \
+# Step 3: Fetch dataset details via API (10-20 minutes for 2000+ datasets)
+python bin/3_append_dataset_details.py
+
+# Step 4: Filter datasets (1 second)
+python bin/4_filter_datasets.py \
+  --input data/all_datasets_complete.csv \
   --organism "Homo sapiens" \
   --tissue "lung" \
   --no-preprints \
@@ -28,92 +22,99 @@ python bin/3_filter_datasets.py \
   --exclude-spatial \
   --output data/homo_sapiens_lung_harvester.csv
 
-# Step 4: Count normal cells
-python bin/4_count_normal_cells.py data/homo_sapiens_lung_harvester.csv
+# Step 5: Count normal cells via Census API (1-5 minutes per dataset)
+python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv
 ```
 
-## Important Notes
+## File Flow
 
-### Tissue Filtering
-- **Step 3 filters on `tissue`** (from Collections API)
-  - Example: "lung", "lung parenchyma", "bronchial epithelium"
-- **Step 4 populates `tissue_general`** (from Census API)
-  - Example: "lung" (organ-level)
-- Use `--tissue` in Step 3 to filter specific tissues before counting
-
-### Python vs Python3
-- Use `python` (works in conda environments)
-- Pipeline uses `python` not `python3`
-
-### Boolean Fields
-- Step 3 handles both boolean `False` and string `"FALSE"` for preprints
-- Automatically converted for comparison
-
-## Verify Setup
-
-```bash
-# Delete old data
-rm -rf data/*
-
-# Run Steps 1-2
-python bin/1_fetch_collections.py
-python bin/2_generate_metadata_csv.py
-
-# Check the output has populated fields
-head -2 data/cellxgene_full_metadata.csv
-
-# You should see:
-# - dataset_title: actual titles
-# - total_cell_count: numbers > 0  
-# - tissue: populated
-# - organism: populated
+```
+Step 1: collections_metadata.json
+Step 2: all_datasets.csv
+Step 3: all_datasets_complete.csv
+Step 4: homo_sapiens_lung_harvester.csv
+Step 5: homo_sapiens_lung_harvester_with_normal_counts.csv
 ```
 
-## Test Filtering
+## Step 4 Examples
 
+### Lung
 ```bash
-# Filter for lung
-python bin/3_filter_datasets.py \
-  --input data/cellxgene_full_metadata.csv \
+python bin/4_filter_datasets.py \
+  --input data/all_datasets_complete.csv \
   --organism "Homo sapiens" \
   --tissue "lung" \
   --no-preprints \
   --exclude-cancer \
   --exclude-spatial \
-  --output data/lung_test.csv
-
-# Check results
-wc -l data/lung_test.csv
-# Should show multiple datasets
-
-head -2 data/lung_test.csv
-# Should show lung tissues
+  --output data/lung.csv
 ```
 
-## Full Pipeline
+### Pancreas (includes islets)
+```bash
+python bin/4_filter_datasets.py \
+  --input data/all_datasets_complete.csv \
+  --organism "Homo sapiens" \
+  --tissue "pancreas|isle" \
+  --no-preprints \
+  --exclude-cancer \
+  --exclude-spatial \
+  --output data/pancreas.csv
+```
+
+### Kidney
+```bash
+python bin/4_filter_datasets.py \
+  --input data/all_datasets_complete.csv \
+  --organism "Homo sapiens" \
+  --tissue "kidney" \
+  --no-preprints \
+  --exclude-cancer \
+  --exclude-spatial \
+  --output data/kidney.csv
+```
+
+## Complete Pipeline
 
 ```bash
-# Runs all 4 steps automatically
+# Runs all 5 steps automatically
 bash bin/run_pipeline.sh
 ```
 
-## Output Files
+## Key Points
 
-After Step 4:
-- `data/homo_sapiens_lung_harvester_with_normal_counts.csv` (39 columns)
-- `data/homo_sapiens_lung_harvester_with_normal_counts_log.txt` (detailed log)
+- Step 3 uses API endpoint: `/collections/{collection_id}/datasets/{dataset_id}`
+- Step 3 makes 2000+ API calls with 0.2 second delays (takes 10-20 minutes)
+- Step 4 filters use `all_datasets_complete.csv` as input
+- Step 5 uses Census API (no H5AD downloads needed!)
+- All filtering flags are optional but recommended
 
-## Key Features
+## Filter Options
 
-- **All pandas** - Fast vectorized operations
-- **Spatial filtering** - Excludes Visium, MERFISH, Xenium, etc.
-- **Age parsing** - Extracts age from "18-year-old", "25 year old"
-- **Adult filtering** - Only cells age >= 18 years
-- **Logging** - Complete log file for review
-- **Separated functions** - Clean, testable code
+```
+--organism "Homo sapiens"    Exact match
+--tissue "lung"              Regex pattern
+--tissue "pancreas|isle"     OR pattern
+--no-preprints               Only peer-reviewed (is_preprint=FALSE)
+--exclude-cancer             Remove cancer/carcinoma
+--exclude-spatial            Remove Visium, MERFISH, etc.
+--disease "normal"           Filter by disease
+```
 
----
+## Output
+
+Final CSV has 39 columns:
+- Columns 1-15: Human-readable (visible)
+- Columns 16-29: Technical IDs
+- Columns 30-39: Census ontology IDs and metadata
+
+Key columns:
+- `normal_cell_count` - Normal adult cells (age >= 18)
+- `total_cell_count` - Total cells in dataset
+- `embedding` - Available embeddings (umap|tsne|pca)
+- `tissue_general` - Organ level (from Census)
+- Development stage ontology IDs
 
 ## Credits
 
-Pipeline developed with assistance from **Claude (Sonnet 4.5)** by Anthropic.
+Pipeline developed with assistance from Claude (Sonnet 4.5) by Anthropic.
