@@ -2,12 +2,11 @@
 #
 # Run the complete CellxGene data harvesting pipeline
 #
-# 5 Steps:
+# 4 Steps (Step 3 removed - not needed):
 # 1. Fetch collections from API
-# 2. Generate basic metadata CSV
-# 3. Fetch dataset details (titles, cell counts) via API
-# 4. Filter by organism and tissue
-# 5. Count normal cells in filtered datasets
+# 2. Generate complete metadata CSV (extracts everything from collections.json)
+# 3. Filter by organism and tissue
+# 4. Count normal cells in filtered datasets
 
 set -e  # Exit on error
 
@@ -21,22 +20,17 @@ echo "======================================================================"
 echo ""
 
 # Step 1: Fetch collections
-echo "Step 1/5: Fetching collections..."
+echo "Step 1/4: Fetching collections..."
 python "$BIN_DIR/1_fetch_collections.py"
 echo ""
 
-# Step 2: Generate basic metadata CSV
-echo "Step 2/5: Generating basic metadata CSV..."
+# Step 2: Generate complete metadata CSV (no Step 3 needed!)
+echo "Step 2/4: Generating complete metadata CSV..."
 python "$BIN_DIR/2_generate_metadata_csv.py"
 echo ""
 
-# Step 3: Fetch dataset details
-echo "Step 3/5: Fetching dataset details (this takes 10-20 minutes)..."
-python "$BIN_DIR/3_append_dataset_details.py"
-echo ""
-
-# Step 4: Filter datasets
-echo "Step 4/5: Filtering datasets..."
+# Step 3: Filter datasets
+echo "Step 3/4: Filtering datasets..."
 echo ""
 
 mkdir -p "$DATA_DIR"
@@ -81,7 +75,7 @@ python "$BIN_DIR/4_filter_datasets.py" \
     --output "$DATA_DIR/homo_sapiens_kidney_harvester.csv"
 
 echo ""
-echo "Step 5/5: Counting normal cells (this takes time)..."
+echo "Step 4/4: Counting normal cells (this takes time)..."
 echo ""
 
 # Count normal cells for each filtered dataset
