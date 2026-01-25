@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 3: Filter datasets
+Step 4: Filter datasets
 Uses pandas for clean filtering operations
 """
 
@@ -110,12 +110,12 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Filter for Homo sapiens lung tissue (recommended)
-  python 3_filter_datasets.py --input data/cellxgene_full_metadata.csv \\
+  python 4_filter_datasets.py --input data/cellxgene_complete_metadata.csv \\
     --organism "Homo sapiens" --tissue "lung" \\
     --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_lung.csv
   
   # Filter for pancreas
-  python 3_filter_datasets.py --input data/cellxgene_full_metadata.csv \\
+  python 4_filter_datasets.py --input data/cellxgene_complete_metadata.csv \\
     --organism "Homo sapiens" --tissue "pancreas|isle" \\
     --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_pancreas.csv
         """

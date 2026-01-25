@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 4: Count normal cells using CellxGene Census API
+Step 5: Count normal cells using CellxGene Census API
 
 Clean pandas implementation with separated functions:
 - extract_age_from_stage() - Parse age from string
@@ -9,7 +9,7 @@ Clean pandas implementation with separated functions:
 - extract_census_metadata() - Extract all Census fields
 
 Usage:
-    python bin/4_count_normal_cells.py <filtered_csv>
+    python bin/5_count_normal_cells.py <filtered_csv>
 """
 
 import os
@@ -358,13 +358,13 @@ def process_all_datasets(input_csv, output_csv, logger):
 
 if __name__ == "__main__":
     print("="*70)
-    print("CellxGene Harvester - Step 4: Count Normal Cells")
+    print("CellxGene Harvester - Step 5: Count Normal Cells")
     print("="*70)
     
     if len(sys.argv) != 2:
-        print("\nUsage: python bin/4_count_normal_cells.py <filtered_csv>")
+        print("\nUsage: python bin/5_count_normal_cells.py <filtered_csv>")
         print("\nExample:")
-        print("  python bin/4_count_normal_cells.py data/homo_sapiens_lung_harvester.csv")
+        print("  python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv")
         sys.exit(1)
     
     input_csv = sys.argv[1]
