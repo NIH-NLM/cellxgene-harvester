@@ -1,109 +1,79 @@
 #!/usr/bin/env python3
 """
-Step 4: Filter datasets by organism, tissue, and publication status
-
-Filters the complete dataset CSV based on:
-- Organism (exact match)
-- Tissue (regex pattern matching)
-- Publication status (--no-preprints flag)
-
-IMPORTANT: When using --no-preprints, ONLY is_preprint=FALSE is accepted.
-Blank values and TRUE are both filtered out for strict quality control.
-
-Usage:
-    python bin/4_filter_datasets.py --organism "Homo sapiens" --output filtered.csv
-    python bin/4_filter_datasets.py --organism "Homo sapiens" --tissue "lung" --no-preprints
-    python bin/4_filter_datasets.py --organism "Homo sapiens" --tissue "pancreas|isle" --no-preprints
+Step 4: Filter datasets
+Uses pandas for clean filtering operations
 """
 
-import os
 import sys
-import csv
 import re
-import argparse
+import pandas as pd
 
-# Default configuration
-DATA_DIR = "data"
-DEFAULT_INPUT = os.path.join(DATA_DIR, "all_datasets_complete.csv")
-
-
-def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None, 
-                   no_preprints=False, exclude_cancer=False, disease=None):
-    """
-    Filter datasets based on criteria.
+def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
+                   no_preprints=False, exclude_cancer=False, exclude_spatial=False, disease=None):
+    """Filter datasets using pandas boolean indexing"""
     
-    Args:
-        input_csv: Input CSV file path
-        output_csv: Output CSV file path
-        organism: Organism to filter for (exact match, case-insensitive)
-        tissue_pattern: Regex pattern for tissue filtering
-        no_preprints: If True, exclude preprints
-        exclude_cancer: If True, exclude cancer/carcinoma datasets
-        disease: Disease to filter for (substring match)
-    """
+    # Load data
+    df = pd.read_csv(input_csv)
+    print(f"Loaded {len(df)} datasets from {input_csv}")
     
-    # Load input CSV
-    if not os.path.exists(input_csv):
-        print(f"ERROR: Input file not found: {input_csv}", file=sys.stderr)
-        sys.exit(1)
+    initial_count = len(df)
     
-    print(f"Loading datasets from: {input_csv}")
-    with open(input_csv, newline="") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-        fieldnames = reader.fieldnames or []
+    # Filter by organism
+    if organism:
+        df = df[df['organism'].str.lower() == organism.lower()]
+        print(f"After organism filter: {len(df)} datasets")
     
-    print(f"Loaded {len(rows)} datasets")
+    # Filter by tissue pattern
+    if tissue_pattern:
+        pattern = re.compile(tissue_pattern, re.IGNORECASE)
+        df = df[df['tissue'].fillna('').str.contains(pattern, na=False)]
+        print(f"After tissue filter: {len(df)} datasets")
     
-    # Apply filters
-    filtered_rows = []
+    # Exclude preprints
+    if no_preprints:
+        # Convert to string and compare case-insensitively
+        preprint_values = df['is_preprint'].astype(str).str.lower()
+        df = df[preprint_values == 'false']
+        print(f"After preprint filter: {len(df)} datasets")
     
-    for row in rows:
-        # Filter by organism
-        if organism:
-            row_organism = row.get("organism", "")
-            if organism.lower() not in row_organism.lower():
-                continue
+    # Exclude cancer
+    if exclude_cancer:
+        cancer_mask = (
+            df['disease'].str.lower().str.contains('cancer', na=False) |
+            df['disease'].str.lower().str.contains('carcinoma', na=False)
+        )
+        df = df[~cancer_mask]
+        print(f"After cancer filter: {len(df)} datasets")
+    
+    # Exclude spatial transcriptomics
+    if exclude_spatial:
+        spatial_terms = ['spatial', 'visium', 'slide-seq', 'slideseq', 'merfish',
+                        'seqfish', 'cosmx', 'xenium', 'stereo-seq', 'stereoseq']
         
-        # Filter by tissue (regex)
-        if tissue_pattern:
-            row_tissue = row.get("tissue", "")
-            if not re.search(tissue_pattern, row_tissue, re.IGNORECASE):
-                continue
+        spatial_mask = pd.Series([False] * len(df), index=df.index)
+        for term in spatial_terms:
+            spatial_mask |= df['dataset_title'].str.lower().str.contains(term, na=False)
+            spatial_mask |= df['disease'].str.lower().str.contains(term, na=False)
+            spatial_mask |= df['tissue'].str.lower().str.contains(term, na=False)
         
-        # Filter by preprint status (strict: ONLY accept FALSE)
-        if no_preprints:
-            is_preprint = row.get("is_preprint", "").strip()
-            # ONLY accept explicit FALSE - reject TRUE or blank
-            if is_preprint.upper() != "FALSE":
-                continue
-        
-        # Exclude cancer/carcinoma datasets (no normal cells expected)
-        if exclude_cancer:
-            row_disease = row.get("disease", "").lower()
-            if "cancer" in row_disease or "carcinoma" in row_disease:
-                continue
-        
-        # Filter by disease
-        if disease:
-            row_disease = row.get("disease", "")
-            if disease.lower() not in row_disease.lower():
-                continue
-        
-        filtered_rows.append(row)
+        df = df[~spatial_mask]
+        print(f"After spatial filter: {len(df)} datasets")
     
-    # Write output CSV
-    os.makedirs(os.path.dirname(output_csv) or ".", exist_ok=True)
-    with open(output_csv, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(filtered_rows)
+    # Filter by disease
+    if disease:
+        df = df[df['disease'].str.lower().str.contains(disease.lower(), na=False)]
+        print(f"After disease filter: {len(df)} datasets")
     
-    # Print summary
-    print(f"\nFiltering Summary:")
-    print(f"  Original datasets: {len(rows)}")
-    print(f"  Filtered datasets: {len(filtered_rows)}")
-    print(f"  Removed: {len(rows) - len(filtered_rows)}")
+    # Save
+    df.to_csv(output_csv, index=False)
+    
+    print(f"\n{'='*70}")
+    print(f"Filtering complete")
+    print(f"{'='*70}")
+    print(f"Initial datasets: {initial_count}")
+    print(f"Final datasets: {len(df)}")
+    print(f"Removed: {initial_count - len(df)}")
+    
     print(f"\nFilters applied:")
     if organism:
         print(f"  - Organism: {organism}")
@@ -113,82 +83,44 @@ def filter_datasets(input_csv, output_csv, organism=None, tissue_pattern=None,
         print(f"  - Exclude preprints: Yes")
     if exclude_cancer:
         print(f"  - Exclude cancer/carcinoma: Yes")
+    if exclude_spatial:
+        print(f"  - Exclude spatial transcriptomics: Yes")
     if disease:
         print(f"  - Disease: {disease}")
+    
     print(f"\nOutput saved to: {output_csv}")
 
-
-def main():
+if __name__ == "__main__":
+    import argparse
+    
     parser = argparse.ArgumentParser(
-        description="Filter CellxGene datasets by organism, tissue, and publication status",
+        description="Filter CellxGene datasets",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Filter for Homo sapiens
-  python 4_filter_datasets.py --organism "Homo sapiens" --output homo_sapiens.csv
-  
-  # Filter for Homo sapiens lung tissue (no preprints, exclude cancer)
+  # Filter for Homo sapiens lung tissue (recommended)
   python 4_filter_datasets.py --organism "Homo sapiens" --tissue "lung" \\
-    --no-preprints --exclude-cancer --output homo_sapiens_lung_harvester.csv
+    --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_lung.csv
   
-  # Filter for Homo sapiens pancreas (including islets)
+  # Filter for pancreas
   python 4_filter_datasets.py --organism "Homo sapiens" --tissue "pancreas|isle" \\
-    --no-preprints --exclude-cancer --output homo_sapiens_pancreas_harvester.csv
-  
-  # Filter for disease datasets (if you DO want cancer data)
-  python 4_filter_datasets.py --organism "Homo sapiens" --disease "cancer" \\
-    --output homo_sapiens_cancer.csv
+    --no-preprints --exclude-cancer --exclude-spatial --output homo_sapiens_pancreas.csv
         """
     )
     
-    parser.add_argument(
-        "--input",
-        default=DEFAULT_INPUT,
-        help=f"Input CSV file (default: {DEFAULT_INPUT})"
-    )
-    
-    parser.add_argument(
-        "--output",
-        required=True,
-        help="Output CSV file path"
-    )
-    
-    parser.add_argument(
-        "--organism",
-        help="Filter by organism (case-insensitive, e.g., 'Homo sapiens')"
-    )
-    
-    parser.add_argument(
-        "--tissue",
-        help="Filter by tissue using regex pattern (e.g., 'lung', 'pancreas|isle')"
-    )
-    
-    parser.add_argument(
-        "--no-preprints",
-        action="store_true",
-        help="Exclude preprints (only include peer-reviewed publications)"
-    )
-    
-    parser.add_argument(
-        "--exclude-cancer",
-        action="store_true",
-        help="Exclude cancer/carcinoma datasets (no normal cells expected in these)"
-    )
-    
-    parser.add_argument(
-        "--disease",
-        help="Filter by disease (case-insensitive substring match)"
-    )
+    parser.add_argument("--input", default="data/cellxgene_full_metadata.csv")
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--organism")
+    parser.add_argument("--tissue")
+    parser.add_argument("--no-preprints", action="store_true")
+    parser.add_argument("--exclude-cancer", action="store_true")
+    parser.add_argument("--exclude-spatial", action="store_true")
+    parser.add_argument("--disease")
     
     args = parser.parse_args()
     
-    # Validate that at least one filter is provided
-    if not any([args.organism, args.tissue, args.no_preprints, args.exclude_cancer, args.disease]):
+    if not any([args.organism, args.tissue, args.no_preprints, args.exclude_cancer, args.exclude_spatial, args.disease]):
         print("WARNING: No filters specified. Output will be identical to input.")
-    
-    print("=" * 70)
-    print("CellxGene Data Harvester - Step 4: Filter Datasets")
-    print("=" * 70)
     
     filter_datasets(
         input_csv=args.input,
@@ -197,9 +129,6 @@ Examples:
         tissue_pattern=args.tissue,
         no_preprints=args.no_preprints,
         exclude_cancer=args.exclude_cancer,
+        exclude_spatial=args.exclude_spatial,
         disease=args.disease
     )
-
-
-if __name__ == "__main__":
-    main()
