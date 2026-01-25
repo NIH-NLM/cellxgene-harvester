@@ -71,7 +71,7 @@ if __name__ == "__main__":
     print("="*70)
     
     append_dataset_details(
-        input_csv="data/cellxgene_full_metadata.csv",
+        input_csv="data/cellxgene_metadata.csv",
         output_csv="data/cellxgene_complete_metadata.csv"
     )
     
