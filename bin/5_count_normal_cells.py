@@ -203,7 +203,6 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
         logger.info(f"    Querying Census API...")
 
         with cellxgene_census.open_soma(census_version="latest") as census:
-            census_info = census["census_info"].read().concat()
             build_date = "2025-11-08"  # Latest stable release date
             
             adata = cellxgene_census.get_anndata(
