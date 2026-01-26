@@ -244,7 +244,7 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
         'development_stage_summary': dev_stage_summary
     }
 
-def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[dict]:
+def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dict]:
     """
     Process one dataset: query Census, filter by tissue, filter adults, count normal cells
     """
@@ -270,7 +270,7 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
             logger.info(f"    Census returned {initial_count:,} total cells")
 
             # FILTER BY TISSUE - Handle multiple patterns separated by |
-            if tissue_from_csv:
+            if tissue_filter:
                 # Split by | and strip whitespace
                 tissue_patterns = [t.strip() for t in tissue_from_csv.split('|')]
                 
@@ -312,7 +312,7 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
         return None
 
 
-def process_all_datasets(input_csv, output_csv, logger):
+def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     """Main processing loop using pandas"""
     
     # Load data
@@ -381,8 +381,7 @@ def process_all_datasets(input_csv, output_csv, logger):
             continue
         
         # Process
-        tissue = row.get('tissue','')
-        result = process_dataset(dataset_id, tissue, logger)
+        result = process_dataset(dataset_id, tissue_filter, logger)
         
         if result is not None:
             # Update row with all results
@@ -421,19 +420,31 @@ def process_all_datasets(input_csv, output_csv, logger):
     logger.info(f"Skipped: {stats['skipped']}")
     logger.info(f"\nOutput: {output_csv}")
 
-
 if __name__ == "__main__":
+    import argparse
+    
     print("="*70)
     print("CellxGene Harvester - Step 5: Count Normal Cells")
     print("="*70)
     
-    if len(sys.argv) != 2:
-        print("\nUsage: python bin/5_count_normal_cells.py <filtered_csv>")
-        print("\nExample:")
-        print("  python bin/5_count_normal_cells.py data/homo_sapiens_lung_harvester.csv")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description='Count normal cells from CellxGene Census API'
+    )
+    parser.add_argument(
+        '--input',
+        required=True,
+        help='Input CSV file (output from step 4)'
+    )
+    parser.add_argument(
+        '--tissue',
+        required=True,
+        help='Tissue(s) to filter (e.g., "liver" or "pancreas | islet of langerhans")'
+    )
     
-    input_csv = sys.argv[1]
+    args = parser.parse_args()
+    
+    input_csv = args.input
+    tissue_filter = args.tissue
     base = os.path.splitext(input_csv)[0]
     output_csv = f"{base}_with_normal_counts.csv"
     
@@ -442,6 +453,7 @@ if __name__ == "__main__":
     
     logger.info(f"Starting: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Input: {input_csv}")
+    logger.info(f"Tissue filter: {tissue_filter}")
     logger.info(f"Output: {output_csv}")
     logger.info(f"Log: {log_file}\n")
     
@@ -453,7 +465,8 @@ if __name__ == "__main__":
         logger.error("Install: conda install -c conda-forge cellxgene-census")
         sys.exit(1)
     
-    process_all_datasets(input_csv, output_csv, logger)
+    process_all_datasets(input_csv, output_csv, tissue_filter, logger)
     
     logger.info(f"\nCompleted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Log saved to: {log_file}")
+
