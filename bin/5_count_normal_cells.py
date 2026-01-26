@@ -204,7 +204,7 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
 
         with cellxgene_census.open_soma(census_version="latest") as census:
             census_info = census["census_info"].read().concat()
-            build_date = str(census_info["census_build_date"][0])
+            build_date = "2025-11-08"  # Latest stable release date
             
             adata = cellxgene_census.get_anndata(
                 census=census,
