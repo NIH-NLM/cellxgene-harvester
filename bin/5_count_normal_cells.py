@@ -72,33 +72,70 @@ def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
     Filter for adult cells (age >= 18 years).
     
     Strategy:
-    - Parse age from development_stage strings
-    - Include if age >= 18
-    - Include if unparseable (unknown = don't exclude)
+    1. Parse age from development_stage - include if >= 18
+    2. Check for "adult" keyword - include if present
+    3. Check for fetal/newborn keywords - EXCLUDE if present
+    4. If unparseable and no keywords - EXCLUDE (conservative)
     """
     if 'development_stage' not in obs_df.columns:
         logger.info(f"      No development_stage column - including all cells")
         return obs_df
     
-    # Parse ages
-    ages = obs_df['development_stage'].apply(extract_age_from_stage)
+    # Exclusion terms (fetal, embryonic, newborn)
+    EXCLUDE_TERMS = ['fetal', 'embryo', 'newborn', 'prenatal', 'lmp', 
+                     'post-fertilization', 'week post', 'Carnegie stage',
+                     'trimester', 'gestational']
     
-    # Include if: age >= 18 OR age is None (unparseable)
-    adult_mask = (ages >= 18) | ages.isna()
+    adult_mask = []
+    total_cells = len(obs_df)
+    cells_with_age = 0
+    cells_adult = 0
+    cells_child = 0
+    cells_excluded_fetal = 0
+    
+    for stage_val in obs_df['development_stage'].astype(str):
+        stage_lower = stage_val.lower()
+        
+        # Empty/null - EXCLUDE (conservative)
+        if not stage_val or stage_val == 'nan' or stage_val.strip() == '' or stage_val == 'None':
+            adult_mask.append(False)
+            continue
+        
+        # Check for exclusion terms (fetal, embryonic, etc.)
+        is_excluded = any(term in stage_lower for term in EXCLUDE_TERMS)
+        if is_excluded:
+            adult_mask.append(False)
+            cells_excluded_fetal += 1
+            continue
+        
+        # Check for "adult" keyword
+        if 'adult' in stage_lower:
+            adult_mask.append(True)
+            cells_adult += 1
+            continue
+        
+        # Try to parse age
+        age = extract_age_from_stage(stage_val)
+        if age is not None:
+            cells_with_age += 1
+            if age >= 18:
+                adult_mask.append(True)
+                cells_adult += 1
+            else:
+                adult_mask.append(False)
+                cells_child += 1
+        else:
+            # Unparseable and no "adult" keyword - EXCLUDE (conservative)
+            adult_mask.append(False)
     
     adult_df = obs_df[adult_mask]
-    
-    # Log stats
-    total_cells = len(obs_df)
-    cells_with_age = ages.notna().sum()
-    cells_adult = ((ages >= 18) & ages.notna()).sum()
-    cells_child = ((ages < 18) & ages.notna()).sum()
     
     logger.info(f"      Age filtering:")
     logger.info(f"        Total cells: {total_cells:,}")
     logger.info(f"        Cells with parseable age: {cells_with_age:,}")
-    logger.info(f"        Adult (age >= 18): {cells_adult:,}")
+    logger.info(f"        Adult (age >= 18 or contains 'adult'): {cells_adult:,}")
     logger.info(f"        Child (age < 18): {cells_child:,}")
+    logger.info(f"        Excluded (fetal/newborn): {cells_excluded_fetal:,}")
     logger.info(f"        After filter: {len(adult_df):,}")
     
     return adult_df
