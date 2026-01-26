@@ -319,7 +319,7 @@ def process_all_datasets(input_csv, output_csv, logger):
         
         if result is not None:
             # Update row with all results
-            df.loc[idx, 'normal_cell_count'] = result['normal_cell_count']
+            df.loc[idx, 'normal_cell_count'] = str(result['normal_cell_count'])
             df.loc[idx, 'embedding'] = result['embeddings']
             df.loc[idx, 'tissue_general'] = result['tissue_general']
             df.loc[idx, 'development_stage'] = result['census_development_stage']
@@ -331,7 +331,7 @@ def process_all_datasets(input_csv, output_csv, logger):
             df.loc[idx, 'development_stage_ontology_term_id'] = result['development_stage_ontology_term_id']
             df.loc[idx, 'sex_ontology_term_id'] = result['sex_ontology_term_id']
             df.loc[idx, 'is_primary_data'] = result['is_primary_data']
-            df.loc[idx, 'donor_id_count'] = result['donor_id_count']
+            df.loc[idx, 'donor_id_count'] = str(result['donor_id_count'])
             df.loc[idx, 'development_stage_summary'] = result['development_stage_summary']
             
             logger.info(f"  SUCCESS: {result['normal_cell_count']:,} normal cells")
