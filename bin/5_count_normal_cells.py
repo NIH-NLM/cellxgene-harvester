@@ -129,8 +129,7 @@ def count_normal_cells(obs_df: pd.DataFrame, logger) -> int:
     
     return int(normal_count)
 
-
-def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
+def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str, logger) -> dict:
     """Extract all Census metadata fields"""
     
     def get_most_common(column_name):
@@ -141,13 +140,26 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
                 return str(value_counts.index[0])
         return ''
     
-    # Extract embeddings from adata.obsm
+    # Extract embeddings using experimental API
     embeddings = []
-    if hasattr(adata, 'obsm') and adata.obsm is not None:
-        for key in adata.obsm.keys():
-            emb_name = key.replace('X_', '') if key.startswith('X_') else key
-            embeddings.append(emb_name)
+    try:
+        # Get all available embeddings for this dataset
+        embedding_data = cellxgene_census.experimental.get_embeddings(
+            census=census,
+            organism="Homo sapiens",
+            obs_value_filter=f"dataset_id == '{dataset_id}'"
+        )
+        # Extract embedding names from the returned data
+        if hasattr(embedding_data, 'keys'):
+            embeddings = list(embedding_data.keys())
+            embeddings = [e.replace('X_', '') if e.startswith('X_') else e for e in embeddings]
+
+    except Exception as e:
+        logger.warning(f"      Could not fetch embeddings: {e}")
+        embeddings = []
+
     embeddings_str = '|'.join(sorted(embeddings)) if embeddings else ''
+
     
     # Human-readable fields
     census_tissue = get_most_common('tissue')
@@ -208,8 +220,7 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
             adata = cellxgene_census.get_anndata(
                 census=census,
                 organism="Homo sapiens",
-                obs_value_filter=f"dataset_id == '{dataset_id}'",
-                obsm_layers=True
+                obs_value_filter=f"dataset_id == '{dataset_id}'"
             )
 
             if adata is None or adata.n_obs == 0:
@@ -235,7 +246,7 @@ def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[d
                 logger.info(f"    After tissue filter ({tissue_from_csv}): {len(obs_df):,} cells")
             
             # Extract metadata
-            metadata = extract_census_metadata(obs_df, adata, logger)
+            metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
 
             # Check if primary data - skip if not
             if metadata.get('is_primary_data', '').upper() != 'TRUE':
