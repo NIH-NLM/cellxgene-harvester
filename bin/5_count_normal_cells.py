@@ -150,13 +150,11 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
     embeddings_str = '|'.join(sorted(embeddings)) if embeddings else ''
     
     # Human-readable fields
-    tissue_general = get_most_common('tissue_general')
     census_tissue = get_most_common('tissue')
     census_disease = get_most_common('disease')
     census_development_stage = get_most_common('development_stage')
     
     # Ontology IDs
-    tissue_general_ontology_term_id = get_most_common('tissue_general_ontology_term_id')
     tissue_ontology_term_id = get_most_common('tissue_ontology_term_id')
     assay_ontology_term_id = get_most_common('assay_ontology_term_id')
     cell_type_ontology_term_id = get_most_common('cell_type_ontology_term_id')
@@ -176,7 +174,6 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
         dev_stage_summary = "; ".join(parts)
     
     logger.info(f"    Census metadata:")
-    logger.info(f"      Tissue (general): {tissue_general or 'N/A'}")
     logger.info(f"      Tissue (specific): {census_tissue or 'N/A'}")
     logger.info(f"      Dev stages: {dev_stage_summary or 'N/A'}")
     logger.info(f"      Embeddings: {embeddings_str or 'None'}")
@@ -184,11 +181,9 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
     
     return {
         'embeddings': embeddings_str,
-        'tissue_general': tissue_general,
         'census_tissue': census_tissue,
         'census_disease': census_disease,
         'census_development_stage': census_development_stage,
-        'tissue_general_ontology_term_id': tissue_general_ontology_term_id,
         'tissue_ontology_term_id': tissue_ontology_term_id,
         'assay_ontology_term_id': assay_ontology_term_id,
         'cell_type_ontology_term_id': cell_type_ontology_term_id,
@@ -200,47 +195,69 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
         'development_stage_summary': dev_stage_summary
     }
 
-
-def process_dataset(dataset_id: str, logger) -> Optional[dict]:
+def process_dataset(dataset_id: str, tissue_from_csv: str, logger) -> Optional[dict]:
     """
-    Process one dataset: query Census, filter adults, count normal cells
+    Process one dataset: query Census, filter by tissue, filter adults, count normal cells
     """
     try:
         logger.info(f"    Querying Census API...")
-        
-        with cellxgene_census.open_soma(census_version="stable") as census:
+
+        with cellxgene_census.open_soma(census_version="latest") as census:
+            census_info = census["census_info"].read().concat()
+            build_date = str(census_info["census_build_date"][0])
+            
             adata = cellxgene_census.get_anndata(
                 census=census,
                 organism="Homo sapiens",
-                obs_value_filter=f"dataset_id == '{dataset_id}'"
+                obs_value_filter=f"dataset_id == '{dataset_id}'",
+                obsm_layers=True
             )
-            
+
             if adata is None or adata.n_obs == 0:
                 logger.warning(f"    WARNING: Census returned 0 cells")
                 logger.warning(f"      Dataset may not be in Census or ID mismatch")
                 return None
-            
+
             obs_df = adata.obs
-            total_count = len(obs_df)
-            logger.info(f"    Census returned {total_count:,} total cells")
+            initial_count = len(obs_df)
+            logger.info(f"    Census returned {initial_count:,} total cells")
+
+            # FILTER BY TISSUE - Handle multiple patterns separated by |
+            if tissue_from_csv:
+                # Split by | and strip whitespace
+                tissue_patterns = [t.strip() for t in tissue_from_csv.split('|')]
+                
+                # Create mask that matches ANY of the patterns
+                tissue_mask = pd.Series([False] * len(obs_df), index=obs_df.index)
+                for pattern in tissue_patterns:
+                    tissue_mask |= obs_df['tissue'].str.contains(pattern, case=False, na=False, regex=False)
+                
+                obs_df = obs_df[tissue_mask]
+                logger.info(f"    After tissue filter ({tissue_from_csv}): {len(obs_df):,} cells")
             
             # Extract metadata
             metadata = extract_census_metadata(obs_df, adata, logger)
-            
+
+            # Check if primary data - skip if not
+            if metadata.get('is_primary_data', '').upper() != 'TRUE':
+                logger.warning(f"    SKIPPED: is_primary_data = {metadata.get('is_primary_data')}")
+                return None
+
             # Filter for adults
             adult_df = filter_adult_cells(obs_df, logger)
             adult_count = len(adult_df)
-            
+
             # Count normal cells in adult population
             normal_cell_count = count_normal_cells(adult_df, logger)
-            
+
             return {
                 'normal_cell_count': normal_cell_count,
-                'total_count': total_count,
+                'total_count': len(obs_df),  # Count after tissue filter
                 'adult_count': adult_count,
+                'build_date': build_date,
                 **metadata
             }
-            
+
     except Exception as e:
         logger.error(f"    ERROR: {e}")
         import traceback
@@ -257,8 +274,7 @@ def process_all_datasets(input_csv, output_csv, logger):
     
     # Define new columns
     new_columns = [
-        'normal_cell_count', 'tissue_general', 'development_stage',
-        'tissue_general_ontology_term_id', 'tissue_ontology_term_id',
+        'normal_cell_count', 'development_stage',
         'assay_ontology_term_id', 'cell_type_ontology_term_id',
         'disease_ontology_term_id', 'development_stage_ontology_term_id',
         'sex_ontology_term_id', 'is_primary_data', 'donor_id_count',
@@ -277,13 +293,13 @@ def process_all_datasets(input_csv, output_csv, logger):
     column_order = [
         'collection_name', 'dataset_title', 'normal_cell_count', 'total_cell_count',
         'author_cell_type', 'embedding',
-        'tissue_general', 'tissue', 'disease', 'development_stage',
+        'tissue', 'disease', 'development_stage',
         'first_author', 'journal', 'year', 'collection_url', 'explorer_url',
         'collection_id', 'collection_version_id', 'dataset_id', 'dataset_version_id',
         'is_preprint', 'revised_at', 'visibility', 'organism',
         'filter_normal', 'metric', 'save_scores', 'save_cluster_summary', 'save_annotation',
         'h5ad_url',
-        'tissue_general_ontology_term_id', 'tissue_ontology_term_id',
+        'tissue_ontology_term_id',
         'assay_ontology_term_id', 'cell_type_ontology_term_id',
         'disease_ontology_term_id', 'development_stage_ontology_term_id',
         'sex_ontology_term_id', 'is_primary_data', 'donor_id_count',
@@ -318,15 +334,15 @@ def process_all_datasets(input_csv, output_csv, logger):
             continue
         
         # Process
-        result = process_dataset(dataset_id, logger)
+        tissue = row.get('tissue','')
+        result = process_dataset(dataset_id, tissue, logger)
         
         if result is not None:
             # Update row with all results
+            df.loc[idx, 'revised_at'] = result['build_date']
             df.loc[idx, 'normal_cell_count'] = str(result['normal_cell_count'])
             df.loc[idx, 'embedding'] = result['embeddings']
-            df.loc[idx, 'tissue_general'] = result['tissue_general']
             df.loc[idx, 'development_stage'] = result['census_development_stage']
-            df.loc[idx, 'tissue_general_ontology_term_id'] = result['tissue_general_ontology_term_id']
             df.loc[idx, 'tissue_ontology_term_id'] = result['tissue_ontology_term_id']
             df.loc[idx, 'assay_ontology_term_id'] = result['assay_ontology_term_id']
             df.loc[idx, 'cell_type_ontology_term_id'] = result['cell_type_ontology_term_id']
