@@ -269,6 +269,9 @@ def process_all_datasets(input_csv, output_csv, logger):
     for col in new_columns:
         if col not in df.columns:
             df[col] = ''
+            
+    # Force all new columns to object dtype (allows any value type)
+    df[new_columns] = df[new_columns].astype(object)
     
     # Define column order
     column_order = [
