@@ -272,7 +272,7 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
             # FILTER BY TISSUE - Handle multiple patterns separated by |
             if tissue_filter:
                 # Split by | and strip whitespace
-                tissue_patterns = [t.strip() for t in tissue_from_csv.split('|')]
+                tissue_patterns = [t.strip() for t in tissue_filter.split('|')]
                 
                 # Create mask that matches ANY of the patterns
                 tissue_mask = pd.Series([False] * len(obs_df), index=obs_df.index)
