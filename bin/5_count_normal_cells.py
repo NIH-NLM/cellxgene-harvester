@@ -201,7 +201,7 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, logger) -> dict:
     }
 
 
-def process_dataset(dataset_version_id: str, logger) -> Optional[dict]:
+def process_dataset(dataset_id: str, logger) -> Optional[dict]:
     """
     Process one dataset: query Census, filter adults, count normal cells
     """
@@ -212,7 +212,7 @@ def process_dataset(dataset_version_id: str, logger) -> Optional[dict]:
             adata = cellxgene_census.get_anndata(
                 census=census,
                 organism="Homo sapiens",
-                obs_value_filter=f"dataset_id == '{dataset_version_id}'"
+                obs_value_filter=f"dataset_id == '{dataset_id}'"
             )
             
             if adata is None or adata.n_obs == 0:
@@ -303,19 +303,19 @@ def process_all_datasets(input_csv, output_csv, logger):
     stats = {'successful': 0, 'failed': 0, 'skipped': 0}
     
     for idx, row in df.iterrows():
-        dataset_version_id = row.get('dataset_version_id', '')
+        dataset_id = row.get('dataset_id', '')
         total_cells_csv = row.get('total_cell_count', 0)
         
-        logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_version_id}")
+        logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
         
-        if not dataset_version_id:
-            logger.warning(f"  SKIPPED: Missing dataset_version_id")
+        if not dataset_id:
+            logger.warning(f"  SKIPPED: Missing dataset_id")
             stats['skipped'] += 1
             continue
         
         # Process
-        result = process_dataset(dataset_version_id, logger)
+        result = process_dataset(dataset_id, logger)
         
         if result is not None:
             # Update row with all results
