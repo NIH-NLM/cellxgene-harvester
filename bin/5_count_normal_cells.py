@@ -269,18 +269,17 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
             initial_count = len(obs_df)
             logger.info(f"    Census returned {initial_count:,} total cells")
 
-            # FILTER BY TISSUE - Handle multiple patterns separated by |
-            if tissue_filter:
-                # Split by | and strip whitespace
-                tissue_patterns = [t.strip() for t in tissue_filter.split('|')]
-                
-                # Create mask that matches ANY of the patterns
-                tissue_mask = pd.Series([False] * len(obs_df), index=obs_df.index)
-                for pattern in tissue_patterns:
-                    tissue_mask |= obs_df['tissue'].str.contains(pattern, case=False, na=False, regex=False)
-                
-                obs_df = obs_df[tissue_mask]
-                logger.info(f"    After tissue filter ({tissue_from_csv}): {len(obs_df):,} cells")
+            # Always FILTER BY TISSUE - Handle multiple patterns separated by |
+            # Split by | and strip whitespace
+            tissue_patterns = [t.strip() for t in tissue_filter.split('|')]
+            
+            # Create mask that matches ANY of the patterns
+            tissue_mask = pd.Series([False] * len(obs_df), index=obs_df.index)
+            for pattern in tissue_patterns:
+                tissue_mask |= obs_df['tissue'].str.contains(pattern, case=False, na=False, regex=False)
+            
+            obs_df = obs_df[tissue_mask]
+            logger.info(f"    After tissue filter ({tissue_filter}): {len(obs_df):,} cells")
             
             # Extract metadata
             metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
