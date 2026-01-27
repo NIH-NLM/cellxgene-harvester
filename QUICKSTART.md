@@ -181,27 +181,27 @@ python bin/6_final_cleanup.py data/homo_sapiens_intestine_harvester_with_normal_
 
 ## Common Mistakes
 
-❌ **Different tissue in Step 4 vs Step 5:**
+**Different tissue in Step 4 vs Step 5:**
 ```bash
 # WRONG - tissue patterns don't match
 --tissue "pancreas"              # Step 4
 --tissue "pancreas | islet"      # Step 5 - DIFFERENT!
 ```
 
-✅ **Correct - identical patterns:**
+**Correct - identical patterns:**
 ```bash
 # RIGHT - exact same pattern
 --tissue "pancreas | islet of langerhans"  # Step 4
 --tissue "pancreas | islet of langerhans"  # Step 5 - SAME!
 ```
 
-❌ **Wrong Step 5 arguments (old style):**
+**Wrong Step 5 arguments (old style):**
 ```bash
 # WRONG - old argument style
 python bin/5_count_normal_cells.py data/lung.csv
 ```
 
-✅ **Correct Step 5 arguments:**
+**Correct Step 5 arguments:**
 ```bash
 # RIGHT - new argument style
 python bin/5_count_normal_cells.py --input data/lung.csv --tissue "lung"
@@ -212,7 +212,7 @@ python bin/5_count_normal_cells.py --input data/lung.csv --tissue "lung"
 Final CSV (`*_final.csv`) contains:
 
 **Key columns:**
-- `normal_cell_count` - Normal adult cells for tissue of interest ⭐
+- `normal_cell_count` - Normal adult cells for tissue of interest
 - `total_cell_count` - Total cells in entire dataset
 - `tissue` - All tissues in dataset
 - `development_stage` - Most common stage
