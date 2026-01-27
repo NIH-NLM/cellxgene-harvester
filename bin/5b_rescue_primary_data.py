@@ -463,8 +463,9 @@ if __name__ == "__main__":
     input_csv = args.input
     tissue_filter = args.tissue
     
-    # Output goes back to same file (fills in blank rows)
-    output_csv = input_csv  # Overwrites input
+    # Output to new file with _rescue suffix
+    base = input_csv.replace('_with_normal_counts.csv', '')
+    output_csv = f"{base}_with_normal_counts_rescue.csv"
     
     # Setup logging
     log_file = input_csv.replace('.csv', '_rescue_log.txt')
@@ -486,7 +487,7 @@ if __name__ == "__main__":
     logger.info(f"Starting RESCUE MODE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Input: {input_csv}")
     logger.info(f"Tissue filter: {tissue_filter}")
-    logger.info(f"Output: {output_csv} (overwrites input)")
+    logger.info(f"Output: {output_csv} (new file with _rescue suffix)")
     logger.info(f"Log: {log_file}")
     logger.info(f"")
     logger.info(f"RESCUE MODE: Re-processing datasets skipped due to is_primary_data == False")

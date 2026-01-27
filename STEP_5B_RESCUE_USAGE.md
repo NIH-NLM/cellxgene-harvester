@@ -30,12 +30,13 @@ python bin/5b_rescue_primary_data.py \
    - Age >= 18
    - Normal disease
 5. Fills in `normal_cell_count` and other Census fields
-6. Overwrites the input file with rescued data
+6. **Writes to new file with `_rescue` suffix**
 
 ## Output
 
-- **Overwrites** the input CSV with rescued data filled in
+- **New file:** `*_with_normal_counts_rescue.csv`
 - Creates log file: `*_rescue_log.txt`
+- **Does NOT overwrite original** (preserves your colleague's manual edits)
 
 ## Example: Lung Dataset
 
@@ -45,17 +46,21 @@ python bin/5_count_normal_cells.py \
   --input data/homo_sapiens_lung_harvester.csv \
   --tissue "lung"
 
-# Output: 49 datasets with data, 37 with blank normal_cell_count
+# Output: data/homo_sapiens_lung_harvester_with_normal_counts.csv
+# Has 49 datasets with data, 37 with blank normal_cell_count
 
 # Step 5b rescues the 37 skipped datasets
 python bin/5b_rescue_primary_data.py \
   --input data/homo_sapiens_lung_harvester_with_normal_counts.csv \
   --tissue "lung"
 
-# Output: All 86 datasets now have data (rescued Sikkema and 36 others)
+# Output: data/homo_sapiens_lung_harvester_with_normal_counts_rescue.csv
+# All 86 datasets now have data (rescued Sikkema and 36 others)
 
-# Step 6 cleanup (optional - removes datasets with 0 counts)
-python bin/6_final_cleanup.py data/homo_sapiens_lung_harvester_with_normal_counts.csv
+# Step 6 cleanup (removes datasets with 0 counts)
+python bin/6_final_cleanup.py data/homo_sapiens_lung_harvester_with_normal_counts_rescue.csv
+
+# Final: data/homo_sapiens_lung_harvester_with_normal_counts_rescue_final.csv
 ```
 
 ## Datasets Rescued
@@ -83,7 +88,7 @@ For the lung dataset, this rescues:
 Check the rescued Sikkema dataset:
 
 ```bash
-grep "Sikkema" data/homo_sapiens_lung_harvester_with_normal_counts.csv | cut -d',' -f3
+grep "Sikkema" data/homo_sapiens_lung_harvester_with_normal_counts_rescue.csv | cut -d',' -f3
 ```
 
 Should show a number (not blank) after running rescue script.
@@ -104,14 +109,17 @@ python bin/4_filter_datasets.py --input data/all_datasets_complete.csv \
 python bin/5_count_normal_cells.py \
   --input data/homo_sapiens_lung_harvester.csv \
   --tissue "lung"
+# Output: data/homo_sapiens_lung_harvester_with_normal_counts.csv
 
 # Step 5b (NEW - rescue skipped datasets)
 python bin/5b_rescue_primary_data.py \
   --input data/homo_sapiens_lung_harvester_with_normal_counts.csv \
   --tissue "lung"
+# Output: data/homo_sapiens_lung_harvester_with_normal_counts_rescue.csv
 
-# Step 6 (cleanup)
-python bin/6_final_cleanup.py data/homo_sapiens_lung_harvester_with_normal_counts.csv
+# Step 6 (cleanup - removes zeros and blanks)
+python bin/6_final_cleanup.py data/homo_sapiens_lung_harvester_with_normal_counts_rescue.csv
+# Output: data/homo_sapiens_lung_harvester_with_normal_counts_rescue_final.csv
 ```
 
 ## Why is is_primary_data unreliable?
