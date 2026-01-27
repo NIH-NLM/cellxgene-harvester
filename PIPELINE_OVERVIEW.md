@@ -224,7 +224,7 @@ obs_df = obs_df[tissue_mask]
 **Columns 1-15: Human-Readable**
 1. collection_name
 2. dataset_title
-3. **normal_cell_count** ⭐ (tissue + age >= 18 + normal disease)
+3. **normal_cell_count** - Normal adult cells for tissue of interest (tissue + age >= 18 + normal disease)
 4. total_cell_count
 5. author_cell_type
 6. embedding (currently empty - future enhancement)
@@ -352,10 +352,10 @@ Solution: Check tissue pattern matches Step 4, review log file
 
 ### What is `normal_cell_count`?
 Cells that meet ALL criteria:
-- ✅ From tissue(s) of interest only
-- ✅ From adult donors (age >= 18)
-- ✅ Normal disease status
-- ✅ Primary data
+- From tissue(s) of interest only
+- From adult donors (age >= 18)
+- Normal disease status
+- Primary data
 
 ### Why doesn't it match `total_cell_count`?
 - `total_cell_count` = All cells in entire dataset (all tissues, ages, diseases)

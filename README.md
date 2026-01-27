@@ -7,9 +7,10 @@ A comprehensive pipeline for harvesting and filtering single-cell RNA-seq datase
 This pipeline queries the CellxGene Collections API and Census API to:
 1. Fetch all available collections and datasets
 2. Extract detailed metadata
-3. Filter datasets by organism, tissue, and quality criteria
-4. Count normal adult cells using Census API
-5. Clean up final dataset
+3. Append dataset-specific details (titles, cell counts)
+4. Filter datasets by organism, tissue, and quality criteria
+5. Count normal adult cells for tissue of interest using Census API
+6. Clean up final dataset (remove datasets with 0 normal cells)
 
 ## Requirements
 
@@ -322,7 +323,7 @@ The final CSV contains these key columns:
 
 **Cell Counts:**
 - `total_cell_count` - Total cells in dataset
-- `normal_cell_count` - Normal adult cells for tissue of interest ⭐
+- `normal_cell_count` - Normal adult cells for tissue of interest
 
 **Development Stage:**
 - `development_stage` - Most common stage
@@ -354,10 +355,10 @@ The final CSV contains these key columns:
 
 The **most important** column - represents cells that meet ALL criteria:
 
-1. ✅ From the **tissue(s) of interest** only
-2. ✅ From **adult donors** (age >= 18 years)
-3. ✅ With **normal disease** status (not diseased)
-4. ✅ From **primary data** (not re-analysis)
+1. From the **tissue(s) of interest** only
+2. From **adult donors** (age >= 18 years)
+3. With **normal disease** status (not diseased)
+4. From **primary data** (not re-analysis)
 
 **Example:** 
 - Tabula Sapiens has 1,136,218 total cells across 60+ tissues
