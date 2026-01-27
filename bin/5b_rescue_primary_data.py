@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
-Step 5: Count normal cells using CellxGene Census API
+Step 5b: Rescue datasets skipped due to is_primary_data == False
 
-Clean pandas implementation with separated functions:
+Re-processes datasets that were skipped in Step 5 ONLY because is_primary_data
+was False. Applies all other filters (tissue, age >= 18, normal disease) but
+IGNORES the is_primary_data check since this field is unreliable.
+
+Functions (same as Step 5):
 - extract_age_from_stage() - Parse age from string
 - filter_adult_cells() - Filter for age >= 18
 - count_normal_cells() - Count normal disease cells
 - extract_census_metadata() - Extract all Census fields
 
 Usage:
-    python bin/5_count_normal_cells.py <filtered_csv>
+    python bin/5b_rescue_primary_data.py \
+      --input data/homo_sapiens_lung_harvester_with_normal_counts.csv \
+      --tissue "lung"
 """
 
 import os
@@ -27,7 +33,7 @@ def setup_logging(output_csv):
     """Setup logging to file and console"""
     log_file = output_csv.replace('.csv', '_log.txt')
     
-    logger = logging.getLogger('cellxgene_harvester')
+    logger = logging.getLogger('cellxgene_harvester_rescue')
     logger.setLevel(logging.INFO)
     logger.handlers = []
     
@@ -284,6 +290,11 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
             # Extract metadata
             metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
 
+            # RESCUE MODE: Skip is_primary_data check (field is unreliable)
+            # In Step 5, datasets with is_primary_data=False were skipped
+            # This rescue script re-processes those datasets
+            logger.info(f"    RESCUE MODE: Ignoring is_primary_data field")
+
             # Filter for adults
             adult_df = filter_adult_cells(obs_df, logger)
             adult_count = len(adult_df)
@@ -311,7 +322,12 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     
     # Load data
     df = pd.read_csv(input_csv)
-    logger.info(f"Loaded {len(df)} datasets from {input_csv}\n")
+    logger.info(f"Loaded {len(df)} datasets from {input_csv}")
+    
+    # Count datasets needing rescue (blank normal_cell_count)
+    blank_count = df['normal_cell_count'].isna().sum() + (df['normal_cell_count'] == '').sum()
+    logger.info(f"Datasets needing rescue (blank normal_cell_count): {blank_count}")
+    logger.info(f"Datasets already processed: {len(df) - blank_count}\n")
     
     # Define new columns
     new_columns = [
@@ -364,9 +380,16 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     
     for idx, row in df.iterrows():
         dataset_id = row.get('dataset_id', '')
+        normal_count = row.get('normal_cell_count', '')
         total_cells_csv = row.get('total_cell_count', 0)
         
-        logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
+        # RESCUE MODE: Only process rows that were skipped (blank normal_cell_count)
+        if normal_count and str(normal_count).strip() and str(normal_count) != '0':
+            logger.info(f"\n[{idx+1}/{len(df)}] Skipping {dataset_id} - already has normal_cell_count")
+            stats['skipped'] += 1
+            continue
+        
+        logger.info(f"\n[{idx+1}/{len(df)}] RESCUING {dataset_id}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
         
         if not dataset_id:
@@ -406,50 +429,68 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     
     # Final summary
     logger.info(f"\n{'='*70}")
-    logger.info(f"COMPLETE")
+    logger.info(f"RESCUE COMPLETE")
     logger.info(f"{'='*70}")
     logger.info(f"Total datasets: {len(df)}")
-    logger.info(f"Successful: {stats['successful']}")
-    logger.info(f"Failed: {stats['failed']}")
-    logger.info(f"Skipped: {stats['skipped']}")
+    logger.info(f"Rescued (successful): {stats['successful']}")
+    logger.info(f"Failed to rescue: {stats['failed']}")
+    logger.info(f"Skipped (already had data): {stats['skipped']}")
     logger.info(f"\nOutput: {output_csv}")
 
 if __name__ == "__main__":
     import argparse
     
     print("="*70)
-    print("CellxGene Harvester - Step 5: Count Normal Cells")
+    print("CellxGene Harvester - Step 5b: Rescue Primary Data")
     print("="*70)
     
     parser = argparse.ArgumentParser(
-        description='Count normal cells from CellxGene Census API'
+        description='Rescue datasets skipped due to is_primary_data == False'
     )
     parser.add_argument(
         '--input',
         required=True,
-        help='Input CSV file (output from step 4)'
+        help='Input CSV file (output from step 5 with blank normal_cell_counts)'
     )
     parser.add_argument(
         '--tissue',
         required=True,
-        help='Tissue(s) to filter (e.g., "liver" or "pancreas | islet of langerhans")'
+        help='Tissue(s) to filter - MUST MATCH what was used in Step 5'
     )
     
     args = parser.parse_args()
     
     input_csv = args.input
     tissue_filter = args.tissue
-    base = os.path.splitext(input_csv)[0]
-    output_csv = f"{base}_with_normal_counts.csv"
+    
+    # Output goes back to same file (fills in blank rows)
+    output_csv = input_csv  # Overwrites input
     
     # Setup logging
-    logger, log_file = setup_logging(output_csv)
+    log_file = input_csv.replace('.csv', '_rescue_log.txt')
     
-    logger.info(f"Starting: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger = logging.getLogger('cellxgene_harvester_rescue')
+    logger.setLevel(logging.INFO)
+    logger.handlers = []
+    
+    fh = logging.FileHandler(log_file, mode='w')
+    ch = logging.StreamHandler(sys.stdout)
+    
+    formatter = logging.Formatter('%(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    
+    logger.info(f"Starting RESCUE MODE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Input: {input_csv}")
     logger.info(f"Tissue filter: {tissue_filter}")
-    logger.info(f"Output: {output_csv}")
-    logger.info(f"Log: {log_file}\n")
+    logger.info(f"Output: {output_csv} (overwrites input)")
+    logger.info(f"Log: {log_file}")
+    logger.info(f"")
+    logger.info(f"RESCUE MODE: Re-processing datasets skipped due to is_primary_data == False")
+    logger.info(f"This field is unreliable - ignoring it for these datasets\n")
     
     # Check dependencies
     try:
