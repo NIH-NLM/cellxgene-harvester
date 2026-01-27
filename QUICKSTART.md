@@ -115,12 +115,12 @@ python bin/6_final_cleanup.py data/homo_sapiens_liver_harvester_with_normal_coun
 # Final output: data/homo_sapiens_liver_final.csv
 ```
 
-### Intestine
+### Large Intestine
 ```bash
 python bin/4_filter_datasets.py \
   --input data/all_datasets_complete.csv \
   --organism "Homo sapiens" \
-  --tissue "intestine | large intestine | colon" \
+  --tissue "colon | colorectum | rectum | large intestine" \
   --no-preprints \
   --exclude-cancer \
   --exclude-spatial \
