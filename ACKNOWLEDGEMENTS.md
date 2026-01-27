@@ -6,7 +6,7 @@ This CellxGene Data Harvester pipeline was developed collaboratively.
 
 ## Contributors
 
-- Primary development and direction
+- Anne Deslattes Mays, PhD
 - Ajith - Technical contributions
 - Claude (Sonnet 4.5) - AI assistant created by Anthropic
 
