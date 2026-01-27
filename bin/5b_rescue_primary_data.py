@@ -390,6 +390,9 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
             stats['skipped'] += 1
             continue
 
+        total_cells_csv = row.get('total_cell_count', 0)
+                
+
         # This dataset needs rescue
         logger.info(f"\n[{idx+1}/{len(df)}] RESCUING {dataset_id}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
@@ -399,8 +402,6 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
             stats['skipped'] += 1
             continue
         
-        total_cells_csv = row.get('total_cell_count', 0)
-                
         if not dataset_id:
             logger.warning(f"  SKIPPED: Missing dataset_id")
             stats['skipped'] += 1
