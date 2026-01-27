@@ -381,17 +381,26 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     for idx, row in df.iterrows():
         dataset_id = row.get('dataset_id', '')
         normal_count = row.get('normal_cell_count', '')
-        total_cells_csv = row.get('total_cell_count', 0)
-        
-        # RESCUE MODE: Only process rows that were skipped (blank normal_cell_count)
-        if normal_count and str(normal_count).strip() and str(normal_count) != '0':
-            logger.info(f"\n[{idx+1}/{len(df)}] Skipping {dataset_id} - already has normal_cell_count")
+
+        # Check if this row needs rescue (blank or 0)
+        normal_count = row.get('normal_cell_count', '')
+
+        # Skip if already has valid data
+        if pd.notna(normal_count) and str(normal_count).strip() not in ['', '0', 'nan']:
             stats['skipped'] += 1
             continue
-        
+
+        # This dataset needs rescue
         logger.info(f"\n[{idx+1}/{len(df)}] RESCUING {dataset_id}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
+
+        if not dataset_id:
+            logger.warning(f"  SKIPPED: Missing dataset_id")
+            stats['skipped'] += 1
+            continueç∂
         
+        total_cells_csv = row.get('total_cell_count', 0)
+                
         if not dataset_id:
             logger.warning(f"  SKIPPED: Missing dataset_id")
             stats['skipped'] += 1
