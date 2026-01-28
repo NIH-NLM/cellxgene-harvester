@@ -67,19 +67,27 @@ def extract_age_from_stage(stage_label: str) -> Optional[int]:
     return None
 
 
-def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
+def filter_adult_cells(obs_df: pd.DataFrame, min_age: int, logger) -> pd.DataFrame:
     """
-    Filter for adult cells (age >= 15 years).
+    Filter for adult cells (age >= min_age years).
     
     Strategy:
-    1. Parse age from development_stage - include if >= 15
-    2. Check for "adult" keyword - include if present
-    3. Check for fetal/newborn keywords - EXCLUDE if present
-    4. If unparseable and no keywords - EXCLUDE (conservative)
+    1. If min_age == 0, skip filtering (return all cells)
+    2. Parse age from development_stage - include if >= min_age
+    3. Check for "adult" keyword - include if present
+    4. Check for fetal/newborn keywords - EXCLUDE if present
+    5. If unparseable and no keywords - EXCLUDE (conservative)
     """
     if 'development_stage' not in obs_df.columns:
         logger.info(f"      No development_stage column - including all cells")
         return obs_df
+    
+    # If min_age is 0, skip age filtering entirely
+    if min_age == 0:
+        logger.info(f"      Age filtering DISABLED (min_age=0) - including all cells")
+        return obs_df
+    
+    logger.info(f"      Age filtering (min_age={min_age}):")
     
     # Exclusion terms (fetal, embryonic, newborn)
     EXCLUDE_TERMS = ['fetal', 'embryo', 'newborn', 'prenatal', 'lmp', 
@@ -118,7 +126,7 @@ def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
         age = extract_age_from_stage(stage_val)
         if age is not None:
             cells_with_age += 1
-            if age >= 15:
+            if age >= min_age:
                 adult_mask.append(True)
                 cells_adult += 1
             else:
@@ -130,11 +138,10 @@ def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
     
     adult_df = obs_df[adult_mask]
     
-    logger.info(f"      Age filtering:")
     logger.info(f"        Total cells: {total_cells:,}")
     logger.info(f"        Cells with parseable age: {cells_with_age:,}")
-    logger.info(f"        Adult (age >= 15 or contains 'adult'): {cells_adult:,}")
-    logger.info(f"        Child (age < 15): {cells_child:,}")
+    logger.info(f"        Adult (age >= {min_age} or contains 'adult'): {cells_adult:,}")
+    logger.info(f"        Child (age < {min_age}): {cells_child:,}")
     logger.info(f"        Excluded (fetal/newborn): {cells_excluded_fetal:,}")
     logger.info(f"        After filter: {len(adult_df):,}")
     
@@ -185,27 +192,6 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
                 return ' | '.join(sorted([str(v) for v in unique_values]))
         return ''
     
-    # Extract embeddings using experimental API
-    embeddings = []
-    try:
-        # Get all available embeddings for this dataset
-        embedding_data = cellxgene_census.experimental.get_embeddings(
-            census=census,
-            organism="Homo sapiens",
-            obs_value_filter=f"dataset_id == '{dataset_id}'"
-        )
-        # Extract embedding names from the returned data
-        if hasattr(embedding_data, 'keys'):
-            embeddings = list(embedding_data.keys())
-            embeddings = [e.replace('X_', '') if e.startswith('X_') else e for e in embeddings]
-
-    except Exception as e:
-        logger.warning(f"      Could not fetch embeddings: {e}")
-        embeddings = []
-
-    embeddings_str = '|'.join(sorted(embeddings)) if embeddings else ''
-
-    
     # Human-readable fields
     census_tissue = get_most_common('tissue')
     census_disease = get_most_common('disease')
@@ -222,21 +208,21 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
     # Donor count
     donor_id_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
     
-    # Development stage summary (ALL stages with counts)
+    # Development stage summary (ALL stages with non-zero counts)
     dev_stage_summary = ''
     if 'development_stage' in obs_df.columns:
         stage_counts = obs_df['development_stage'].value_counts()
-        parts = [f"{stage}: {count:,}" for stage, count in stage_counts.items()]
+        # Only include stages with count > 0
+        parts = [f"{stage}: {count:,}" for stage, count in stage_counts.items() if count > 0]
         dev_stage_summary = "; ".join(parts)
     
     logger.info(f"    Census metadata:")
     logger.info(f"      Tissue (specific): {census_tissue or 'N/A'}")
-    logger.info(f"      Dev stages (all): {dev_stage_summary or 'N/A'}")
-    logger.info(f"      Embeddings: {embeddings_str or 'None'}")
+    logger.info(f"      Dev stages (all non-zero): {dev_stage_summary or 'N/A'}")
     logger.info(f"      Donors: {donor_id_count}")
     
     return {
-        'embeddings': embeddings_str,
+        'embeddings': '',  # Not populated - Census API limitation
         'census_tissue': census_tissue,
         'census_disease': census_disease,
         'tissue_ontology_term_id': tissue_ontology_term_id,
@@ -250,7 +236,7 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
         'development_stage_summary': dev_stage_summary
     }
 
-def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dict]:
+def process_dataset(dataset_id: str, tissue_filter: str, min_age: int, logger) -> Optional[dict]:
     """
     Process one dataset: query Census, filter by tissue, filter adults, count normal cells
     """
@@ -287,17 +273,36 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
             obs_df = obs_df[tissue_mask]
             logger.info(f"    After tissue filter ({tissue_filter}): {len(obs_df):,} cells")
             
+            # If no cells after tissue filter, return success with 0 count
+            if len(obs_df) == 0:
+                logger.info(f"    No cells found for tissue filter")
+                # Still extract what metadata we can
+                metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
+                return {
+                    'normal_cell_count': 0,
+                    'total_count': 0,
+                    'adult_count': 0,
+                    'build_date': build_date,
+                    **metadata
+                }
+            
             # Extract metadata
             metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
 
-            # Check if primary data - skip if not
-            if metadata.get('is_primary_data', '').upper() != 'TRUE':
-                logger.warning(f"    SKIPPED: is_primary_data = {metadata.get('is_primary_data')}")
-                return None
-
             # Filter for adults
-            adult_df = filter_adult_cells(obs_df, logger)
+            adult_df = filter_adult_cells(obs_df, min_age, logger)
             adult_count = len(adult_df)
+            
+            # If no adult cells, return success with 0 count
+            if adult_count == 0:
+                logger.info(f"    No adult cells found")
+                return {
+                    'normal_cell_count': 0,
+                    'total_count': len(obs_df),
+                    'adult_count': 0,
+                    'build_date': build_date,
+                    **metadata
+                }
 
             # Count normal cells in adult population
             normal_cell_count = count_normal_cells(adult_df, logger)
@@ -317,7 +322,7 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
         return None
 
 
-def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
+def process_all_datasets(input_csv, output_csv, tissue_filter, min_age, logger):
     """Main processing loop using pandas"""
     
     # Load data
@@ -376,16 +381,12 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     for idx, row in df.iterrows():
         dataset_id = row.get('dataset_id', '')
         total_cells_csv = row.get('total_cell_count', 0)
-        dataset_title = row.get('dataset_title', 'Unknown')
         first_author = row.get('first_author', 'Unknown')
-        journal = row.get('journal', 'Unknown')
         year = row.get('year', 'Unknown')
-
+        journal = row.get('journal', 'Unknown')
+        
         logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
-        logger.info(f"  Dataset: {dataset_title}")
-        logger.info(f"  Author: {first_author}, {journal}, {year}") 
-        logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
-        logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
+        logger.info(f"  Author: {first_author} ({year}) - {journal}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
         
         if not dataset_id:
@@ -394,7 +395,7 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
             continue
         
         # Process
-        result = process_dataset(dataset_id, tissue_filter, logger)
+        result = process_dataset(dataset_id, tissue_filter, min_age, logger)
         
         if result is not None:
             # Update row with all results
@@ -452,11 +453,18 @@ if __name__ == "__main__":
         required=True,
         help='Tissue(s) to filter (e.g., "liver" or "pancreas | islet of langerhans")'
     )
+    parser.add_argument(
+        '--min-age',
+        type=int,
+        default=15,
+        help='Minimum age for adult filtering (default: 15). Use 0 to disable age filtering.'
+    )
     
     args = parser.parse_args()
     
     input_csv = args.input
     tissue_filter = args.tissue
+    min_age = args.min_age
     base = os.path.splitext(input_csv)[0]
     output_csv = f"{base}_with_normal_counts.csv"
     
@@ -466,6 +474,7 @@ if __name__ == "__main__":
     logger.info(f"Starting: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Input: {input_csv}")
     logger.info(f"Tissue filter: {tissue_filter}")
+    logger.info(f"Min age: {min_age} (use 0 to disable)")
     logger.info(f"Output: {output_csv}")
     logger.info(f"Log: {log_file}\n")
     
@@ -477,7 +486,7 @@ if __name__ == "__main__":
         logger.error("Install: conda install -c conda-forge cellxgene-census")
         sys.exit(1)
     
-    process_all_datasets(input_csv, output_csv, tissue_filter, logger)
+    process_all_datasets(input_csv, output_csv, tissue_filter, min_age, logger)
     
     logger.info(f"\nCompleted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Log saved to: {log_file}")
