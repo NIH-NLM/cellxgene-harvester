@@ -4,7 +4,7 @@ Step 5: Count normal cells using CellxGene Census API
 
 Clean pandas implementation with separated functions:
 - extract_age_from_stage() - Parse age from string
-- filter_adult_cells() - Filter for age >= 18
+- filter_adult_cells() - Filter for age >= 15
 - count_normal_cells() - Count normal disease cells
 - extract_census_metadata() - Extract all Census fields
 
@@ -69,10 +69,10 @@ def extract_age_from_stage(stage_label: str) -> Optional[int]:
 
 def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
     """
-    Filter for adult cells (age >= 18 years).
+    Filter for adult cells (age >= 15 years).
     
     Strategy:
-    1. Parse age from development_stage - include if >= 18
+    1. Parse age from development_stage - include if >= 15
     2. Check for "adult" keyword - include if present
     3. Check for fetal/newborn keywords - EXCLUDE if present
     4. If unparseable and no keywords - EXCLUDE (conservative)
@@ -118,7 +118,7 @@ def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
         age = extract_age_from_stage(stage_val)
         if age is not None:
             cells_with_age += 1
-            if age >= 18:
+            if age >= 15:
                 adult_mask.append(True)
                 cells_adult += 1
             else:
@@ -133,8 +133,8 @@ def filter_adult_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
     logger.info(f"      Age filtering:")
     logger.info(f"        Total cells: {total_cells:,}")
     logger.info(f"        Cells with parseable age: {cells_with_age:,}")
-    logger.info(f"        Adult (age >= 18 or contains 'adult'): {cells_adult:,}")
-    logger.info(f"        Child (age < 18): {cells_child:,}")
+    logger.info(f"        Adult (age >= 15 or contains 'adult'): {cells_adult:,}")
+    logger.info(f"        Child (age < 15): {cells_child:,}")
     logger.info(f"        Excluded (fetal/newborn): {cells_excluded_fetal:,}")
     logger.info(f"        After filter: {len(adult_df):,}")
     
@@ -177,6 +177,14 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
                 return str(value_counts.index[0])
         return ''
     
+    def get_all_unique(column_name):
+        """Get all unique values in a column, joined by |"""
+        if column_name in obs_df.columns:
+            unique_values = obs_df[column_name].dropna().unique()
+            if len(unique_values) > 0:
+                return ' | '.join(sorted([str(v) for v in unique_values]))
+        return ''
+    
     # Extract embeddings using experimental API
     embeddings = []
     try:
@@ -201,30 +209,29 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
     # Human-readable fields
     census_tissue = get_most_common('tissue')
     census_disease = get_most_common('disease')
-    census_development_stage = get_most_common('development_stage')
     
-    # Ontology IDs
-    tissue_ontology_term_id = get_most_common('tissue_ontology_term_id')
-    assay_ontology_term_id = get_most_common('assay_ontology_term_id')
-    cell_type_ontology_term_id = get_most_common('cell_type_ontology_term_id')
-    disease_ontology_term_id = get_most_common('disease_ontology_term_id')
-    development_stage_ontology_term_id = get_most_common('development_stage_ontology_term_id')
-    sex_ontology_term_id = get_most_common('sex_ontology_term_id')
+    # Ontology IDs - get ALL unique values
+    tissue_ontology_term_id = get_all_unique('tissue_ontology_term_id')
+    assay_ontology_term_id = get_all_unique('assay_ontology_term_id')
+    cell_type_ontology_term_id = get_all_unique('cell_type_ontology_term_id')
+    disease_ontology_term_id = get_all_unique('disease_ontology_term_id')
+    development_stage_ontology_term_id = get_all_unique('development_stage_ontology_term_id')
+    sex_ontology_term_id = get_all_unique('sex_ontology_term_id')
     is_primary_data = get_most_common('is_primary_data')
     
     # Donor count
     donor_id_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
     
-    # Development stage summary (top 3)
+    # Development stage summary (ALL stages with counts)
     dev_stage_summary = ''
     if 'development_stage' in obs_df.columns:
-        stage_counts = obs_df['development_stage'].value_counts().head(3)
+        stage_counts = obs_df['development_stage'].value_counts()
         parts = [f"{stage}: {count:,}" for stage, count in stage_counts.items()]
         dev_stage_summary = "; ".join(parts)
     
     logger.info(f"    Census metadata:")
     logger.info(f"      Tissue (specific): {census_tissue or 'N/A'}")
-    logger.info(f"      Dev stages: {dev_stage_summary or 'N/A'}")
+    logger.info(f"      Dev stages (all): {dev_stage_summary or 'N/A'}")
     logger.info(f"      Embeddings: {embeddings_str or 'None'}")
     logger.info(f"      Donors: {donor_id_count}")
     
@@ -232,7 +239,6 @@ def extract_census_metadata(obs_df: pd.DataFrame, adata, census, dataset_id: str
         'embeddings': embeddings_str,
         'census_tissue': census_tissue,
         'census_disease': census_disease,
-        'census_development_stage': census_development_stage,
         'tissue_ontology_term_id': tissue_ontology_term_id,
         'assay_ontology_term_id': assay_ontology_term_id,
         'cell_type_ontology_term_id': cell_type_ontology_term_id,
@@ -284,6 +290,11 @@ def process_dataset(dataset_id: str, tissue_filter: str, logger) -> Optional[dic
             # Extract metadata
             metadata = extract_census_metadata(obs_df, adata, census, dataset_id, logger)
 
+            # Check if primary data - skip if not
+            if metadata.get('is_primary_data', '').upper() != 'TRUE':
+                logger.warning(f"    SKIPPED: is_primary_data = {metadata.get('is_primary_data')}")
+                return None
+
             # Filter for adults
             adult_df = filter_adult_cells(obs_df, logger)
             adult_count = len(adult_df)
@@ -315,7 +326,7 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     
     # Define new columns
     new_columns = [
-        'normal_cell_count', 'development_stage',
+        'normal_cell_count',
         'assay_ontology_term_id', 'cell_type_ontology_term_id',
         'disease_ontology_term_id', 'development_stage_ontology_term_id',
         'sex_ontology_term_id', 'is_primary_data', 'donor_id_count',
@@ -334,7 +345,7 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     column_order = [
         'collection_name', 'dataset_title', 'normal_cell_count', 'total_cell_count',
         'author_cell_type', 'embedding',
-        'tissue', 'disease', 'development_stage',
+        'tissue', 'disease',
         'first_author', 'journal', 'year', 'collection_url', 'explorer_url',
         'collection_id', 'collection_version_id', 'dataset_id', 'dataset_version_id',
         'is_preprint', 'revised_at', 'visibility', 'organism',
@@ -365,7 +376,15 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
     for idx, row in df.iterrows():
         dataset_id = row.get('dataset_id', '')
         total_cells_csv = row.get('total_cell_count', 0)
-        
+        dataset_title = row.get('dataset_title', 'Unknown')
+        first_author = row.get('first_author', 'Unknown')
+        journal = row.get('journal', 'Unknown')
+        year = row.get('year', 'Unknown')
+
+        logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
+        logger.info(f"  Dataset: {dataset_title}")
+        logger.info(f"  Author: {first_author}, {journal}, {year}") 
+        logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
         logger.info(f"\n[{idx+1}/{len(df)}] Processing {dataset_id}")
         logger.info(f"  Expected cells (from CSV): {total_cells_csv}")
         
@@ -382,7 +401,6 @@ def process_all_datasets(input_csv, output_csv, tissue_filter, logger):
             df.loc[idx, 'revised_at'] = result['build_date']
             df.loc[idx, 'normal_cell_count'] = str(result['normal_cell_count'])
             df.loc[idx, 'embedding'] = result['embeddings']
-            df.loc[idx, 'development_stage'] = result['census_development_stage']
             df.loc[idx, 'tissue_ontology_term_id'] = result['tissue_ontology_term_id']
             df.loc[idx, 'assay_ontology_term_id'] = result['assay_ontology_term_id']
             df.loc[idx, 'cell_type_ontology_term_id'] = result['cell_type_ontology_term_id']
