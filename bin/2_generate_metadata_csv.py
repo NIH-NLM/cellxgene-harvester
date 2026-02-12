@@ -40,6 +40,7 @@ CSV_HEADER = [
     "first_author",
     "journal",
     "year",
+    "doi",
     "collection_url",
     "explorer_url",
     "tissue",
@@ -97,7 +98,8 @@ def extract_publication_metadata(collection_data):
         "first_author": "",
         "journal": "",
         "is_preprint": "",
-        "year": ""
+        "year": "",
+        "doi": ""
     }
     
     if isinstance(publisher, dict):
@@ -115,7 +117,8 @@ def extract_publication_metadata(collection_data):
         year_val = publisher.get("published_year")
         if year_val is not None:
             metadata["year"] = str(year_val)
-    
+        metadata["doi"] = publisher.get("doi", "") 
+
     return metadata
 
 
@@ -225,6 +228,7 @@ def generate_csv():
                 "first_author": pub_metadata["first_author"],
                 "journal": pub_metadata["journal"],
                 "year": pub_metadata["year"],
+                "doi": pub_metadata["doi"],
                 "collection_url": collection_url,
                 "explorer_url": "",  # Will be filled in step 3
                 "tissue": ds["tissue"],
