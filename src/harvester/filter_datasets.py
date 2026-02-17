@@ -18,7 +18,7 @@ Usage:
 import sys
 import json
 import pandas as pd
-from harvester_logger import setup_logger, log_command, log_counts, log_finish
+from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 
 def load_uberon_labels(uberon_json: str, logger) -> list:

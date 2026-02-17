@@ -24,7 +24,7 @@ import json
 import argparse
 import requests
 import pandas as pd
-from harvester_logger import setup_logger, log_command, log_counts, log_finish
+from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE   = "https://www.ebi.ac.uk/ols4/api"
 UBERON_IRI = "http://purl.obolibrary.org/obo/{term_id}"

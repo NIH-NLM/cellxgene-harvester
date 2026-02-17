@@ -18,7 +18,7 @@ import json
 import pandas as pd
 import re
 from typing import Optional
-from harvester_logger import setup_logger, log_command, log_counts, log_finish
+from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 
 def extract_age_from_stage(stage_label: str) -> Optional[int]:
