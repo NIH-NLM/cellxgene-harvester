@@ -5,7 +5,6 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - emacs
   - scanpy
   - pandas
   - requests
