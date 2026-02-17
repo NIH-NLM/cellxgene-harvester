@@ -1,0 +1,7 @@
+check\_uberon module
+====================
+
+.. automodule:: check_uberon
+   :members:
+   :show-inheritance:
+   :undoc-members:

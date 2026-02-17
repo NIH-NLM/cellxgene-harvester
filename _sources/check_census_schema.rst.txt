@@ -1,0 +1,7 @@
+check\_census\_schema module
+============================
+
+.. automodule:: check_census_schema
+   :members:
+   :show-inheritance:
+   :undoc-members:
