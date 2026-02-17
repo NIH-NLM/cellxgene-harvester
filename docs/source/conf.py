@@ -1,8 +1,8 @@
 import os
 import sys
 
-# Point to the bin/ scripts for autodoc
-sys.path.insert(0, os.path.abspath('../../bin'))
+# Point to src/ so autodoc can find the harvester package
+sys.path.insert(0, os.path.abspath('../../src'))
 
 project   = 'cellxgene-harvester'
 copyright = '2026, NIH-NLM'
@@ -20,8 +20,8 @@ extensions = [
 templates_path   = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-html_theme        = 'sphinx_rtd_theme'
-html_static_path  = ['_static']
+html_theme       = 'sphinx_rtd_theme'
+html_static_path = ['_static']
 
 autodoc_member_order      = 'bysource'
 autodoc_typehints         = 'description'

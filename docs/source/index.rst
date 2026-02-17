@@ -1,5 +1,5 @@
-cellxgene-harvester
-===================
+cellxgene-harvester Documentation
+==================================
 
 Harvest, filter, and count normal cells from the `CellxGene Census <https://chanzuckerberg.github.io/cellxgene-census/>`_
 using UBERON ontology-based tissue filtering.
@@ -9,11 +9,9 @@ human-prompted AI-assisted development using `Claude <https://claude.ai>`_ (Anth
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: API Reference:
 
-   installation
-   pipeline
-   api/modules
+   modules
 
 Indices and tables
 ==================
