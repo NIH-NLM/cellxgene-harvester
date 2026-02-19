@@ -280,10 +280,10 @@ def generate_csv():
     print(f"\nOutput saved to: {OUTPUT_CSV}")
     print(f"\nNote: If any datasets had multiple versions, only the latest was included.")
 
-
-if __name__ == "__main__":
+def run_generate_metadata():
+    """Main entry point called by CLI"""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 2: Generate Metadata CSV")
     print("=" * 70)
     generate_csv()
-    print("\nNext step: Run 'python bin/3_append_dataset_details.py'")
+    print("\nNext step: cellxgene-harvester append-details")
