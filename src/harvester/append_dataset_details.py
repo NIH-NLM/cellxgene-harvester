@@ -11,7 +11,12 @@ NOTE: This step does NOT download H5AD files - it only gets the URLs.
 H5AD files are downloaded in step 5, after filtering.
 
 Usage:
-    python bin/3_append_dataset_details.py
+1. Python module execution:
+python -m harvester.append_dataset_details
+
+2. CLI command (after pip install -e .):
+cellxgene-harvester append-details
+
 """
 
 import os
@@ -162,10 +167,13 @@ def append_details():
     print(f"  Failed/skipped: {failed}")
     print(f"\nOutput saved to: {OUTPUT_CSV}")
 
-
-if __name__ == "__main__":
+# =============================================================================
+# run_append_dataset_details
+# =============================================================================
+def run_append_details():
+    """Main entry point called by CLI"""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 3: Append Dataset Details")
     print("=" * 70)
     append_details()
-    print("\nNext step: Run 'python bin/4_filter_datasets.py' to filter results")
+    print("\nNext step: cellxgene-harvester filter-datasets")

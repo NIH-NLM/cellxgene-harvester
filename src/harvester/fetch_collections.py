@@ -8,7 +8,12 @@ Downloads collection metadata including:
 - Associated datasets
 
 Usage:
-    python bin/1_fetch_collections.py
+1. Python module execution:
+python -m harvester.fetch_collections
+
+2. CLI command (after pip install -e .):
+cellxgene-harvester fetch-collections
+
 """
 
 import os
@@ -65,10 +70,13 @@ def fetch_collections():
         print(f"  - name: {sample.get('name', 'N/A')}")
         print(f"  - datasets: {len(sample.get('datasets', []))} datasets")
 
-
-if __name__ == "__main__":
+# =============================================================================
+# run_fetch_collections
+# =============================================================================
+def run_fetch_collections():
+    """Main entry point called by CLI"""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 1: Fetch Collections")
     print("=" * 70)
     fetch_collections()
-    print("\nNext step: Run 'python bin/2_generate_metadata_csv.py'")
+    print("\nNext step: cellxgene-harvester generate-metadata")

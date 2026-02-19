@@ -86,6 +86,41 @@ def extract_metadata(obs_df: pd.DataFrame) -> dict:
             return ' | '.join(sorted(str(v) for v in uv))
         return ''
 
+    # Tissue ontology summary
+    tissue_summary = ''
+    if 'tissue_ontology_term_id' in obs_df.columns:
+        tissue_counts = obs_df['tissue_ontology_term_id'].value_counts()
+        parts = [f"{tid}: {count:,}" for tid, count in tissue_counts.items() if count > 0]
+        tissue_summary = "; ".join(parts)
+
+    # Assay ontology summary
+    assay_summary = ''
+    if 'assay_ontology_term_id' in obs_df.columns:
+        assay_counts = obs_df['assay_ontology_term_id'].value_counts()
+        parts = [f"{aid}: {count:,}" for aid, count in assay_counts.items() if count > 0]
+        assay_summary = "; ".join(parts)
+
+    # Cell type ontology summary
+    cell_type_summary = ''
+    if 'cell_type_ontology_term_id' in obs_df.columns:
+        ct_counts = obs_df['cell_type_ontology_term_id'].value_counts()
+        parts = [f"{ct}: {count:,}" for ct, count in ct_counts.items() if count > 0]
+        cell_type_summary = "; ".join(parts)
+
+    # Disease ontology summary
+    disease_summary = ''
+    if 'disease_ontology_term_id' in obs_df.columns:
+        dis_counts = obs_df['disease_ontology_term_id'].value_counts()
+        parts = [f"{did}: {count:,}" for did, count in dis_counts.items() if count > 0]
+        disease_summary = "; ".join(parts)
+
+    # Sex ontology summary
+    sex_summary = ''
+    if 'sex_ontology_term_id' in obs_df.columns:
+        sex_counts = obs_df['sex_ontology_term_id'].value_counts()
+        parts = [f"{sid}: {count:,}" for sid, count in sex_counts.items() if count > 0]
+        sex_summary = "; ".join(parts)
+
     dev_stage_summary = ''
     if 'development_stage' in obs_df.columns and len(obs_df) > 0:
         counts            = obs_df['development_stage'].value_counts()
@@ -102,7 +137,12 @@ def extract_metadata(obs_df: pd.DataFrame) -> dict:
         'sex_ontology_term_id':               all_unique('sex_ontology_term_id'),
         'is_primary_data':                    most_common('is_primary_data'),
         'donor_id_count':                     donor_count,
+        'tissue_ontology_summary':            tissue_summary,
+        'assay_ontology_summary':             assay_summary,
+        'cell_type_ontology_summary':         cell_type_summary,
+        'disease_ontology_summary':           disease_summary,
         'development_stage_summary':          dev_stage_summary,
+        'sex_ontology_summary':               sex_summary,
     }
 
 
@@ -137,12 +177,18 @@ def count_normal_cells_single(dataset_id, uberon_ids, min_age):
             organism="Homo sapiens",
             obs_value_filter=obs_filter,
             obs_column_names=[
-                "tissue", "tissue_ontology_term_id",
-                "disease", "disease_ontology_term_id",
-                "development_stage", "development_stage_ontology_term_id",
-                "assay_ontology_term_id", "cell_type_ontology_term_id",
-                "sex_ontology_term_id", "is_primary_data",
-                "donor_id", "suspension_type"
+                "tissue",
+                "tissue_ontology_term_id",
+                "disease",
+                "disease_ontology_term_id",
+                "development_stage",
+                "development_stage_ontology_term_id",
+                "assay_ontology_term_id",
+                "cell_type_ontology_term_id",
+                "sex_ontology_term_id",
+                "is_primary_data",
+                "donor_id",
+                "suspension_type"
             ]
         )
 

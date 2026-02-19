@@ -35,6 +35,7 @@ CSV_HEADER = [
     "reference",
     "collection_name",
     "dataset_title",
+    "normal_cell_count",
     "total_cell_count",
     "author_cell_type",
     "embedding",
@@ -62,6 +63,21 @@ CSV_HEADER = [
     "save_cluster_summary",
     "save_annotation",
     "h5ad_url",
+    'tissue_ontology_term_id',
+    'assay_ontology_term_id', 
+    'cell_type_ontology_term_id',
+    'disease_ontology_term_id',
+    'development_stage_ontology_term_id',
+    'sex_ontology_term_id',
+    'is_primary_data',
+    'donor_id_count',
+    'tissue_ontology_summary',
+    'assay_ontology_summary',
+    'cell_type_ontology_summary',
+    'disease_ontology_summary',
+    'sex_ontology_summary',
+    'development_stage_summary',
+
 ]
 
 
@@ -221,7 +237,7 @@ def generate_csv():
         for ds in latest_datasets.values():
             row = {
                 # Human-readable fields (will be filled in subsequent steps)
-                "reference": "unk"
+                "reference": "unk",
                 "collection_name": collection_name,
                 "dataset_title": "",  # Will be filled in step 3
                 "total_cell_count": "",  # Will be filled in step 3
