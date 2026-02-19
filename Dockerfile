@@ -1,38 +1,40 @@
-# cellxgene-harvester
-# Harvests, filters, and counts normal cells from CellxGene Census
-#
-# Build:
-#   docker build -t ghcr.io/nih-nlm/cellxgene-harvester:1.0.0 .
-#
-# Run:
-#   docker run --rm ghcr.io/nih-nlm/cellxgene-harvester:1.0.0 \
-#     python /opt/cellxgene-harvester/src/0_resolve_uberon.py "kidney"
+FROM mambaorg/micromamba:1.5.6
 
-FROM continuumio/miniconda3:24.1.2-0
+LABEL maintainer="nih-nlm"
 
-LABEL org.opencontainers.image.source="https://github.com/NIH-NLM/cellxgene-harvester"
-LABEL org.opencontainers.image.description="CellxGene data harvester with UBERON ontology filtering"
-LABEL org.opencontainers.image.licenses="MIT"
+USER root:root
 
-WORKDIR /opt/cellxgene-harvester
+RUN apt-get update && \
+    apt-get install -y git procps && \
+    apt-get clean
 
-# Copy environment first for layer caching
-COPY environment.yml .
+WORKDIR /app
 
-# Create conda environment
-RUN conda env create -f environment.yml \
-    && conda clean -afy
+# Copy repository files
+COPY --chown=mambauser:mambauser . /app/cellxgene-harvester
 
-# Make all RUN commands use the conda env
-SHELL ["conda", "run", "-n", "cellxgene", "/bin/bash", "-c"]
+USER mambauser:mambauser
 
-# Copy source scripts
-COPY src/ ./src/
+ENV MAMBA_ROOT_PREFIX=/opt/conda \
+    PATH=/opt/conda/bin:$PATH \
+    DEBIAN_FRONTEND=noninteractive
 
-# Add src/ to PATH so scripts are callable directly
-ENV PATH="/opt/cellxgene-harvester/src:${PATH}"
-ENV PYTHONPATH="/opt/cellxgene-harvester/src:${PYTHONPATH}"
+# Install Python with channels specified
+RUN micromamba install -y -n base -c conda-forge python=3.11 pip && \
+    micromamba clean --all --yes
 
-# Default entrypoint - run with conda env active
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "cellxgene", "python"]
+# Install all packages via pip
+WORKDIR /app/cellxgene-harvester
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    python -m pip install --no-cache-dir \
+        pandas \
+        requests \
+        "typer[all]" \
+        cellxgene-census \
+        tiledbsoma && \
+    python -m pip install --no-cache-dir .
+
+ENV PYTHONPATH="/app/cellxgene-harvester/src"
+
+ENTRYPOINT ["cellxgene-harvester"]
 CMD ["--help"]
