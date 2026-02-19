@@ -14,7 +14,11 @@ requires-python = ">=3.11"
 dependencies = [
     "pandas",
     "requests",
+    "typer[all]",
 ]
+
+[project.scripts]
+cellxgene-harvester = "harvester.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
