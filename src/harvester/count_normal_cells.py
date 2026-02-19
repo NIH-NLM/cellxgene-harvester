@@ -194,7 +194,6 @@ def process_dataset(dataset_id: str, uberon_ids: set, min_age: int, census, logg
         obs_filter = (
             f"dataset_id == '{dataset_id}' "
             f"and tissue_ontology_term_id in [{tissue_ids_str}] "
-            f"and is_primary_data == True "
             f"and disease == 'normal'"
         )
         logger.info(f"    Querying Census (server-side filtered)...")
