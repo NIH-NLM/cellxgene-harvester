@@ -7,12 +7,26 @@ against the 'tissue' column. Precise ontology ID filtering happens in
 step 5 where Census provides tissue_ontology_term_id.
 
 Usage:
-    python bin/4_filter_datasets.py \
+1. Python module execution:
+python -m harvester.filter_datasets
         --input data/all_datasets_complete.csv \
         --uberon data/uberon_kidney.json \
         --organism "Homo sapiens" \
-        --no-preprints --exclude-cancer --exclude-spatial \
+        --no-preprints \
+        --exclude-cancer \
+        --exclude-spatial \
         --output data/homo_sapiens_kidney_harvester.csv
+
+2. CLI command (after pip install -e .):
+cellxgene-harvester filter_datasets
+        --input data/all_datasets_complete.csv \
+        --uberon data/uberon_kidney.json \
+        --organism "Homo sapiens" \
+        --no-preprints \
+        --exclude-cancer \
+        --exclude-spatial \
+        --output data/homo_sapiens_kidney_harvester.csv
+
 """
 
 import sys
@@ -116,38 +130,34 @@ def filter_datasets(input_csv, output_csv, logger,
     df.to_csv(output_csv, index=False)
 
 
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Filter CellxGene datasets using UBERON ontology term labels"
-    )
-    parser.add_argument("--input",           default="data/all_datasets_complete.csv")
-    parser.add_argument("--output",          required=True)
-    parser.add_argument("--uberon",          default=None,
-                        help="Path to UBERON JSON from 0_resolve_uberon.py")
-    parser.add_argument("--organism",        default=None)
-    parser.add_argument("--no-preprints",    action="store_true")
-    parser.add_argument("--exclude-cancer",  action="store_true")
-    parser.add_argument("--exclude-spatial", action="store_true")
-    parser.add_argument("--disease",         default=None)
-
-    args = parser.parse_args()
-
-    logger = setup_logger("4_filter_datasets", output_csv=args.output)
+# =============================================================================
+# run_filter_datasets
+# =============================================================================
+def run_filter_datasets(
+        input_csv,
+        output_csv,
+        uberon_json=None,
+        organism=None,
+        no_preprints=False,
+        exclude_cancer=False,
+        exclude_spatial=False,
+        disease=None):
+    
+    """Main entry point called by CLI"""
+    logger = setup_logger("4_filter_datasets", output_csv=output_csv)
     log_command(logger)
-
+    
     filter_datasets(
-        input_csv       = args.input,
-        output_csv      = args.output,
-        logger          = logger,
-        uberon_json     = args.uberon,
-        organism        = args.organism,
-        no_preprints    = args.no_preprints,
-        exclude_cancer  = args.exclude_cancer,
-        exclude_spatial = args.exclude_spatial,
-        disease         = args.disease,
+        input_csv=input_csv,
+        output_csv=output_csv,
+        logger=logger,
+        uberon_json=uberon_json,
+        organism=organism,
+        no_preprints=no_preprints,
+        exclude_cancer=exclude_cancer,
+        exclude_spatial=exclude_spatial,
+        disease=disease
     )
+    
+    log_finish(logger, output_csv)
 
-    log_finish(logger, args.output)
-    print("\nNext step: python bin/5_count_normal_cells.py")

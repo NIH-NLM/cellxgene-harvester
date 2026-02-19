@@ -10,4 +10,7 @@ dependencies:
   - requests
   - cellxgene-census
   - gh
+  - pip
+  - pip:
+    - typer(all)
   

@@ -7,10 +7,12 @@ hierarchical descendants, saves both JSON and CSV for use in downstream
 filtering steps (4 and 5).
 
 Usage:
-    python bin/0_resolve_uberon.py "kidney"
-    python bin/0_resolve_uberon.py "UBERON:0002113"
-    python bin/0_resolve_uberon.py "lung" --output-prefix data/uberon_lung
-    python bin/0_resolve_uberon.py "pancreas | islet of Langerhans" --multi
+1. Python module execution:
+python -m harvester.resolve_uberon "kidney"
+
+2. CLI command (after pip install -e .):
+cellxgene-harvester resolve-uberon kidney
+cellxgene-harvester resolve-uberon kidney --output-prefix data/uberon_kidney
 
 Output:
     data/uberon_kidney.json   - full term list with metadata
@@ -21,7 +23,6 @@ import os
 import re
 import sys
 import json
-import argparse
 import requests
 import pandas as pd
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
@@ -175,53 +176,24 @@ def resolve_uberon(queries: list, output_prefix: str, logger):
 
     return json_path, csv_path
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Resolve UBERON tissue hierarchy and save JSON + CSV",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Single tissue
-  python bin/0_resolve_uberon.py "kidney"
-
-  # By UBERON ID
-  python bin/0_resolve_uberon.py "UBERON:0002113"
-
-  # Multiple tissues (combined into one file)
-  python bin/0_resolve_uberon.py "pancreas" "islet of Langerhans" --multi
-
-  # Custom output prefix
-  python bin/0_resolve_uberon.py "lung" --output-prefix data/uberon_lung
-        """
-    )
-    parser.add_argument("queries", nargs="+",
-        help="Tissue label(s) or UBERON ID(s) to resolve")
-    parser.add_argument("--output-prefix", default=None,
-        help="Output file prefix (default: data/uberon_{first_query})")
-    parser.add_argument("--multi", action="store_true",
-        help="Combine multiple queries into a single output file")
-
-    args = parser.parse_args()
-
+# =============================================================================
+# run_resolve_uberon
+# =============================================================================
+def run_resolve_uberon(queries: list, output_prefix: str = None, multi: bool = False):
+    """Main entry point called by CLI"""
     os.makedirs(DATA_DIR, exist_ok=True)
-
-    # Determine output prefix
-    if args.output_prefix:
-        output_prefix = args.output_prefix
+    
+    if output_prefix:
+        out_prefix = output_prefix
     else:
-        slug = re.sub(r"[^a-z0-9]+", "_", args.queries[0].lower()).strip("_")
-        output_prefix = os.path.join(DATA_DIR, f"uberon_{slug}")
-
-    log_file = f"{output_prefix}.log"
-    logger   = setup_logger("0_resolve_uberon", output_csv=log_file)
+        slug = re.sub(r"[^a-z0-9]+", "_", queries[0].lower()).strip("_")
+        out_prefix = os.path.join(DATA_DIR, f"uberon_{slug}")
+    
+    log_file = f"{out_prefix}.log"
+    logger = setup_logger("0_resolve_uberon", output_csv=log_file)
     log_command(logger)
+    
+    resolve_uberon(queries, out_prefix, logger)
+    
+    log_finish(logger, out_prefix + ".csv")
 
-    if args.multi or len(args.queries) > 1:
-        # Combine all queries into one output
-        resolve_uberon(args.queries, output_prefix, logger)
-    else:
-        # Single query
-        resolve_uberon(args.queries, output_prefix, logger)
-
-    log_finish(logger, output_prefix + ".csv")

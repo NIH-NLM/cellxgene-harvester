@@ -6,7 +6,13 @@ Opens Census ONCE and reuses connection across all datasets.
 Resumes automatically - skips rows where normal_cell_count is already set.
 
 Usage:
-    python bin/5_count_normal_cells.py \
+1. Python module execution:
+python -m harvester.count_normal_cells \
+        --input data/homo_sapiens_kidney_harvester.csv \
+        --uberon data/uberon_kidney.json \
+        --min-age 15
+2. CLI command (after pip install -e .):
+cellxgene-harvester count-normal-cells \
         --input data/homo_sapiens_kidney_harvester.csv \
         --uberon data/uberon_kidney.json \
         --min-age 15
@@ -114,26 +120,63 @@ def extract_census_metadata(obs_df: pd.DataFrame) -> dict:
             return ' | '.join(sorted([str(v) for v in uv])) if len(uv) > 0 else ''
         return ''
 
+    # Tissue ontology summary
+    tissue_summary = ''
+    if 'tissue_ontology_term_id' in obs_df.columns:
+        tissue_counts = obs_df['tissue_ontology_term_id'].value_counts()
+        parts = [f"{tid}: {count:,}" for tid, count in tissue_counts.items() if count > 0]
+        tissue_summary = "; ".join(parts)
+
+    # Assay ontology summary
+    assay_summary = ''
+    if 'assay_ontology_term_id' in obs_df.columns:
+        assay_counts = obs_df['assay_ontology_term_id'].value_counts()
+        parts = [f"{aid}: {count:,}" for aid, count in assay_counts.items() if count > 0]
+        assay_summary = "; ".join(parts)
+
+    # Cell type ontology summary
+    cell_type_summary = ''
+    if 'cell_type_ontology_term_id' in obs_df.columns:
+        ct_counts = obs_df['cell_type_ontology_term_id'].value_counts()
+        parts = [f"{ct}: {count:,}" for ct, count in ct_counts.items() if count > 0]
+        cell_type_summary = "; ".join(parts)
+
+    # Disease ontology summary
+    disease_summary = ''
+    if 'disease_ontology_term_id' in obs_df.columns:
+        dis_counts = obs_df['disease_ontology_term_id'].value_counts()
+        parts = [f"{did}: {count:,}" for did, count in dis_counts.items() if count > 0]
+        disease_summary = "; ".join(parts)
+
+    # Sex ontology summary
+    sex_summary = ''
+    if 'sex_ontology_term_id' in obs_df.columns:
+        sex_counts = obs_df['sex_ontology_term_id'].value_counts()
+        parts = [f"{sid}: {count:,}" for sid, count in sex_counts.items() if count > 0]
+        sex_summary = "; ".join(parts)
+
     dev_stage_summary = ''
     if 'development_stage' in obs_df.columns and len(obs_df) > 0:
-        stage_counts      = obs_df['development_stage'].value_counts()
-        parts             = [f"{s}: {c:,}" for s, c in stage_counts.items() if c > 0]
-        dev_stage_summary = "; ".join(parts)
+        counts            = obs_df['development_stage'].value_counts()
+        dev_stage_summary = "; ".join(f"{s}: {c:,}" for s, c in counts.items())
 
     donor_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
 
     return {
-        'census_tissue':                       get_most_common('tissue'),
-        'census_disease':                       get_most_common('disease'),
-        'tissue_ontology_term_id':             get_all_unique('tissue_ontology_term_id'),
-        'assay_ontology_term_id':              get_all_unique('assay_ontology_term_id'),
-        'cell_type_ontology_term_id':          get_all_unique('cell_type_ontology_term_id'),
-        'disease_ontology_term_id':            get_all_unique('disease_ontology_term_id'),
-        'development_stage_ontology_term_id':  get_all_unique('development_stage_ontology_term_id'),
-        'sex_ontology_term_id':                get_all_unique('sex_ontology_term_id'),
-        'is_primary_data':                     get_most_common('is_primary_data'),
-        'donor_id_count':                      donor_count,
-        'development_stage_summary':           dev_stage_summary,
+        'tissue_ontology_term_id':            all_unique('tissue_ontology_term_id'),
+        'assay_ontology_term_id':             all_unique('assay_ontology_term_id'),
+        'cell_type_ontology_term_id':         all_unique('cell_type_ontology_term_id'),
+        'disease_ontology_term_id':           all_unique('disease_ontology_term_id'),
+        'development_stage_ontology_term_id': all_unique('development_stage_ontology_term_id'),
+        'sex_ontology_term_id':               all_unique('sex_ontology_term_id'),
+        'is_primary_data':                    most_common('is_primary_data'),
+        'donor_id_count':                     donor_count,
+        'tissue_ontology_summary':            tissue_summary,
+        'assay_ontology_summary':             assay_summary,
+        'cell_type_ontology_summary':         cell_type_summary,
+        'disease_ontology_summary':           disease_summary,
+        'development_stage_summary':          dev_stage_summary,
+        'sex_ontology_summary':               sex_summary,
     }
 
 
@@ -160,11 +203,18 @@ def process_dataset(dataset_id: str, uberon_ids: set, min_age: int, census, logg
             census=census,
             organism="Homo sapiens",
             obs_value_filter=obs_filter,
-            obs_column_names=["tissue", "tissue_ontology_term_id", "disease",
-                              "disease_ontology_term_id", "development_stage",
-                              "development_stage_ontology_term_id", "assay_ontology_term_id",
-                              "cell_type_ontology_term_id", "sex_ontology_term_id",
-                              "is_primary_data", "donor_id", "suspension_type"]
+            obs_column_names=["tissue",
+                              "tissue_ontology_term_id",
+                              "disease",
+                              "disease_ontology_term_id",
+                              "development_stage",
+                              "development_stage_ontology_term_id",
+                              "assay_ontology_term_id",
+                              "cell_type_ontology_term_id",
+                              "sex_ontology_term_id",
+                              "is_primary_data",
+                              "donor_id",
+                              "suspension_type"]
         )
 
         if adata is None or adata.n_obs == 0:
@@ -220,11 +270,21 @@ def process_all_datasets(input_csv, output_csv, uberon_json, min_age, logger):
         logger.info(f"Starting fresh: {input_csv} ({len(df):,} datasets)")
 
     # Ensure output columns exist
-    for col in ['normal_cell_count', 'tissue_ontology_term_id',
-                'assay_ontology_term_id', 'cell_type_ontology_term_id',
-                'disease_ontology_term_id', 'development_stage_ontology_term_id',
-                'sex_ontology_term_id', 'is_primary_data', 'donor_id_count',
-                'development_stage_summary']:
+    for col in ['normal_cell_count',
+                'tissue_ontology_term_id',
+                'assay_ontology_term_id',
+                'cell_type_ontology_term_id',
+                'disease_ontology_term_id',
+                'development_stage_ontology_term_id',
+                'sex_ontology_term_id',
+                'is_primary_data',
+                'donor_id_count',
+                'tissue_ontology_summary',
+                'assay_ontology_summary',
+                'cell_type_ontology_summary',
+                'disease_ontology_summary',
+                'development_stage_summary',
+                'sex_ontology_summary']:
         if col not in df.columns:
             df[col] = ''
 
@@ -281,36 +341,30 @@ def process_all_datasets(input_csv, output_csv, uberon_json, min_age, logger):
     logger.info(f"  Failed                 : {stats['failed']:,}")
     logger.info(f"  Skipped (no ID)        : {stats['skipped']:,}")
 
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='Count normal cells from CellxGene Census using UBERON ontology filtering'
-    )
-    parser.add_argument('--input',   required=True,
-                        help='Input CSV (output from step 4)')
-    parser.add_argument('--uberon',  required=True,
-                        help='UBERON JSON from 0_resolve_uberon.py')
-    parser.add_argument('--min-age', type=int, default=15,
-                        help='Minimum age for adult filtering (default: 15). Use 0 to disable.')
-
-    args = parser.parse_args()
-
-    base       = os.path.splitext(args.input)[0]
+# =============================================================================
+# run_count_normal_cells
+# =============================================================================
+def run_count_normal_cells(
+        input_csv: str,
+        uberon_json: str,
+        min_age: int
+    ):
+    """Main entry point called by CLI"""
+    base = os.path.splitext(input_csv)[0]
     output_csv = f"{base}_with_normal_counts.csv"
-
+    
     logger = setup_logger("5_count_normal_cells", output_csv=output_csv)
     log_command(logger)
-    logger.info(f"UBERON file: {args.uberon}")
-    logger.info(f"Min age    : {args.min_age}")
+    logger.info(f"UBERON file: {uberon_json}")
+    logger.info(f"Min age    : {min_age}")
     logger.info(f"Output     : {output_csv}\n")
-
+    
     try:
         import cellxgene_census
     except ImportError:
         logger.error("ERROR: cellxgene_census not found")
         sys.exit(1)
-
-    process_all_datasets(args.input, output_csv, args.uberon, args.min_age, logger)
+    
+    process_all_datasets(input_csv, output_csv, uberon_json, min_age, logger)
     log_finish(logger, output_csv)
+
