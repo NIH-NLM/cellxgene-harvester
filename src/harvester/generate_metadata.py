@@ -6,7 +6,7 @@ Extracts collection and dataset information into a CSV file.
 Includes collection names and basic metadata for each dataset.
 
 Usage:
-    python bin/2_generate_metadata_csv.py
+    python bin/generate_metadata_csv.py
 """
 
 import os
@@ -32,6 +32,7 @@ STATIC_FIELDS = {
 # CSV header with user-friendly ordering
 CSV_HEADER = [
     # Human-readable fields first (for easy editing)
+    "reference",
     "collection_name",
     "dataset_title",
     "total_cell_count",
@@ -198,7 +199,7 @@ def generate_csv():
         collection_version_id = collection.get("collection_version_id", "")
         collection_name = collection.get("name", "")
         collection_url = collection.get("collection_url", "")
-        revised_at = collection.get("revised_at", "")
+        doi = collection.get("doi","")
         visibility = collection.get("visibility", "")
         
         if not collection_id:
@@ -220,6 +221,7 @@ def generate_csv():
         for ds in latest_datasets.values():
             row = {
                 # Human-readable fields (will be filled in subsequent steps)
+                "reference": "unk"
                 "collection_name": collection_name,
                 "dataset_title": "",  # Will be filled in step 3
                 "total_cell_count": "",  # Will be filled in step 3
@@ -228,7 +230,7 @@ def generate_csv():
                 "first_author": pub_metadata["first_author"],
                 "journal": pub_metadata["journal"],
                 "year": pub_metadata["year"],
-                "doi": pub_metadata["doi"],
+                "doi": doi,
                 "collection_url": collection_url,
                 "explorer_url": "",  # Will be filled in step 3
                 "tissue": ds["tissue"],
