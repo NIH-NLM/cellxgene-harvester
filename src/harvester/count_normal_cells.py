@@ -163,12 +163,12 @@ def extract_census_metadata(obs_df: pd.DataFrame) -> dict:
     donor_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
 
     return {
-        'tissue_ontology_term_id':            all_unique('tissue_ontology_term_id'),
-        'assay_ontology_term_id':             all_unique('assay_ontology_term_id'),
-        'cell_type_ontology_term_id':         all_unique('cell_type_ontology_term_id'),
-        'disease_ontology_term_id':           all_unique('disease_ontology_term_id'),
-        'development_stage_ontology_term_id': all_unique('development_stage_ontology_term_id'),
-        'sex_ontology_term_id':               all_unique('sex_ontology_term_id'),
+        'tissue_ontology_term_id':            get_all_unique('tissue_ontology_term_id'),
+        'assay_ontology_term_id':             get_all_unique('assay_ontology_term_id'),
+        'cell_type_ontology_term_id':         get_all_unique('cell_type_ontology_term_id'),
+        'disease_ontology_term_id':           get_all_unique('disease_ontology_term_id'),
+        'development_stage_ontology_term_id': get_all_unique('development_stage_ontology_term_id'),
+        'sex_ontology_term_id':               get_all_unique('sex_ontology_term_id'),
         'is_primary_data':                    most_common('is_primary_data'),
         'donor_id_count':                     donor_count,
         'tissue_ontology_summary':            tissue_summary,
