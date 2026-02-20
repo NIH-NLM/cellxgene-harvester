@@ -74,13 +74,13 @@ def filter_adult_cells(obs_df: pd.DataFrame, min_age: int) -> pd.DataFrame:
 
 
 def extract_metadata(obs_df: pd.DataFrame) -> dict:
-    def most_common(col):
+    def get_most_common(col):
         if col in obs_df.columns and len(obs_df) > 0:
             vc = obs_df[col].value_counts()
             return str(vc.index[0]) if len(vc) > 0 else ''
         return ''
 
-    def all_unique(col):
+    def get_all_unique(col):
         if col in obs_df.columns and len(obs_df) > 0:
             uv = obs_df[col].dropna().unique()
             return ' | '.join(sorted(str(v) for v in uv))
@@ -135,7 +135,7 @@ def extract_metadata(obs_df: pd.DataFrame) -> dict:
         'disease_ontology_term_id':           get_all_unique('disease_ontology_term_id'),
         'development_stage_ontology_term_id': get_all_unique('development_stage_ontology_term_id'),
         'sex_ontology_term_id':               get_all_unique('sex_ontology_term_id'),
-        'is_primary_data':                    most_common('is_primary_data'),
+        'is_primary_data':                    get_most_common('is_primary_data'),
         'donor_id_count':                     donor_count,
         'tissue_ontology_summary':            tissue_summary,
         'assay_ontology_summary':             assay_summary,

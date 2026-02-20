@@ -169,7 +169,7 @@ def extract_census_metadata(obs_df: pd.DataFrame) -> dict:
         'disease_ontology_term_id':           get_all_unique('disease_ontology_term_id'),
         'development_stage_ontology_term_id': get_all_unique('development_stage_ontology_term_id'),
         'sex_ontology_term_id':               get_all_unique('sex_ontology_term_id'),
-        'is_primary_data':                    most_common('is_primary_data'),
+        'is_primary_data':                    get_most_common('is_primary_data'),
         'donor_id_count':                     donor_count,
         'tissue_ontology_summary':            tissue_summary,
         'assay_ontology_summary':             assay_summary,
