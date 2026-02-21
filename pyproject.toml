@@ -15,10 +15,15 @@ dependencies = [
     "pandas",
     "requests",
     "typer[all]",
+    "fastmcp",
 ]
+
+[project.optional-dependencies]
+cloudos = ["cloudos-cli"]
 
 [project.scripts]
 cellxgene-harvester = "harvester.cli:main"
+cellxgene-harvester-mcp = "harvester.mcp.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
