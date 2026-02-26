@@ -26,70 +26,21 @@ from typing import Optional
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 
-def load_disease_ids(disease_json: str, logger) -> set:
-    """Load disease obo_ids from a resolve_disease JSON file."""
-    with open(disease_json) as f:
+def load_obo_ids(json_path: str, label: str, logger) -> set:
+    """Load obo_ids from a resolve_uberon / resolve_disease / resolve_hsapdv JSON.
+
+    All three resolve steps produce the same JSON structure, so this one
+    helper covers all three. Filtering is a uniform .isin(obo_ids) check —
+    no numeric age comparison, no text matching.
+    """
+    with open(json_path) as f:
         data = json.load(f)
     obo_ids = set(data["obo_ids"])
     roots   = [t["label"] for t in data["root_terms"]]
-    logger.info(f"  Loaded disease IDs  : {disease_json}")
+    logger.info(f"  Loaded {label} JSON : {json_path}")
     logger.info(f"  Root terms          : {', '.join(roots)}")
     logger.info(f"  Total obo_ids       : {len(obo_ids):,}")
     return obo_ids
-
-
-def load_hsapdv_ages(hsapdv_json: str, logger) -> dict:
-    """Load HsapDv ID -> min_age_years mapping from resolve_hsapdv JSON."""
-    with open(hsapdv_json) as f:
-        data = json.load(f)
-    terms  = data["terms"]
-    n_ages = sum(1 for v in terms.values() if v["min_age_years"] is not None)
-    logger.info(f"  Loaded HsapDv ages  : {hsapdv_json}")
-    logger.info(f"  Terms with age      : {n_ages:,}")
-    logger.info(f"  Prenatal/unparsed   : {len(terms) - n_ages:,}")
-    return {term_id: v["min_age_years"] for term_id, v in terms.items()}
-
-
-def filter_adult_cells(obs_df: pd.DataFrame, min_age: int,
-                       hsapdv_ages: dict, logger) -> pd.DataFrame:
-    """Filter cells using development_stage_ontology_term_id resolved via HsapDv ages JSON."""
-    if min_age == 0:
-        return obs_df
-
-    id_col = "development_stage_ontology_term_id"
-    if id_col not in obs_df.columns:
-        logger.warning(f"  {id_col} column missing - skipping age filter")
-        return obs_df
-
-    adult_mask     = []
-    cells_adult    = 0
-    cells_child    = 0
-    cells_prenatal = 0
-    cells_unknown  = 0
-
-    for term_id in obs_df[id_col].astype(str):
-        term_id = term_id.strip()
-        if term_id in ("", "nan", "None", "unknown") or term_id not in hsapdv_ages:
-            adult_mask.append(False)
-            cells_unknown += 1
-            continue
-        age = hsapdv_ages[term_id]
-        if age is None:
-            adult_mask.append(False)
-            cells_prenatal += 1
-        elif age >= min_age:
-            adult_mask.append(True)
-            cells_adult += 1
-        else:
-            adult_mask.append(False)
-            cells_child += 1
-
-    adult_df = obs_df[adult_mask]
-    log_counts(logger, f"age filter (>= {min_age} yr, via HsapDv ID)",
-               before=len(obs_df), after=len(adult_df), unit="cells")
-    logger.info(f"        Adult: {cells_adult:,}  Child: {cells_child:,}  "
-                f"Prenatal: {cells_prenatal:,}  Unknown ID: {cells_unknown:,}")
-    return adult_df
 
 
 def filter_normal_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
@@ -191,12 +142,13 @@ def extract_census_metadata(obs_df: pd.DataFrame) -> dict:
 
 
 def process_dataset(dataset_id: str, uberon_ids: set, disease_ids: set,
-                    hsapdv_ages: dict, min_age: int, census, logger) -> Optional[dict]:
+                    hsapdv_ids: set, census, logger) -> Optional[dict]:
     """Process one dataset using an already-open Census connection.
 
-    Pushes UBERON tissue + disease filters into the Census query using
-    ontology term IDs loaded from resolve_uberon and resolve_disease JSON files.
-    Age filtering is done client-side using development_stage_ontology_term_id.
+    Tissue and disease filters pushed server-side into Census query.
+    Age filter applied client-side as .isin(hsapdv_ids) — same pattern,
+    no numeric comparison. Age threshold is encoded in hsapdv_ids at
+    resolve time (cellxgene-harvester resolve-hsapdv --min-age N).
     """
     try:
         import cellxgene_census
@@ -238,9 +190,12 @@ def process_dataset(dataset_id: str, uberon_ids: set, disease_ids: set,
 
         metadata = extract_census_metadata(obs_df)
 
-        # Age filter (client-side - not supported in Census query)
-        adult_df    = filter_adult_cells(obs_df, min_age, hsapdv_ages, logger)
+        # Age filter (client-side — .isin() on HsapDv obo_ids, same pattern as tissue/disease)
+        id_col      = 'development_stage_ontology_term_id'
+        adult_df    = obs_df[obs_df[id_col].isin(hsapdv_ids)] if id_col in obs_df.columns else obs_df
         adult_count = len(adult_df)
+        log_counts(logger, "age filter (HsapDv IDs)",
+                   before=len(obs_df), after=adult_count, unit="cells")
 
         if adult_count == 0:
             return {'normal_cell_count': 0, 'total_count': len(obs_df),
@@ -263,22 +218,12 @@ def process_dataset(dataset_id: str, uberon_ids: set, disease_ids: set,
 
 
 def process_all_datasets(input_csv, output_csv, uberon_json, disease_json,
-                         hsapdv_json, min_age, logger):
+                         hsapdv_json, logger):
     import cellxgene_census
 
-    # Load UBERON IDs
-    with open(uberon_json) as f:
-        uberon_data = json.load(f)
-    uberon_ids = set(uberon_data["obo_ids"])
-    roots      = [t["label"] for t in uberon_data["root_terms"]]
-    logger.info(f"UBERON terms : {len(uberon_ids):,} IDs  (roots: {', '.join(roots)})")
-
-    # Load disease IDs
-    disease_ids = load_disease_ids(disease_json, logger)
-
-    # Load HsapDv age mapping
-    logger.info("")
-    hsapdv_ages = load_hsapdv_ages(hsapdv_json, logger)
+    uberon_ids  = load_obo_ids(uberon_json,  "UBERON",  logger)
+    disease_ids = load_obo_ids(disease_json, "disease", logger)
+    hsapdv_ids  = load_obo_ids(hsapdv_json,  "HsapDv",  logger)
     logger.info("")
 
     # Load input - use output if it exists (resume)
@@ -342,7 +287,7 @@ def process_all_datasets(input_csv, output_csv, uberon_json, disease_json,
                 continue
 
             result = process_dataset(dataset_id, uberon_ids, disease_ids,
-                                     hsapdv_ages, min_age, census, logger)
+                                     hsapdv_ids, census, logger)
 
             if result is not None:
                 for key, val in result.items():
@@ -370,10 +315,9 @@ def run_count_normal_cells(
         uberon_json:  str,
         disease_json: str,
         hsapdv_json:  str,
-        min_age:      int
     ):
     """Main entry point called by CLI"""
-    base = os.path.splitext(input_csv)[0]
+    base       = os.path.splitext(input_csv)[0]
     output_csv = f"{base}_with_normal_counts.csv"
 
     logger = setup_logger("5_count_normal_cells", output_csv=output_csv)
@@ -381,7 +325,6 @@ def run_count_normal_cells(
     logger.info(f"UBERON file  : {uberon_json}")
     logger.info(f"Disease file : {disease_json}")
     logger.info(f"HsapDv file  : {hsapdv_json}")
-    logger.info(f"Min age      : {min_age}")
     logger.info(f"Output       : {output_csv}\n")
 
     try:
@@ -391,6 +334,6 @@ def run_count_normal_cells(
         sys.exit(1)
 
     process_all_datasets(input_csv, output_csv, uberon_json, disease_json,
-                         hsapdv_json, min_age, logger)
+                         hsapdv_json, logger)
     log_finish(logger, output_csv)
 
