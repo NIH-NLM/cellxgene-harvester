@@ -32,66 +32,21 @@ import pandas as pd
 from typing import Optional
 
 
-def load_disease_ids(disease_json: str) -> set:
-    """Load disease obo_ids from a resolve_disease JSON file."""
-    with open(disease_json) as f:
+def load_obo_ids(json_path: str, label: str) -> set:
+    """Load obo_ids from a resolve_uberon / resolve_disease / resolve_hsapdv JSON.
+
+    All three resolve steps produce the same JSON structure, so this one
+    helper covers all three. Filtering is a uniform .isin(obo_ids) check —
+    no numeric age comparison, no text matching.
+    """
+    with open(json_path) as f:
         data = json.load(f)
     obo_ids = set(data["obo_ids"])
     roots   = [t["label"] for t in data["root_terms"]]
-    print(f"  Disease IDs loaded  : {len(obo_ids):,}  (roots: {', '.join(roots)})")
+    print(f"  Loaded {label} JSON : {json_path}")
+    print(f"  Root terms          : {', '.join(roots)}")
+    print(f"  Total obo_ids       : {len(obo_ids):,}")
     return obo_ids
-
-
-def load_hsapdv_ages(hsapdv_json: str) -> dict:
-    """Load HsapDv ID -> min_age_years mapping from resolve_hsapdv JSON."""
-    with open(hsapdv_json) as f:
-        data = json.load(f)
-    terms  = data["terms"]
-    n_ages = sum(1 for v in terms.values() if v["min_age_years"] is not None)
-    print(f"  HsapDv terms with age : {n_ages:,}")
-    return {term_id: v["min_age_years"] for term_id, v in terms.items()}
-
-
-def filter_adult_cells(obs_df: pd.DataFrame, min_age: int,
-                       hsapdv_ages: dict) -> pd.DataFrame:
-    """Filter cells using development_stage_ontology_term_id resolved via HsapDv ages JSON."""
-    if min_age == 0:
-        return obs_df
-
-    id_col = "development_stage_ontology_term_id"
-    if id_col not in obs_df.columns:
-        print(f"  WARNING: {id_col} column missing - skipping age filter")
-        return obs_df
-
-    adult_mask     = []
-    cells_adult    = 0
-    cells_child    = 0
-    cells_prenatal = 0
-    cells_unknown  = 0
-
-    for term_id in obs_df[id_col].astype(str):
-        term_id = term_id.strip()
-        if term_id in ("", "nan", "None", "unknown") or term_id not in hsapdv_ages:
-            adult_mask.append(False)
-            cells_unknown += 1
-            continue
-        age = hsapdv_ages[term_id]
-        if age is None:
-            adult_mask.append(False)
-            cells_prenatal += 1
-        elif age >= min_age:
-            adult_mask.append(True)
-            cells_adult += 1
-        else:
-            adult_mask.append(False)
-            cells_child += 1
-
-    adult_df = obs_df[adult_mask]
-    print(f"  Age filter (>= {min_age} yr, via HsapDv ID): "
-          f"{len(obs_df):,} -> {len(adult_df):,} cells")
-    print(f"    Adult: {cells_adult:,}  Child: {cells_child:,}  "
-          f"Prenatal: {cells_prenatal:,}  Unknown ID: {cells_unknown:,}")
-    return adult_df
 
 
 def extract_metadata(obs_df: pd.DataFrame) -> dict:
@@ -167,16 +122,15 @@ def extract_metadata(obs_df: pd.DataFrame) -> dict:
     }
 
 
-def count_normal_cells_single(dataset_id, uberon_ids, disease_ids, hsapdv_ages, min_age):
+def count_normal_cells_single(dataset_id, uberon_ids, disease_ids, hsapdv_ids):
     """
     Query Census for one dataset, apply server-side filters, count normal adult cells.
 
     Args:
-        dataset_id:   CellxGene dataset UUID
-        uberon_ids:   set of UBERON obo_ids from resolve_uberon
-        disease_ids:  set of disease obo_ids from resolve_disease
-        hsapdv_ages:  dict of HsapDv ID -> min_age_years from resolve_hsapdv
-        min_age:      minimum age for adult cell filtering
+        dataset_id:  CellxGene dataset UUID
+        uberon_ids:  set of UBERON obo_ids from resolve_uberon
+        disease_ids: set of disease obo_ids from resolve_disease
+        hsapdv_ids:  set of HsapDv obo_ids from resolve_hsapdv --min-age N
     """
     import cellxgene_census
 
@@ -222,15 +176,15 @@ def count_normal_cells_single(dataset_id, uberon_ids, disease_ids, hsapdv_ages, 
         }
 
     obs_df = adata.obs
-    print(f"  Census returned {len(obs_df):,} cells (tissue + primary + normal filtered)")
+    print(f"  Census returned {len(obs_df):,} cells (tissue + primary + disease filtered)")
 
-    # Capture metadata before age filter
-    metadata    = extract_metadata(obs_df)
+    metadata = extract_metadata(obs_df)
 
-    # Age filter (client-side - not supported in Census query)
-    adult_df    = filter_adult_cells(obs_df, min_age, hsapdv_ages)
+    # Age filter (client-side — .isin() on HsapDv obo_ids, same pattern as tissue/disease)
+    id_col      = 'development_stage_ontology_term_id'
+    adult_df    = obs_df[obs_df[id_col].isin(hsapdv_ids)] if id_col in obs_df.columns else obs_df
     adult_count = len(adult_df)
-    print(f"  After age filter (>= {min_age}): {adult_count:,} cells")
+    print(f"  After age filter (HsapDv IDs): {adult_count:,} cells")
 
     return {
         'normal_cell_count': adult_count,
@@ -279,12 +233,11 @@ if __name__ == "__main__":
     )
     parser.add_argument('--dataset-id',   required=True)
     parser.add_argument('--uberon',       required=True,
-                        help='UBERON JSON from resolve_uberon')
+                        help='UBERON JSON from resolve-uberon')
     parser.add_argument('--disease',      required=True,
-                        help='Disease JSON from resolve_disease')
+                        help='Disease JSON from resolve-disease')
     parser.add_argument('--hsapdv',       required=True,
-                        help='HsapDv ages JSON from resolve_hsapdv')
-    parser.add_argument('--min-age',      type=int, default=15)
+                        help='HsapDv JSON from resolve-hsapdv --min-age N')
     parser.add_argument('--first-author', default='')
     parser.add_argument('--year',         default='')
     parser.add_argument('--journal',      default='')
@@ -298,17 +251,11 @@ if __name__ == "__main__":
     print(f"UBERON  : {args.uberon}")
     print(f"Disease : {args.disease}")
     print(f"HsapDv  : {args.hsapdv}")
-    print(f"Min age : {args.min_age}")
     print(f"{'='*60}")
 
-    # Load ontology IDs
-    with open(args.uberon) as f:
-        uberon_data = json.load(f)
-    uberon_ids = set(uberon_data["obo_ids"])
-    print(f"  UBERON IDs loaded: {len(uberon_ids):,}")
-
-    disease_ids = load_disease_ids(args.disease)
-    hsapdv_ages = load_hsapdv_ages(args.hsapdv)
+    uberon_ids  = load_obo_ids(args.uberon,  "UBERON")
+    disease_ids = load_obo_ids(args.disease, "disease")
+    hsapdv_ids  = load_obo_ids(args.hsapdv,  "HsapDv")
 
     try:
         import cellxgene_census
@@ -320,7 +267,7 @@ if __name__ == "__main__":
 
     try:
         result = count_normal_cells_single(args.dataset_id, uberon_ids,
-                                           disease_ids, hsapdv_ages, args.min_age)
+                                           disease_ids, hsapdv_ids)
         write_result(result, args.dataset_id, args.first_author,
                      args.year, args.journal, args.output)
         print(f"\nResult: {result['normal_cell_count']:,} normal cells")
