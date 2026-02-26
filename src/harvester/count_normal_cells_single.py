@@ -28,49 +28,70 @@ import os
 import sys
 import json
 import argparse
-import re
 import pandas as pd
 from typing import Optional
 
 
-def extract_age_from_stage(stage_label: str) -> Optional[int]:
-    if not stage_label or not isinstance(stage_label, str):
-        return None
-    match = re.search(r'(\d+)[- ]?(?:year|yr)', stage_label.lower())
-    return int(match.group(1)) if match else None
+def load_disease_ids(disease_json: str) -> set:
+    """Load disease obo_ids from a resolve_disease JSON file."""
+    with open(disease_json) as f:
+        data = json.load(f)
+    obo_ids = set(data["obo_ids"])
+    roots   = [t["label"] for t in data["root_terms"]]
+    print(f"  Disease IDs loaded  : {len(obo_ids):,}  (roots: {', '.join(roots)})")
+    return obo_ids
 
 
-def filter_adult_cells(obs_df: pd.DataFrame, min_age: int) -> pd.DataFrame:
-    if 'development_stage' not in obs_df.columns or min_age == 0:
+def load_hsapdv_ages(hsapdv_json: str) -> dict:
+    """Load HsapDv ID -> min_age_years mapping from resolve_hsapdv JSON."""
+    with open(hsapdv_json) as f:
+        data = json.load(f)
+    terms  = data["terms"]
+    n_ages = sum(1 for v in terms.values() if v["min_age_years"] is not None)
+    print(f"  HsapDv terms with age : {n_ages:,}")
+    return {term_id: v["min_age_years"] for term_id, v in terms.items()}
+
+
+def filter_adult_cells(obs_df: pd.DataFrame, min_age: int,
+                       hsapdv_ages: dict) -> pd.DataFrame:
+    """Filter cells using development_stage_ontology_term_id resolved via HsapDv ages JSON."""
+    if min_age == 0:
         return obs_df
 
-    EXCLUDE_TERMS = ['fetal', 'embryo', 'newborn', 'prenatal', 'lmp',
-                     'post-fertilization', 'week post', 'Carnegie stage',
-                     'trimester', 'gestational']
+    id_col = "development_stage_ontology_term_id"
+    if id_col not in obs_df.columns:
+        print(f"  WARNING: {id_col} column missing - skipping age filter")
+        return obs_df
 
-    adult_mask = []
-    for stage_val in obs_df['development_stage'].astype(str):
-        stage_lower = stage_val.lower()
+    adult_mask     = []
+    cells_adult    = 0
+    cells_child    = 0
+    cells_prenatal = 0
+    cells_unknown  = 0
 
-        if not stage_val or stage_val in ('nan', 'None') or stage_val.strip() == '':
+    for term_id in obs_df[id_col].astype(str):
+        term_id = term_id.strip()
+        if term_id in ("", "nan", "None", "unknown") or term_id not in hsapdv_ages:
             adult_mask.append(False)
+            cells_unknown += 1
             continue
-
-        if any(term in stage_lower for term in EXCLUDE_TERMS):
+        age = hsapdv_ages[term_id]
+        if age is None:
             adult_mask.append(False)
-            continue
-
-        if 'adult' in stage_lower:
+            cells_prenatal += 1
+        elif age >= min_age:
             adult_mask.append(True)
-            continue
-
-        age = extract_age_from_stage(stage_val)
-        if age is not None:
-            adult_mask.append(age >= min_age)
+            cells_adult += 1
         else:
             adult_mask.append(False)
+            cells_child += 1
 
-    return obs_df[adult_mask]
+    adult_df = obs_df[adult_mask]
+    print(f"  Age filter (>= {min_age} yr, via HsapDv ID): "
+          f"{len(obs_df):,} -> {len(adult_df):,} cells")
+    print(f"    Adult: {cells_adult:,}  Child: {cells_child:,}  "
+          f"Prenatal: {cells_prenatal:,}  Unknown ID: {cells_unknown:,}")
+    return adult_df
 
 
 def extract_metadata(obs_df: pd.DataFrame) -> dict:
@@ -146,27 +167,26 @@ def extract_metadata(obs_df: pd.DataFrame) -> dict:
     }
 
 
-def count_normal_cells_single(dataset_id, uberon_ids, min_age):
+def count_normal_cells_single(dataset_id, uberon_ids, disease_ids, hsapdv_ages, min_age):
     """
     Query Census for one dataset, apply server-side filters, count normal adult cells.
 
     Args:
-        dataset_id: CellxGene dataset UUID
-        uberon_ids: set of UBERON obo_ids from resolve_uberon step
-        min_age:    minimum age for adult cell filtering
-
-    Returns:
-        dict with normal_cell_count and metadata, or None on failure
+        dataset_id:   CellxGene dataset UUID
+        uberon_ids:   set of UBERON obo_ids from resolve_uberon
+        disease_ids:  set of disease obo_ids from resolve_disease
+        hsapdv_ages:  dict of HsapDv ID -> min_age_years from resolve_hsapdv
+        min_age:      minimum age for adult cell filtering
     """
     import cellxgene_census
 
-    # Build server-side filter - push everything possible into the query
-    tissue_ids_str = ", ".join(f"'{t}'" for t in sorted(uberon_ids))
+    tissue_ids_str  = ", ".join(f"'{t}'" for t in sorted(uberon_ids))
+    disease_ids_str = ", ".join(f"'{d}'" for d in sorted(disease_ids))
     obs_filter = (
         f"dataset_id == '{dataset_id}' "
         f"and tissue_ontology_term_id in [{tissue_ids_str}] "
         f"and is_primary_data == True "
-        f"and disease == 'normal'"
+        f"and disease_ontology_term_id in [{disease_ids_str}]"
     )
 
     print(f"  Querying Census (server-side filtered)...")
@@ -208,7 +228,7 @@ def count_normal_cells_single(dataset_id, uberon_ids, min_age):
     metadata    = extract_metadata(obs_df)
 
     # Age filter (client-side - not supported in Census query)
-    adult_df    = filter_adult_cells(obs_df, min_age)
+    adult_df    = filter_adult_cells(obs_df, min_age, hsapdv_ages)
     adult_count = len(adult_df)
     print(f"  After age filter (>= {min_age}): {adult_count:,} cells")
 
@@ -259,7 +279,11 @@ if __name__ == "__main__":
     )
     parser.add_argument('--dataset-id',   required=True)
     parser.add_argument('--uberon',       required=True,
-                        help='UBERON JSON from 0_resolve_uberon.py')
+                        help='UBERON JSON from resolve_uberon')
+    parser.add_argument('--disease',      required=True,
+                        help='Disease JSON from resolve_disease')
+    parser.add_argument('--hsapdv',       required=True,
+                        help='HsapDv ages JSON from resolve_hsapdv')
     parser.add_argument('--min-age',      type=int, default=15)
     parser.add_argument('--first-author', default='')
     parser.add_argument('--year',         default='')
@@ -272,14 +296,19 @@ if __name__ == "__main__":
     print(f"Dataset : {args.dataset_id}")
     print(f"Author  : {args.first_author} ({args.year}) - {args.journal}")
     print(f"UBERON  : {args.uberon}")
+    print(f"Disease : {args.disease}")
+    print(f"HsapDv  : {args.hsapdv}")
     print(f"Min age : {args.min_age}")
     print(f"{'='*60}")
 
-    # Load UBERON IDs
+    # Load ontology IDs
     with open(args.uberon) as f:
         uberon_data = json.load(f)
     uberon_ids = set(uberon_data["obo_ids"])
     print(f"  UBERON IDs loaded: {len(uberon_ids):,}")
+
+    disease_ids = load_disease_ids(args.disease)
+    hsapdv_ages = load_hsapdv_ages(args.hsapdv)
 
     try:
         import cellxgene_census
@@ -290,7 +319,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        result = count_normal_cells_single(args.dataset_id, uberon_ids, args.min_age)
+        result = count_normal_cells_single(args.dataset_id, uberon_ids,
+                                           disease_ids, hsapdv_ages, args.min_age)
         write_result(result, args.dataset_id, args.first_author,
                      args.year, args.journal, args.output)
         print(f"\nResult: {result['normal_cell_count']:,} normal cells")

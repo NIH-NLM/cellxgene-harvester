@@ -6,11 +6,13 @@ Unified command-line interface for all pipeline steps.
 
 Usage:
     cellxgene-harvester resolve-uberon kidney
+    cellxgene-harvester resolve-disease normal
+    cellxgene-harvester resolve-hsapdv --min-age 15
     cellxgene-harvester fetch-collections
     cellxgene-harvester generate-metadata
     cellxgene-harvester append-details
     cellxgene-harvester filter-datasets --input ... --output ...
-    cellxgene-harvester count-normal-cells --input ... --uberon ...
+    cellxgene-harvester count-normal-cells --input ... --uberon ... --disease ... --hsapdv ...
     cellxgene-harvester final-cleanup --input ...
 """
 
@@ -23,6 +25,8 @@ from harvester.logger import setup_logger, log_command, log_finish
 # Import the modules directly - no aliases
 from harvester import (
     resolve_uberon,
+    resolve_disease,
+    resolve_hsapdv,
     fetch_collections,
     generate_metadata,
     append_dataset_details,
@@ -34,7 +38,7 @@ from harvester import (
 
 app = typer.Typer(
     name="cellxgene-harvester",
-    help="Harvest, filter, and count normal cells from CellxGene Census using UBERON ontology"
+    help="Harvest, filter, and count normal cells from CellxGene Census using ontology IDs"
 )
 
 
@@ -44,8 +48,30 @@ def resolve_uberon_command(
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
     multi: bool = typer.Option(False, help="Combine multiple queries into single file")
 ):
-    """Step 0: Resolve UBERON tissue terms via OLS4 API"""
+    """Step 0a: Resolve UBERON tissue terms via OLS4 API"""
     resolve_uberon.run_resolve_uberon(queries, output_prefix, multi)
+
+
+@app.command(name="resolve-disease")
+def resolve_disease_command(
+    queries: List[str] = typer.Argument(..., help="Disease label(s) or ontology ID(s) e.g. 'normal'"),
+    output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
+):
+    """Step 0b: Resolve disease terms (PATO/MONDO) via OLS4 API"""
+    resolve_disease.run_resolve_disease(queries, output_prefix)
+
+
+@app.command(name="resolve-hsapdv")
+def resolve_hsapdv_command(
+    min_age: float = typer.Option(..., help="Minimum age in years (e.g. 15)"),
+    output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
+    obo_url: str = typer.Option(
+        resolve_hsapdv.HSAPDV_OBO_URL,
+        help="HsapDv OBO URL (default: OBO Foundry)"
+    ),
+):
+    """Step 0c: Resolve HsapDv development stage terms for a minimum age threshold"""
+    resolve_hsapdv.run_resolve_hsapdv(min_age, output_prefix, obo_url)
 
 
 @app.command(name="fetch-collections")
@@ -92,15 +118,17 @@ def filter_datasets_command(
 
 @app.command(name="count-normal-cells")
 def count_normal_cells_command(
-    input: Path = typer.Option(..., help="Input CSV"),
-    uberon: Path = typer.Option(..., help="UBERON JSON"),
-    min_age: int = typer.Option(15, help="Minimum age for adult filtering")
+    input:   Path = typer.Option(...,  help="Input CSV"),
+    uberon:  Path = typer.Option(...,  help="UBERON JSON from resolve-uberon"),
+    disease: Path = typer.Option(...,  help="Disease JSON from resolve-disease"),
+    hsapdv:  Path = typer.Option(...,  help="HsapDv JSON from resolve-hsapdv --min-age N"),
 ):
     """Step 5: Count normal cells from CellxGene Census"""
     count_normal_cells.run_count_normal_cells(
         input_csv=str(input),
         uberon_json=str(uberon),
-        min_age=min_age
+        disease_json=str(disease),
+        hsapdv_json=str(hsapdv),
     )
 
 
