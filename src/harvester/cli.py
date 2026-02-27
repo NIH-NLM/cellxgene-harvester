@@ -11,8 +11,8 @@ Usage:
     cellxgene-harvester fetch-collections
     cellxgene-harvester generate-metadata
     cellxgene-harvester append-details
-    cellxgene-harvester filter-datasets --input ... --output ...
-    cellxgene-harvester count-normal-cells --input ... --uberon ... --disease ... --hsapdv ...
+    cellxgene-harvester filter-datasets data/all_datasets_complete.csv --output ... --uberon ... --disease ...
+    cellxgene-harvester count-normal-cells data/harvester.csv --uberon ... --disease ... --hsapdv ...
     cellxgene-harvester final-cleanup --input ...
 """
 
@@ -94,36 +94,36 @@ def append_details_command():
 
 @app.command(name="filter-datasets")
 def filter_datasets_command(
-    input: Path = typer.Option("data/all_datasets_complete.csv", help="Input CSV"),
+    input: Path = typer.Argument(..., help="Input CSV (all_datasets_complete.csv from append-details)"),
     output: Path = typer.Option(..., help="Output CSV path"),
-    uberon: Optional[Path] = typer.Option(None, help="UBERON JSON"),
-    organism: Optional[str] = typer.Option(None, help="Filter by organism"),
+    uberon: Optional[Path] = typer.Option(None, help="UBERON JSON from resolve-uberon"),
+    disease: Optional[Path] = typer.Option(None, help="Disease JSON from resolve-disease"),
+    organism: Optional[str] = typer.Option(None, help="Filter by organism label"),
     no_preprints: bool = typer.Option(False, help="Exclude preprints"),
-    exclude_cancer: bool = typer.Option(False, help="Exclude cancer"),
-    exclude_spatial: bool = typer.Option(False, help="Exclude spatial"),
-    disease: Optional[str] = typer.Option(None, help="Filter by disease")
+    exclude_cancer: bool = typer.Option(False, help="Exclude cancer datasets"),
+    exclude_spatial: bool = typer.Option(False, help="Exclude spatial transcriptomics datasets"),
 ):
-    """Step 4: Filter datasets using UBERON labels"""
+    """Step 4: Filter datasets using UBERON and disease ontology IDs"""
     filter_datasets.run_filter_datasets(
         input_csv=str(input),
         output_csv=str(output),
         uberon_json=str(uberon) if uberon else None,
+        disease_json=str(disease) if disease else None,
         organism=organism,
         no_preprints=no_preprints,
         exclude_cancer=exclude_cancer,
         exclude_spatial=exclude_spatial,
-        disease=disease
     )
 
 
 @app.command(name="count-normal-cells")
 def count_normal_cells_command(
-    input:   Path = typer.Option(...,  help="Input CSV"),
-    uberon:  Path = typer.Option(...,  help="UBERON JSON from resolve-uberon"),
-    disease: Path = typer.Option(...,  help="Disease JSON from resolve-disease"),
-    hsapdv:  Path = typer.Option(...,  help="HsapDv JSON from resolve-hsapdv --min-age N"),
+    input:   Path = typer.Argument(..., help="Input CSV (harvester.csv from filter-datasets)"),
+    uberon:  Path = typer.Option(...,   help="UBERON JSON from resolve-uberon"),
+    disease: Path = typer.Option(...,   help="Disease JSON from resolve-disease"),
+    hsapdv:  Path = typer.Option(...,   help="HsapDv JSON from resolve-hsapdv --min-age N"),
 ):
-    """Step 5: Count normal cells from CellxGene Census"""
+    """Step 5: Count normal adult cells via CellxGene Census"""
     count_normal_cells.run_count_normal_cells(
         input_csv=str(input),
         uberon_json=str(uberon),

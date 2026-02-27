@@ -46,7 +46,9 @@ CSV_HEADER = [
     "collection_url",
     "explorer_url",
     "tissue",
+    "tissue_ontology_term_id",
     "disease",
+    "disease_ontology_term_id",
     # Technical IDs and metadata
     "collection_id",
     "collection_version_id",
@@ -63,10 +65,8 @@ CSV_HEADER = [
     "save_cluster_summary",
     "save_annotation",
     "h5ad_url",
-    'tissue_ontology_term_id',
-    'assay_ontology_term_id', 
+    'assay_ontology_term_id',
     'cell_type_ontology_term_id',
-    'disease_ontology_term_id',
     'development_stage_ontology_term_id',
     'sex_ontology_term_id',
     'is_primary_data',
@@ -84,11 +84,11 @@ CSV_HEADER = [
 def safe_label(entry, sep=" | "):
     """
     Extract labels from CellxGene metadata fields.
-    
+
     Args:
         entry: List of dicts with 'label' keys, or other type
         sep: Separator for multiple labels
-        
+
     Returns:
         String of joined labels or empty string
     """
@@ -99,6 +99,33 @@ def safe_label(entry, sep=" | "):
             if isinstance(item, dict) and item.get("label")
         ]
         return sep.join(labels)
+    return ""
+
+
+def safe_ontology_ids(entry, sep=" | "):
+    """
+    Extract ontology_term_id values from CellxGene metadata fields.
+
+    The dataset-level API returns tissue and disease as arrays of objects,
+    each with both a 'label' and an 'ontology_term_id'.  This helper extracts
+    the ID half so that Step 4 (filter_datasets) can use exact ontology ID
+    matching rather than text matching against labels.
+
+    Args:
+        entry: List of dicts with 'ontology_term_id' keys, or other type
+        sep: Separator for multiple IDs (default " | " matches safe_label)
+
+    Returns:
+        String of joined ontology_term_ids or empty string.
+        Example: "UBERON:0002113 | UBERON:0001225 | UBERON:0000362"
+    """
+    if isinstance(entry, list):
+        ids = [
+            item.get("ontology_term_id", "")
+            for item in entry
+            if isinstance(item, dict) and item.get("ontology_term_id")
+        ]
+        return sep.join(ids)
     return ""
 
 
@@ -170,12 +197,14 @@ def get_latest_dataset_versions(datasets):
         current = latest_versions.get(ds_id)
         if not current or revised_at > current.get("revised_at", ""):
             latest_versions[ds_id] = {
-                "dataset_id": ds_id,
-                "dataset_version_id": ds_version_id,
-                "organism": safe_label(ds.get("organism")),
-                "tissue": safe_label(ds.get("tissue")),
-                "disease": safe_label(ds.get("disease")),
-                "revised_at": revised_at,
+                "dataset_id":               ds_id,
+                "dataset_version_id":       ds_version_id,
+                "organism":                 safe_label(ds.get("organism")),
+                "tissue":                   safe_label(ds.get("tissue")),
+                "tissue_ontology_term_id":  safe_ontology_ids(ds.get("tissue")),
+                "disease":                  safe_label(ds.get("disease")),
+                "disease_ontology_term_id": safe_ontology_ids(ds.get("disease")),
+                "revised_at":               revised_at,
             }
     
     # Report datasets with multiple versions
@@ -249,8 +278,10 @@ def generate_csv():
                 "doi": doi,
                 "collection_url": collection_url,
                 "explorer_url": "",  # Will be filled in step 3
-                "tissue": ds["tissue"],
-                "disease": ds["disease"],
+                "tissue":                   ds["tissue"],
+                "tissue_ontology_term_id":  ds["tissue_ontology_term_id"],
+                "disease":                  ds["disease"],
+                "disease_ontology_term_id": ds["disease_ontology_term_id"],
                 # Technical IDs and metadata
                 "collection_id": collection_id,
                 "collection_version_id": collection_version_id,
