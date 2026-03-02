@@ -5,8 +5,6 @@
 
 Harvest, filter, and count normal cells from the [CellxGene Census](https://chanzuckerberg.github.io/cellxgene-census/) using ontology-based filtering (UBERON tissue, PATO/MONDO disease, HsapDv age).
 
-> Architecture and engineering by Anne Deslattes Mays (NIH-NLM) with human-prompted AI-assisted development using [Claude](https://claude.ai) (Anthropic).
-
 ---
 
 ## Architecture: Resolve Once, Filter Everywhere
