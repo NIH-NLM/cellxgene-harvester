@@ -1,0 +1,30 @@
+======================================================================
+CellxGene Harvester - 0 Resolve Uberon
+======================================================================
+Started : 2026-02-15 15:45:00
+Log file: data/uberon_lung.log
+Command : python bin/0_resolve_uberon.py lung
+
+
+Resolving: 'lung'
+  Searching OLS4 for: 'lung'
+  Exact match: UBERON:0002048  lung
+  Root term: UBERON:0002048  lung
+  Found 160 descendants for UBERON:0002048
+  [terms resolved for 'lung']
+    Before :        1 terms
+    After  :      161 terms
+    Removed:     -160 terms  (-16000.0%)
+  [deduplication]
+    Before :      161 terms
+    After  :      161 terms
+    Removed:        0 terms  (0.0%)
+
+Saved JSON: data/uberon_lung.json
+Saved CSV : data/uberon_lung.csv
+Total terms: 161  (root + descendants)
+
+======================================================================
+Finished: 2026-02-15 15:45:03
+Output  : data/uberon_lung.csv
+======================================================================

@@ -1,0 +1,827 @@
+{
+  "queries": [
+    "large intestine"
+  ],
+  "root_terms": [
+    {
+      "obo_id": "UBERON:0000059",
+      "label": "large intestine",
+      "level": "root"
+    }
+  ],
+  "obo_ids": [
+    "UBERON:0000059",
+    "UBERON:8410050",
+    "UBERON:0013742",
+    "UBERON:0013741",
+    "UBERON:0012652",
+    "UBERON:0011198",
+    "UBERON:0011189",
+    "UBERON:0004220",
+    "UBERON:0003453",
+    "UBERON:0001984",
+    "UBERON:0001278",
+    "UBERON:0001239",
+    "UBERON:0001209",
+    "UBERON:0001208",
+    "UBERON:0001207",
+    "UBERON:0001169",
+    "UBERON:0001155",
+    "UBERON:0001154",
+    "UBERON:0001153",
+    "UBERON:0001052",
+    "UBERON:0000159",
+    "UBERON:8410056",
+    "UBERON:8410055",
+    "UBERON:8410009",
+    "UBERON:8410008",
+    "UBERON:8410007",
+    "UBERON:8410006",
+    "UBERON:0013067",
+    "UBERON:0018111",
+    "UBERON:0012490",
+    "UBERON:0012419",
+    "UBERON:0012489",
+    "UBERON:8600140",
+    "UBERON:8600139",
+    "UBERON:8600137",
+    "UBERON:8600136",
+    "UBERON:8600135",
+    "UBERON:8600134",
+    "UBERON:0007177",
+    "UBERON:8410061",
+    "UBERON:8410060",
+    "UBERON:0018112",
+    "UBERON:0012399",
+    "UBERON:0012398",
+    "UBERON:0022281",
+    "UBERON:0013485",
+    "UBERON:0013486",
+    "UBERON:0015716",
+    "UBERON:0009697",
+    "UBERON:0003354",
+    "UBERON:0000397",
+    "UBERON:8410031",
+    "UBERON:0012497",
+    "UBERON:0007178",
+    "UBERON:0012498",
+    "UBERON:0003335",
+    "UBERON:0003334",
+    "UBERON:0004928",
+    "UBERON:0003331",
+    "UBERON:0003330",
+    "UBERON:0003329",
+    "UBERON:0004989",
+    "UBERON:0003346",
+    "UBERON:0003342",
+    "UBERON:0000317",
+    "UBERON:0036362",
+    "UBERON:0036337",
+    "UBERON:8410059",
+    "UBERON:8410058",
+    "UBERON:8410057",
+    "UBERON:8410051",
+    "UBERON:8410048",
+    "UBERON:8410015",
+    "UBERON:8410054",
+    "UBERON:0022275",
+    "UBERON:0013695",
+    "UBERON:0008972",
+    "UBERON:0008971",
+    "UBERON:0007159",
+    "UBERON:0003396",
+    "UBERON:0000168",
+    "UBERON:8410047",
+    "UBERON:8410046",
+    "UBERON:8410045",
+    "UBERON:8410044",
+    "UBERON:8410039",
+    "UBERON:8410030",
+    "UBERON:8410029",
+    "UBERON:8410028",
+    "UBERON:8410012",
+    "UBERON:8410011",
+    "UBERON:8410020",
+    "UBERON:0013689",
+    "UBERON:0013478",
+    "UBERON:0005686",
+    "UBERON:0005636",
+    "UBERON:0005677",
+    "UBERON:0004927",
+    "UBERON:0000314",
+    "UBERON:8600057",
+    "UBERON:0035377",
+    "UBERON:0017627",
+    "UBERON:0017626",
+    "UBERON:0009670",
+    "UBERON:0004757",
+    "UBERON:0003395",
+    "UBERON:0035243",
+    "UBERON:0009882",
+    "UBERON:0007158",
+    "UBERON:0006574",
+    "UBERON:0004760",
+    "UBERON:0001357",
+    "UBERON:0035805",
+    "UBERON:8410005",
+    "UBERON:7770008",
+    "UBERON:7770007",
+    "UBERON:7770006",
+    "UBERON:7770005",
+    "UBERON:8410049",
+    "UBERON:0004932",
+    "UBERON:0004931",
+    "UBERON:0004930",
+    "UBERON:0004929",
+    "UBERON:0004993",
+    "UBERON:0004992",
+    "UBERON:0004991",
+    "UBERON:0004990",
+    "UBERON:0022277",
+    "UBERON:0022276",
+    "UBERON:8410016",
+    "UBERON:0010239",
+    "UBERON:0001159",
+    "UBERON:0001158",
+    "UBERON:0001157",
+    "UBERON:0001156"
+  ],
+  "terms": [
+    {
+      "obo_id": "UBERON:0000059",
+      "label": "large intestine",
+      "level": "root"
+    },
+    {
+      "obo_id": "UBERON:8410050",
+      "label": "anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013742",
+      "label": "wall of crypt of Lieberkuhn of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013741",
+      "label": "base of crypt of Lieberkuhn of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012652",
+      "label": "colorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011198",
+      "label": "muscle layer of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011189",
+      "label": "lamina propria of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004220",
+      "label": "large intestine smooth muscle",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003453",
+      "label": "large intestine Peyer's patch",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001984",
+      "label": "crypt of Lieberkuhn of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001278",
+      "label": "epithelium of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001239",
+      "label": "muscularis mucosae of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001209",
+      "label": "serosa of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001208",
+      "label": "submucosa of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001207",
+      "label": "mucosa of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001169",
+      "label": "wall of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001155",
+      "label": "colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001154",
+      "label": "vermiform appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001153",
+      "label": "caecum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001052",
+      "label": "rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000159",
+      "label": "anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410056",
+      "label": "capillary of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410055",
+      "label": "lymphatic capillary of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410009",
+      "label": "arteriole of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410008",
+      "label": "venule of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410007",
+      "label": "myenteric nerve plexus of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410006",
+      "label": "submucous nerve plexus of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013067",
+      "label": "colorectal mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0018111",
+      "label": "muscle layer of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012490",
+      "label": "muscle layer of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012419",
+      "label": "taenia coli",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012489",
+      "label": "muscle layer of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600140",
+      "label": "rectum lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600139",
+      "label": "caecum lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600137",
+      "label": "transverse colon lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600136",
+      "label": "sigmoid colon lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600135",
+      "label": "descending colon lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600134",
+      "label": "ascending colon lamina propria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007177",
+      "label": "lamina propria of mucosa of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410061",
+      "label": "colon smooth muscle longitudinal layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410060",
+      "label": "colon smooth muscle circular layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0018112",
+      "label": "rectum smooth muscle tissue",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012399",
+      "label": "large intestine smooth muscle longitudinal layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012398",
+      "label": "large intestine smooth muscle circular layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0022281",
+      "label": "epithelium of crypt of Lieberkuhn of large intestine",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013485",
+      "label": "crypt of Lieberkuhn of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013486",
+      "label": "crypt of Lieberkuhn of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015716",
+      "label": "anal canal epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009697",
+      "label": "epithelium of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003354",
+      "label": "epithelium of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000397",
+      "label": "colonic epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410031",
+      "label": "muscularis mucosae of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012497",
+      "label": "muscularis mucosae of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007178",
+      "label": "muscularis mucosae of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012498",
+      "label": "serosa of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003335",
+      "label": "serosa of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003334",
+      "label": "serosa of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004928",
+      "label": "submucosa of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003331",
+      "label": "submucosa of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003330",
+      "label": "submucosa of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003329",
+      "label": "submucosa of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004989",
+      "label": "mucosa of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003346",
+      "label": "mucosa of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003342",
+      "label": "mucosa of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000317",
+      "label": "colonic mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0036362",
+      "label": "wall of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0036337",
+      "label": "wall of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410059",
+      "label": "submucous nerve plexus of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410058",
+      "label": "myenteric nerve plexus of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410057",
+      "label": "capillary of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410051",
+      "label": "lymphatic vessel of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410048",
+      "label": "venule of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410015",
+      "label": "arteriole of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410054",
+      "label": "lymphatic capillary of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0022275",
+      "label": "colic flexure",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013695",
+      "label": "colon endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008972",
+      "label": "right colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008971",
+      "label": "left colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007159",
+      "label": "lumen of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003396",
+      "label": "mesentery of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000168",
+      "label": "proximal-distal subdivision of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410047",
+      "label": "appendix smooth muscle longitudinal layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410046",
+      "label": "appendix smooth muscle circular layer",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410045",
+      "label": "artery of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410044",
+      "label": "vein of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410039",
+      "label": "high endothelial venule of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410030",
+      "label": "lymphatic vessel of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410029",
+      "label": "lymphatic capillary of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410028",
+      "label": "arteriole of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410012",
+      "label": "submucous nerve plexus of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410011",
+      "label": "myenteric nerve plexus of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410020",
+      "label": "venule of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013689",
+      "label": "appendix lymphoid tissue",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013478",
+      "label": "cecal tonsil",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005686",
+      "label": "caecum dorsal mesentery",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005636",
+      "label": "caecum epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005677",
+      "label": "caecum mesentery",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004927",
+      "label": "submucosa of cecum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000314",
+      "label": "cecum mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600057",
+      "label": "middle hemorrhoidal vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035377",
+      "label": "transverse fold of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0017627",
+      "label": "rectal valve",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0017626",
+      "label": "transverse folds of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009670",
+      "label": "rectal lumen",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004757",
+      "label": "rectal salt gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003395",
+      "label": "mesentery of rectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035243",
+      "label": "anal sinus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009882",
+      "label": "anal column",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007158",
+      "label": "lumen of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006574",
+      "label": "pectinate line",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004760",
+      "label": "gland of anal canal",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001357",
+      "label": "inferior rectal artery",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035805",
+      "label": "muscle layer of sigmoid colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410005",
+      "label": "transitional glandular epithelium of anorectum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7770008",
+      "label": "sigmoid colon epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7770007",
+      "label": "descending colon epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7770006",
+      "label": "transverse colon epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7770005",
+      "label": "ascending colon epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410049",
+      "label": "serosal nerve fiber of appendix",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004932",
+      "label": "submucosa of sigmoid colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004931",
+      "label": "submucosa of descending colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004930",
+      "label": "submucosa of transverse colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004929",
+      "label": "submucosa of ascending colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004993",
+      "label": "mucosa of sigmoid colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004992",
+      "label": "mucosa of descending colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004991",
+      "label": "mucosa of transverse colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004990",
+      "label": "mucosa of ascending colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0022277",
+      "label": "hepatic flexure of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0022276",
+      "label": "splenic flexure of colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8410016",
+      "label": "descending sigmoid junction",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010239",
+      "label": "spiral colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001159",
+      "label": "sigmoid colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001158",
+      "label": "descending colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001157",
+      "label": "transverse colon",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001156",
+      "label": "ascending colon",
+      "level": "descendant"
+    }
+  ],
+  "total": 135
+}

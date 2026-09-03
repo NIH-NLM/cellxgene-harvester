@@ -1,0 +1,983 @@
+{
+  "queries": [
+    "lung"
+  ],
+  "root_terms": [
+    {
+      "obo_id": "UBERON:0002048",
+      "label": "lung",
+      "level": "root"
+    }
+  ],
+  "obo_ids": [
+    "UBERON:0002048",
+    "UBERON:8920019",
+    "UBERON:8920018",
+    "UBERON:8920017",
+    "UBERON:8920016",
+    "UBERON:8920015",
+    "UBERON:8920014",
+    "UBERON:8600067",
+    "UBERON:8600052",
+    "UBERON:8600051",
+    "UBERON:8600024",
+    "UBERON:8600060",
+    "UBERON:0035767",
+    "UBERON:0019190",
+    "UBERON:0018227",
+    "UBERON:0018226",
+    "UBERON:0016405",
+    "UBERON:0013479",
+    "UBERON:0011862",
+    "UBERON:0010368",
+    "UBERON:0009072",
+    "UBERON:0009071",
+    "UBERON:0009058",
+    "UBERON:0008961",
+    "UBERON:0008946",
+    "UBERON:0009073",
+    "UBERON:0006524",
+    "UBERON:0004886",
+    "UBERON:0003948",
+    "UBERON:0004883",
+    "UBERON:0003512",
+    "UBERON:0003615",
+    "UBERON:0002401",
+    "UBERON:0002299",
+    "UBERON:0002186",
+    "UBERON:0002168",
+    "UBERON:0002167",
+    "UBERON:0002173",
+    "UBERON:0000115",
+    "UBERON:0000114",
+    "UBERON:0000102",
+    "UBERON:0000101",
+    "UBERON:8600061",
+    "UBERON:8600009",
+    "UBERON:0002184",
+    "UBERON:0002183",
+    "UBERON:0010369",
+    "UBERON:0012086",
+    "UBERON:0008870",
+    "UBERON:0007311",
+    "UBERON:0006526",
+    "UBERON:0006525",
+    "UBERON:0004893",
+    "UBERON:0002169",
+    "UBERON:0004888",
+    "UBERON:0004887",
+    "UBERON:0009603",
+    "UBERON:0009602",
+    "UBERON:0004884",
+    "UBERON:8600094",
+    "UBERON:8600077",
+    "UBERON:8850000",
+    "UBERON:0035963",
+    "UBERON:0008873",
+    "UBERON:0004895",
+    "UBERON:0004894",
+    "UBERON:0004861",
+    "UBERON:0004821",
+    "UBERON:0004862",
+    "UBERON:0002172",
+    "UBERON:0000116",
+    "UBERON:8600000",
+    "UBERON:0012067",
+    "UBERON:0005039",
+    "UBERON:0004952",
+    "UBERON:0004515",
+    "UBERON:0003538",
+    "UBERON:0003539",
+    "UBERON:0002187",
+    "UBERON:0002188",
+    "UBERON:0002051",
+    "UBERON:0009536",
+    "UBERON:0008953",
+    "UBERON:0008952",
+    "UBERON:0008951",
+    "UBERON:0005673",
+    "UBERON:0003543",
+    "UBERON:0003541",
+    "UBERON:0003537",
+    "UBERON:0003405",
+    "UBERON:0003365",
+    "UBERON:0009537",
+    "UBERON:0006518",
+    "UBERON:0005672",
+    "UBERON:0004901",
+    "UBERON:0004890",
+    "UBERON:0003542",
+    "UBERON:0003540",
+    "UBERON:0003536",
+    "UBERON:0003404",
+    "UBERON:0003364",
+    "UBERON:0002174",
+    "UBERON:0002171",
+    "UBERON:0002170",
+    "UBERON:0010002",
+    "UBERON:0002339",
+    "UBERON:0002341",
+    "UBERON:8600022",
+    "UBERON:0003591",
+    "UBERON:0004889",
+    "UBERON:8600017",
+    "UBERON:0008955",
+    "UBERON:0008949",
+    "UBERON:0008948",
+    "UBERON:0012085",
+    "UBERON:0005680",
+    "UBERON:0005679",
+    "UBERON:0005678",
+    "UBERON:0004951",
+    "UBERON:0005038",
+    "UBERON:0012084",
+    "UBERON:0004950",
+    "UBERON:0004892",
+    "UBERON:0005037",
+    "UBERON:0008874",
+    "UBERON:0005315",
+    "UBERON:0005314",
+    "UBERON:8600003",
+    "UBERON:8600002",
+    "UBERON:8600001",
+    "UBERON:0005041",
+    "UBERON:0005040",
+    "UBERON:0004517",
+    "UBERON:0004516",
+    "UBERON:0012068",
+    "UBERON:0012059",
+    "UBERON:0005682",
+    "UBERON:0005681",
+    "UBERON:0012056",
+    "UBERON:0012055",
+    "UBERON:0001958",
+    "UBERON:0001955",
+    "UBERON:0012066",
+    "UBERON:0012065",
+    "UBERON:0008954",
+    "UBERON:0015794",
+    "UBERON:0005675",
+    "UBERON:0005674",
+    "UBERON:0005676",
+    "UBERON:0004900",
+    "UBERON:0004899",
+    "UBERON:0004897",
+    "UBERON:0008950",
+    "UBERON:0005655",
+    "UBERON:0004896",
+    "UBERON:0015795",
+    "UBERON:0012063",
+    "UBERON:0005245",
+    "UBERON:0005244",
+    "UBERON:0005640",
+    "UBERON:0005639"
+  ],
+  "terms": [
+    {
+      "obo_id": "UBERON:0002048",
+      "label": "lung",
+      "level": "root"
+    },
+    {
+      "obo_id": "UBERON:8920019",
+      "label": "left superior pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8920018",
+      "label": "right superior pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8920017",
+      "label": "left inferior pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8920016",
+      "label": "right inferior pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8920015",
+      "label": "right bronchial vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8920014",
+      "label": "left bronchial vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600067",
+      "label": "bronchial venule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600052",
+      "label": "subsegmental pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600051",
+      "label": "segmental pulmonary vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600024",
+      "label": "pulmonary venule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600060",
+      "label": "subsegmental pulmonary artery",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035767",
+      "label": "intrapulmonary bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0019190",
+      "label": "mucous gland of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0018227",
+      "label": "pulmonary lymphatic vessel",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0018226",
+      "label": "pulmonary part of lymphatic system",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0016405",
+      "label": "pulmonary capillary",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013479",
+      "label": "lung endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011862",
+      "label": "pulmonary collagen fibril",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010368",
+      "label": "pulmonary lobule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009072",
+      "label": "ventrobronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009071",
+      "label": "mesobronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009058",
+      "label": "faveolus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008961",
+      "label": "parabronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008946",
+      "label": "lung parenchyma",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009073",
+      "label": "dorsobronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006524",
+      "label": "alveolar system",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004886",
+      "label": "lung hilus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003948",
+      "label": "blood-air barrier",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004883",
+      "label": "lung mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003512",
+      "label": "lung blood vessel",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003615",
+      "label": "lung elastic tissue",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002401",
+      "label": "visceral pleura",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002299",
+      "label": "alveolus of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002186",
+      "label": "bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002168",
+      "label": "left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002167",
+      "label": "right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002173",
+      "label": "pulmonary alveolar duct",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000115",
+      "label": "lung epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000114",
+      "label": "lung connective tissue",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000102",
+      "label": "lung vasculature",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000101",
+      "label": "lobe of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600061",
+      "label": "intra-acinar venule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600009",
+      "label": "subsegmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002184",
+      "label": "segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002183",
+      "label": "lobar bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010369",
+      "label": "secondary pulmonary lobule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012086",
+      "label": "lumen of parabronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008870",
+      "label": "pulmonary alveolar parenchyma",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007311",
+      "label": "sputum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006526",
+      "label": "right lung alveolar system",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006525",
+      "label": "left lung alveolar system",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004893",
+      "label": "interalveolar septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002169",
+      "label": "alveolar sac",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004888",
+      "label": "right lung hilus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004887",
+      "label": "left lung hilus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009603",
+      "label": "right lung associated mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009602",
+      "label": "left lung associated mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004884",
+      "label": "lobar bronchus mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600094",
+      "label": "intra-acinar arteriole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600077",
+      "label": "pulmonary arteriole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8850000",
+      "label": "lumen of pulmonary alveolus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035963",
+      "label": "epithelial lining fluid",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008873",
+      "label": "alveolar pore",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004895",
+      "label": "alveolar smooth muscle",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004894",
+      "label": "alveolar wall",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004861",
+      "label": "right lung alveolus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004821",
+      "label": "pulmonary alveolus epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004862",
+      "label": "left lung alveolus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002172",
+      "label": "alveolar atrium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000116",
+      "label": "lung saccule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600000",
+      "label": "lobular bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012067",
+      "label": "primary bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005039",
+      "label": "mucosa of bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004952",
+      "label": "submucosa of bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004515",
+      "label": "smooth muscle tissue of bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003538",
+      "label": "right lung bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003539",
+      "label": "left lung bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002187",
+      "label": "terminal bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002188",
+      "label": "respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002051",
+      "label": "epithelium of bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009536",
+      "label": "vascular element of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008953",
+      "label": "lower lobe of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008952",
+      "label": "upper lobe of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008951",
+      "label": "left lung lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005673",
+      "label": "left lung endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003543",
+      "label": "left lung respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003541",
+      "label": "left lung terminal bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003537",
+      "label": "left lung alveolar duct",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003405",
+      "label": "lobar bronchus of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003365",
+      "label": "epithelium of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009537",
+      "label": "vascular element of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006518",
+      "label": "right lung lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005672",
+      "label": "right lung endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004901",
+      "label": "right lung lobar bronchus mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004890",
+      "label": "right lung accessory lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003542",
+      "label": "right lung respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003540",
+      "label": "right lung terminal bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003536",
+      "label": "right lung alveolar duct",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003404",
+      "label": "lobar bronchus of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003364",
+      "label": "epithelium of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002174",
+      "label": "middle lobe of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002171",
+      "label": "lower lobe of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002170",
+      "label": "upper lobe of right lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010002",
+      "label": "pulmonary neuroendocrine body",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002339",
+      "label": "epithelium of lobar bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002341",
+      "label": "epithelium of segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600022",
+      "label": "pulmonary interlobular septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003591",
+      "label": "lobar bronchus connective tissue",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004889",
+      "label": "lobar bronchus vasculature",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600017",
+      "label": "bronchopulmonary segment",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008955",
+      "label": "middle lobe of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008949",
+      "label": "lower lobe of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008948",
+      "label": "upper lobe of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012085",
+      "label": "lumen of tertiary bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005680",
+      "label": "right lung accessory lobe segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005679",
+      "label": "right lung caudal lobe segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005678",
+      "label": "right lung cranial lobe segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004951",
+      "label": "submucosa of segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005038",
+      "label": "mucosa of segmental bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012084",
+      "label": "lumen of secondary bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004950",
+      "label": "submucosa of lobar bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004892",
+      "label": "lobar bronchus alveolar system",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005037",
+      "label": "mucosa of lobar bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008874",
+      "label": "pulmonary acinus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005315",
+      "label": "alveolar secondary septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005314",
+      "label": "alveolar primary septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600003",
+      "label": "smooth muscle tissue of lobular bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600002",
+      "label": "mucosa of lobular bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:8600001",
+      "label": "epithelium of lobular bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005041",
+      "label": "mucosa of respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005040",
+      "label": "mucosa of terminal bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004517",
+      "label": "smooth muscle tissue of respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004516",
+      "label": "smooth muscle tissue of terminal bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012068",
+      "label": "right lung middle lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012059",
+      "label": "right lung lower lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005682",
+      "label": "right lung accessory lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005681",
+      "label": "right lung upper lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012056",
+      "label": "left lung upper lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012055",
+      "label": "left lung lower lobe bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001958",
+      "label": "terminal bronchiole epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001955",
+      "label": "epithelium of respiratory bronchiole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012066",
+      "label": "lobar bronchus of left lung lower lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012065",
+      "label": "lobar bronchus of left lung upper lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008954",
+      "label": "lingula of left lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015794",
+      "label": "left lung lobar bronchus epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005675",
+      "label": "right lung caudal lobe endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005674",
+      "label": "right lung cranial lobe endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005676",
+      "label": "right lung accessory lobe endothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004900",
+      "label": "right lung middle lobe lobar bronchus mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004899",
+      "label": "right lung cranial lobe lobar bronchus mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004897",
+      "label": "right lung accessory lobe lobar bronchus mesenchyme",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008950",
+      "label": "azygous lobe of lung",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005655",
+      "label": "right lung accessory lobe epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004896",
+      "label": "right lung accessory lobe lobar bronchus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015795",
+      "label": "right lung lobar bronchus epitheium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012063",
+      "label": "lobar bronchus of right lung middle lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005245",
+      "label": "lobar bronchus of right lung caudal lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005244",
+      "label": "lobar bronchus of right lung cranial lobe",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005640",
+      "label": "right lung caudal lobe epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005639",
+      "label": "right lung cranial lobe epithelium",
+      "level": "descendant"
+    }
+  ],
+  "total": 161
+}
