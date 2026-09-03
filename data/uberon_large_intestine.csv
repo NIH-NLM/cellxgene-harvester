@@ -1,0 +1,136 @@
+obo_id,label,level
+UBERON:0000059,large intestine,root
+UBERON:8410050,anorectum,descendant
+UBERON:0013742,wall of crypt of Lieberkuhn of large intestine,descendant
+UBERON:0013741,base of crypt of Lieberkuhn of large intestine,descendant
+UBERON:0012652,colorectum,descendant
+UBERON:0011198,muscle layer of large intestine,descendant
+UBERON:0011189,lamina propria of large intestine,descendant
+UBERON:0004220,large intestine smooth muscle,descendant
+UBERON:0003453,large intestine Peyer's patch,descendant
+UBERON:0001984,crypt of Lieberkuhn of large intestine,descendant
+UBERON:0001278,epithelium of large intestine,descendant
+UBERON:0001239,muscularis mucosae of large intestine,descendant
+UBERON:0001209,serosa of large intestine,descendant
+UBERON:0001208,submucosa of large intestine,descendant
+UBERON:0001207,mucosa of large intestine,descendant
+UBERON:0001169,wall of large intestine,descendant
+UBERON:0001155,colon,descendant
+UBERON:0001154,vermiform appendix,descendant
+UBERON:0001153,caecum,descendant
+UBERON:0001052,rectum,descendant
+UBERON:0000159,anal canal,descendant
+UBERON:8410056,capillary of anorectum,descendant
+UBERON:8410055,lymphatic capillary of anorectum,descendant
+UBERON:8410009,arteriole of anorectum,descendant
+UBERON:8410008,venule of anorectum,descendant
+UBERON:8410007,myenteric nerve plexus of anorectum,descendant
+UBERON:8410006,submucous nerve plexus of anorectum,descendant
+UBERON:0013067,colorectal mucosa,descendant
+UBERON:0018111,muscle layer of rectum,descendant
+UBERON:0012490,muscle layer of anal canal,descendant
+UBERON:0012419,taenia coli,descendant
+UBERON:0012489,muscle layer of colon,descendant
+UBERON:8600140,rectum lamina propria,descendant
+UBERON:8600139,caecum lamina propria,descendant
+UBERON:8600137,transverse colon lamina propria,descendant
+UBERON:8600136,sigmoid colon lamina propria,descendant
+UBERON:8600135,descending colon lamina propria,descendant
+UBERON:8600134,ascending colon lamina propria,descendant
+UBERON:0007177,lamina propria of mucosa of colon,descendant
+UBERON:8410061,colon smooth muscle longitudinal layer,descendant
+UBERON:8410060,colon smooth muscle circular layer,descendant
+UBERON:0018112,rectum smooth muscle tissue,descendant
+UBERON:0012399,large intestine smooth muscle longitudinal layer,descendant
+UBERON:0012398,large intestine smooth muscle circular layer,descendant
+UBERON:0022281,epithelium of crypt of Lieberkuhn of large intestine,descendant
+UBERON:0013485,crypt of Lieberkuhn of colon,descendant
+UBERON:0013486,crypt of Lieberkuhn of appendix,descendant
+UBERON:0015716,anal canal epithelium,descendant
+UBERON:0009697,epithelium of appendix,descendant
+UBERON:0003354,epithelium of rectum,descendant
+UBERON:0000397,colonic epithelium,descendant
+UBERON:8410031,muscularis mucosae of appendix,descendant
+UBERON:0012497,muscularis mucosae of rectum,descendant
+UBERON:0007178,muscularis mucosae of colon,descendant
+UBERON:0012498,serosa of appendix,descendant
+UBERON:0003335,serosa of colon,descendant
+UBERON:0003334,serosa of rectum,descendant
+UBERON:0004928,submucosa of appendix,descendant
+UBERON:0003331,submucosa of colon,descendant
+UBERON:0003330,submucosa of rectum,descendant
+UBERON:0003329,submucosa of anal canal,descendant
+UBERON:0004989,mucosa of appendix,descendant
+UBERON:0003346,mucosa of rectum,descendant
+UBERON:0003342,mucosa of anal canal,descendant
+UBERON:0000317,colonic mucosa,descendant
+UBERON:0036362,wall of anal canal,descendant
+UBERON:0036337,wall of appendix,descendant
+UBERON:8410059,submucous nerve plexus of colon,descendant
+UBERON:8410058,myenteric nerve plexus of colon,descendant
+UBERON:8410057,capillary of colon,descendant
+UBERON:8410051,lymphatic vessel of colon,descendant
+UBERON:8410048,venule of colon,descendant
+UBERON:8410015,arteriole of colon,descendant
+UBERON:8410054,lymphatic capillary of colon,descendant
+UBERON:0022275,colic flexure,descendant
+UBERON:0013695,colon endothelium,descendant
+UBERON:0008972,right colon,descendant
+UBERON:0008971,left colon,descendant
+UBERON:0007159,lumen of colon,descendant
+UBERON:0003396,mesentery of colon,descendant
+UBERON:0000168,proximal-distal subdivision of colon,descendant
+UBERON:8410047,appendix smooth muscle longitudinal layer,descendant
+UBERON:8410046,appendix smooth muscle circular layer,descendant
+UBERON:8410045,artery of appendix,descendant
+UBERON:8410044,vein of appendix,descendant
+UBERON:8410039,high endothelial venule of appendix,descendant
+UBERON:8410030,lymphatic vessel of appendix,descendant
+UBERON:8410029,lymphatic capillary of appendix,descendant
+UBERON:8410028,arteriole of appendix,descendant
+UBERON:8410012,submucous nerve plexus of appendix,descendant
+UBERON:8410011,myenteric nerve plexus of appendix,descendant
+UBERON:8410020,venule of appendix,descendant
+UBERON:0013689,appendix lymphoid tissue,descendant
+UBERON:0013478,cecal tonsil,descendant
+UBERON:0005686,caecum dorsal mesentery,descendant
+UBERON:0005636,caecum epithelium,descendant
+UBERON:0005677,caecum mesentery,descendant
+UBERON:0004927,submucosa of cecum,descendant
+UBERON:0000314,cecum mucosa,descendant
+UBERON:8600057,middle hemorrhoidal vein,descendant
+UBERON:0035377,transverse fold of rectum,descendant
+UBERON:0017627,rectal valve,descendant
+UBERON:0017626,transverse folds of rectum,descendant
+UBERON:0009670,rectal lumen,descendant
+UBERON:0004757,rectal salt gland,descendant
+UBERON:0003395,mesentery of rectum,descendant
+UBERON:0035243,anal sinus,descendant
+UBERON:0009882,anal column,descendant
+UBERON:0007158,lumen of anal canal,descendant
+UBERON:0006574,pectinate line,descendant
+UBERON:0004760,gland of anal canal,descendant
+UBERON:0001357,inferior rectal artery,descendant
+UBERON:0035805,muscle layer of sigmoid colon,descendant
+UBERON:8410005,transitional glandular epithelium of anorectum,descendant
+UBERON:7770008,sigmoid colon epithelium,descendant
+UBERON:7770007,descending colon epithelium,descendant
+UBERON:7770006,transverse colon epithelium,descendant
+UBERON:7770005,ascending colon epithelium,descendant
+UBERON:8410049,serosal nerve fiber of appendix,descendant
+UBERON:0004932,submucosa of sigmoid colon,descendant
+UBERON:0004931,submucosa of descending colon,descendant
+UBERON:0004930,submucosa of transverse colon,descendant
+UBERON:0004929,submucosa of ascending colon,descendant
+UBERON:0004993,mucosa of sigmoid colon,descendant
+UBERON:0004992,mucosa of descending colon,descendant
+UBERON:0004991,mucosa of transverse colon,descendant
+UBERON:0004990,mucosa of ascending colon,descendant
+UBERON:0022277,hepatic flexure of colon,descendant
+UBERON:0022276,splenic flexure of colon,descendant
+UBERON:8410016,descending sigmoid junction,descendant
+UBERON:0010239,spiral colon,descendant
+UBERON:0001159,sigmoid colon,descendant
+UBERON:0001158,descending colon,descendant
+UBERON:0001157,transverse colon,descendant
+UBERON:0001156,ascending colon,descendant

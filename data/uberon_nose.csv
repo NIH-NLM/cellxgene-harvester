@@ -1,0 +1,145 @@
+obo_id,label,level
+UBERON:0000004,nose,root
+UBERON:8600089,transverse nasal root vein,descendant
+UBERON:2001428,olfactory rosette,descendant
+UBERON:0019306,nose epithelium,descendant
+UBERON:0015788,olfactory apparatus chamber,descendant
+UBERON:0015245,septal olfactory organ,descendant
+UBERON:0015216,nasal meatus,descendant
+UBERON:0011931,nasal hair,descendant
+UBERON:0008522,nasal muscle,descendant
+UBERON:0008340,nasal bridge,descendant
+UBERON:0006813,nasal skeleton,descendant
+UBERON:0007827,external nose,descendant
+UBERON:0006332,nasal capsule,descendant
+UBERON:0006266,nasolacrimal groove,descendant
+UBERON:0005928,external naris,descendant
+UBERON:0005870,olfactory pit,descendant
+UBERON:0004101,nasolabial region,descendant
+UBERON:0002255,vomeronasal organ,descendant
+UBERON:0002109,pair of nares,descendant
+UBERON:0001706,nasal septum,descendant
+UBERON:0001681,nasal bone,descendant
+UBERON:0001823,nasal cartilage,descendant
+UBERON:0019307,epithelium of external nose,descendant
+UBERON:0005384,nasal cavity epithelium,descendant
+UBERON:0004692,external naris epithelium,descendant
+UBERON:0003367,epithelium of vomeronasal organ,descendant
+UBERON:0003356,epithelium of nasal septum,descendant
+UBERON:0001826,nasal cavity mucosa,descendant
+UBERON:0001707,nasal cavity,descendant
+UBERON:0015246,septal organ of Masera,descendant
+UBERON:0013208,Grueneberg ganglion,descendant
+UBERON:0015223,dorsal nasal meatus,descendant
+UBERON:0015222,ventral nasal meatus,descendant
+UBERON:0015220,inferior nasal meatus,descendant
+UBERON:0015219,middle nasal meatus,descendant
+UBERON:0015221,common nasal meatus,descendant
+UBERON:0007163,superior nasal meatus,descendant
+UBERON:0010953,nasalis muscle,descendant
+UBERON:0008589,depressor septi nasi,descendant
+UBERON:0008588,procerus,descendant
+UBERON:3010827,anterior prenasal cartilage,descendant
+UBERON:3000644,processus lingularis of nasal skeleton,descendant
+UBERON:3000601,tectum nasi,descendant
+UBERON:3000569,solum nasi,descendant
+UBERON:3000586,superior prenasal cartilage,descendant
+UBERON:3000565,skeletal support for eminentia olfactoria,descendant
+UBERON:3000454,postnasal wall,descendant
+UBERON:3000448,posterior maxillary process,descendant
+UBERON:3000441,planum triangulare,descendant
+UBERON:3000434,planum antorbitale,descendant
+UBERON:3000381,paranasal commissure,descendant
+UBERON:3000329,oblique cartilage,descendant
+UBERON:3000290,medial inferior prenasal cartilage,descendant
+UBERON:3000264,lamina superior,descendant
+UBERON:3000263,lamina precerebralis,descendant
+UBERON:3000234,inferior prenasal cartilage,descendant
+UBERON:3000118,crista supraorbitalis,descendant
+UBERON:3000117,crista subnasalis,descendant
+UBERON:3000113,crista intermedia,descendant
+UBERON:3000079,cartilago retronarina,descendant
+UBERON:3000069,cartilago infranarina,descendant
+UBERON:3000068,cartilago ectochoanalis,descendant
+UBERON:3000016,anterior nasal wall,descendant
+UBERON:3000015,anterior maxillary process,descendant
+UBERON:3000002,alary cartilage,descendant
+UBERON:3000389,paries nasi,descendant
+UBERON:3000440,planum terminale,descendant
+UBERON:3000438,planum internasale,descendant
+UBERON:3000437,planum conchale,descendant
+UBERON:0036254,piriform aperture,descendant
+UBERON:0011167,septomaxilla bone,descendant
+UBERON:1000013,nose vertex,descendant
+UBERON:1000012,nose anterior margin,descendant
+UBERON:0016464,dorsum of nose,descendant
+UBERON:0015476,nose skin,descendant
+UBERON:0012128,nose tip,descendant
+UBERON:0011256,rhinarium,descendant
+UBERON:0008341,columella nasi,descendant
+UBERON:0006906,ala of nose,descendant
+UBERON:3000316,nasal opening,descendant
+UBERON:3000260,lamina nariochoanalis,descendant
+UBERON:3000259,lamina inferior,descendant
+UBERON:2001427,anterior naris,descendant
+UBERON:2001426,posterior naris,descendant
+UBERON:0013477,blowhole,descendant
+UBERON:0012304,nasal diverticulum,descendant
+UBERON:0010893,median external naris,descendant
+UBERON:0005931,primary choana,descendant
+UBERON:0003421,mesenchyme of vomeronasal organ,descendant
+UBERON:3000294,median prenasal process,descendant
+UBERON:0005018,mucosa of nasal septum,descendant
+UBERON:0003415,mesenchyme of nasal septum,descendant
+UBERON:0003407,cartilage of nasal septum,descendant
+UBERON:7500074,right nasal bone,descendant
+UBERON:7500073,left nasal bone,descendant
+UBERON:3000547,rostral process,descendant
+UBERON:0018508,foramen of nasal bone,descendant
+UBERON:0007822,vomeronasal cartilage,descendant
+UBERON:0007821,lateral nasal cartilage,descendant
+UBERON:0007820,accessory nasal cartilage,descendant
+UBERON:0007819,minor alar cartilage,descendant
+UBERON:0007818,major alar cartilage,descendant
+UBERON:0009672,oronasal membrane,descendant
+UBERON:0009671,nasal fin,descendant
+UBERON:0005385,nasal cavity respiratory epithelium,descendant
+UBERON:0001997,olfactory epithelium,descendant
+UBERON:0015786,respiratory segment of nasal mucosa,descendant
+UBERON:0012278,gland of nasal mucosa,descendant
+UBERON:0005386,olfactory segment of nasal mucosa,descendant
+UBERON:3010197,lateral recess,descendant
+UBERON:3000089,cavum principale,descendant
+UBERON:3000086,cavum internasale,descendant
+UBERON:3000085,cavum inferius,descendant
+UBERON:3000088,cavum praenasale,descendant
+UBERON:3000087,cavum medius,descendant
+UBERON:0004110,midnasal cavity,descendant
+UBERON:0000402,nasal vestibule,descendant
+UBERON:3000059,capsular process,descendant
+UBERON:3000449,posterior maxillary process dorsal process,descendant
+UBERON:3000563,seydels palatal process,descendant
+UBERON:3000645,corpus,descendant
+UBERON:3000155,extremitas anterior,descendant
+UBERON:3000333,olfactory foramen,descendant
+UBERON:3000291,medial orbitonasal foramen,descendant
+UBERON:3000190,foramen orbitonasale mediale,descendant
+UBERON:3000189,foramen orbitonasale laterale,descendant
+UBERON:3000171,fenestra prechoanalis,descendant
+UBERON:3000170,fenestra precerebralis,descendant
+UBERON:3000167,fenestra nasolateralis,descendant
+UBERON:3000166,fenestra nasobasalis,descendant
+UBERON:3000164,fenestra lateralis nasi,descendant
+UBERON:3000162,fenestra endonarina communis,descendant
+UBERON:3000161,fenestra endochoanalis,descendant
+UBERON:3000160,fenestra dorsalis nasi,descendant
+UBERON:0035077,lateral nasal gland,descendant
+UBERON:0013233,supraorbital gland,descendant
+UBERON:0002232,olfactory gland,descendant
+UBERON:3000646,margo libera,descendant
+UBERON:3000509,processus suprafenestralis,descendant
+UBERON:3000492,processus infrafenestralis,descendant
+UBERON:3000110,crista contacta,descendant
+UBERON:0015785,acinus of olfactory gland,descendant
+UBERON:0015784,duct of olfactory gland,descendant
+UBERON:3000647,crista interna,descendant
