@@ -1,0 +1,162 @@
+obo_id,label,level
+UBERON:0002048,lung,root
+UBERON:8920019,left superior pulmonary vein,descendant
+UBERON:8920018,right superior pulmonary vein,descendant
+UBERON:8920017,left inferior pulmonary vein,descendant
+UBERON:8920016,right inferior pulmonary vein,descendant
+UBERON:8920015,right bronchial vein,descendant
+UBERON:8920014,left bronchial vein,descendant
+UBERON:8600067,bronchial venule,descendant
+UBERON:8600052,subsegmental pulmonary vein,descendant
+UBERON:8600051,segmental pulmonary vein,descendant
+UBERON:8600024,pulmonary venule,descendant
+UBERON:8600060,subsegmental pulmonary artery,descendant
+UBERON:0035767,intrapulmonary bronchus,descendant
+UBERON:0019190,mucous gland of lung,descendant
+UBERON:0018227,pulmonary lymphatic vessel,descendant
+UBERON:0018226,pulmonary part of lymphatic system,descendant
+UBERON:0016405,pulmonary capillary,descendant
+UBERON:0013479,lung endothelium,descendant
+UBERON:0011862,pulmonary collagen fibril,descendant
+UBERON:0010368,pulmonary lobule,descendant
+UBERON:0009072,ventrobronchus,descendant
+UBERON:0009071,mesobronchus,descendant
+UBERON:0009058,faveolus,descendant
+UBERON:0008961,parabronchus,descendant
+UBERON:0008946,lung parenchyma,descendant
+UBERON:0009073,dorsobronchus,descendant
+UBERON:0006524,alveolar system,descendant
+UBERON:0004886,lung hilus,descendant
+UBERON:0003948,blood-air barrier,descendant
+UBERON:0004883,lung mesenchyme,descendant
+UBERON:0003512,lung blood vessel,descendant
+UBERON:0003615,lung elastic tissue,descendant
+UBERON:0002401,visceral pleura,descendant
+UBERON:0002299,alveolus of lung,descendant
+UBERON:0002186,bronchiole,descendant
+UBERON:0002168,left lung,descendant
+UBERON:0002167,right lung,descendant
+UBERON:0002173,pulmonary alveolar duct,descendant
+UBERON:0000115,lung epithelium,descendant
+UBERON:0000114,lung connective tissue,descendant
+UBERON:0000102,lung vasculature,descendant
+UBERON:0000101,lobe of lung,descendant
+UBERON:8600061,intra-acinar venule,descendant
+UBERON:8600009,subsegmental bronchus,descendant
+UBERON:0002184,segmental bronchus,descendant
+UBERON:0002183,lobar bronchus,descendant
+UBERON:0010369,secondary pulmonary lobule,descendant
+UBERON:0012086,lumen of parabronchus,descendant
+UBERON:0008870,pulmonary alveolar parenchyma,descendant
+UBERON:0007311,sputum,descendant
+UBERON:0006526,right lung alveolar system,descendant
+UBERON:0006525,left lung alveolar system,descendant
+UBERON:0004893,interalveolar septum,descendant
+UBERON:0002169,alveolar sac,descendant
+UBERON:0004888,right lung hilus,descendant
+UBERON:0004887,left lung hilus,descendant
+UBERON:0009603,right lung associated mesenchyme,descendant
+UBERON:0009602,left lung associated mesenchyme,descendant
+UBERON:0004884,lobar bronchus mesenchyme,descendant
+UBERON:8600094,intra-acinar arteriole,descendant
+UBERON:8600077,pulmonary arteriole,descendant
+UBERON:8850000,lumen of pulmonary alveolus,descendant
+UBERON:0035963,epithelial lining fluid,descendant
+UBERON:0008873,alveolar pore,descendant
+UBERON:0004895,alveolar smooth muscle,descendant
+UBERON:0004894,alveolar wall,descendant
+UBERON:0004861,right lung alveolus,descendant
+UBERON:0004821,pulmonary alveolus epithelium,descendant
+UBERON:0004862,left lung alveolus,descendant
+UBERON:0002172,alveolar atrium,descendant
+UBERON:0000116,lung saccule,descendant
+UBERON:8600000,lobular bronchiole,descendant
+UBERON:0012067,primary bronchiole,descendant
+UBERON:0005039,mucosa of bronchiole,descendant
+UBERON:0004952,submucosa of bronchiole,descendant
+UBERON:0004515,smooth muscle tissue of bronchiole,descendant
+UBERON:0003538,right lung bronchiole,descendant
+UBERON:0003539,left lung bronchiole,descendant
+UBERON:0002187,terminal bronchiole,descendant
+UBERON:0002188,respiratory bronchiole,descendant
+UBERON:0002051,epithelium of bronchiole,descendant
+UBERON:0009536,vascular element of left lung,descendant
+UBERON:0008953,lower lobe of left lung,descendant
+UBERON:0008952,upper lobe of left lung,descendant
+UBERON:0008951,left lung lobe,descendant
+UBERON:0005673,left lung endothelium,descendant
+UBERON:0003543,left lung respiratory bronchiole,descendant
+UBERON:0003541,left lung terminal bronchiole,descendant
+UBERON:0003537,left lung alveolar duct,descendant
+UBERON:0003405,lobar bronchus of left lung,descendant
+UBERON:0003365,epithelium of left lung,descendant
+UBERON:0009537,vascular element of right lung,descendant
+UBERON:0006518,right lung lobe,descendant
+UBERON:0005672,right lung endothelium,descendant
+UBERON:0004901,right lung lobar bronchus mesenchyme,descendant
+UBERON:0004890,right lung accessory lobe,descendant
+UBERON:0003542,right lung respiratory bronchiole,descendant
+UBERON:0003540,right lung terminal bronchiole,descendant
+UBERON:0003536,right lung alveolar duct,descendant
+UBERON:0003404,lobar bronchus of right lung,descendant
+UBERON:0003364,epithelium of right lung,descendant
+UBERON:0002174,middle lobe of right lung,descendant
+UBERON:0002171,lower lobe of right lung,descendant
+UBERON:0002170,upper lobe of right lung,descendant
+UBERON:0010002,pulmonary neuroendocrine body,descendant
+UBERON:0002339,epithelium of lobar bronchus,descendant
+UBERON:0002341,epithelium of segmental bronchus,descendant
+UBERON:8600022,pulmonary interlobular septum,descendant
+UBERON:0003591,lobar bronchus connective tissue,descendant
+UBERON:0004889,lobar bronchus vasculature,descendant
+UBERON:8600017,bronchopulmonary segment,descendant
+UBERON:0008955,middle lobe of lung,descendant
+UBERON:0008949,lower lobe of lung,descendant
+UBERON:0008948,upper lobe of lung,descendant
+UBERON:0012085,lumen of tertiary bronchus,descendant
+UBERON:0005680,right lung accessory lobe segmental bronchus,descendant
+UBERON:0005679,right lung caudal lobe segmental bronchus,descendant
+UBERON:0005678,right lung cranial lobe segmental bronchus,descendant
+UBERON:0004951,submucosa of segmental bronchus,descendant
+UBERON:0005038,mucosa of segmental bronchus,descendant
+UBERON:0012084,lumen of secondary bronchus,descendant
+UBERON:0004950,submucosa of lobar bronchus,descendant
+UBERON:0004892,lobar bronchus alveolar system,descendant
+UBERON:0005037,mucosa of lobar bronchus,descendant
+UBERON:0008874,pulmonary acinus,descendant
+UBERON:0005315,alveolar secondary septum,descendant
+UBERON:0005314,alveolar primary septum,descendant
+UBERON:8600003,smooth muscle tissue of lobular bronchiole,descendant
+UBERON:8600002,mucosa of lobular bronchiole,descendant
+UBERON:8600001,epithelium of lobular bronchiole,descendant
+UBERON:0005041,mucosa of respiratory bronchiole,descendant
+UBERON:0005040,mucosa of terminal bronchiole,descendant
+UBERON:0004517,smooth muscle tissue of respiratory bronchiole,descendant
+UBERON:0004516,smooth muscle tissue of terminal bronchiole,descendant
+UBERON:0012068,right lung middle lobe bronchiole,descendant
+UBERON:0012059,right lung lower lobe bronchiole,descendant
+UBERON:0005682,right lung accessory lobe bronchiole,descendant
+UBERON:0005681,right lung upper lobe bronchiole,descendant
+UBERON:0012056,left lung upper lobe bronchiole,descendant
+UBERON:0012055,left lung lower lobe bronchiole,descendant
+UBERON:0001958,terminal bronchiole epithelium,descendant
+UBERON:0001955,epithelium of respiratory bronchiole,descendant
+UBERON:0012066,lobar bronchus of left lung lower lobe,descendant
+UBERON:0012065,lobar bronchus of left lung upper lobe,descendant
+UBERON:0008954,lingula of left lung,descendant
+UBERON:0015794,left lung lobar bronchus epithelium,descendant
+UBERON:0005675,right lung caudal lobe endothelium,descendant
+UBERON:0005674,right lung cranial lobe endothelium,descendant
+UBERON:0005676,right lung accessory lobe endothelium,descendant
+UBERON:0004900,right lung middle lobe lobar bronchus mesenchyme,descendant
+UBERON:0004899,right lung cranial lobe lobar bronchus mesenchyme,descendant
+UBERON:0004897,right lung accessory lobe lobar bronchus mesenchyme,descendant
+UBERON:0008950,azygous lobe of lung,descendant
+UBERON:0005655,right lung accessory lobe epithelium,descendant
+UBERON:0004896,right lung accessory lobe lobar bronchus,descendant
+UBERON:0015795,right lung lobar bronchus epitheium,descendant
+UBERON:0012063,lobar bronchus of right lung middle lobe,descendant
+UBERON:0005245,lobar bronchus of right lung caudal lobe,descendant
+UBERON:0005244,lobar bronchus of right lung cranial lobe,descendant
+UBERON:0005640,right lung caudal lobe epithelium,descendant
+UBERON:0005639,right lung cranial lobe epithelium,descendant

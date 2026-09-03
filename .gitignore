@@ -1,8 +1,6 @@
 api*
 collections*
 dag*
-data*
-data/
 logs/
 .nextflow.*
 .nextflow/
@@ -10,3 +8,5 @@ timeline*
 trace*
 results/
 work/
+.ipynb_checkpoints/
+src/cellxgene_harvester.egg-info/

@@ -1,0 +1,30 @@
+======================================================================
+CellxGene Harvester - 0 Resolve Uberon
+======================================================================
+Started : 2026-08-10 14:03:22
+Log file: data/uberon_respiratory_system.log
+Command : python /Users/adeslatt/miniforge3/envs/cellxgene/bin/cellxgene-harvester resolve-uberon respiratory system
+
+
+Resolving: 'respiratory system'
+  Searching OLS4 for: 'respiratory system'
+  Exact match: UBERON:0001004  respiratory system
+  Root term: UBERON:0001004  respiratory system
+  Found 540 descendants for UBERON:0001004
+  [terms resolved for 'respiratory system']
+    Before :        1 terms
+    After  :      541 terms
+    Removed:     -540 terms  (-54000.0%)
+  [deduplication]
+    Before :      541 terms
+    After  :      541 terms
+    Removed:        0 terms  (0.0%)
+
+Saved JSON: data/uberon_respiratory_system.json
+Saved CSV : data/uberon_respiratory_system.csv
+Total terms: 541  (root + descendants)
+
+======================================================================
+Finished: 2026-08-10 14:03:29
+Output  : data/uberon_respiratory_system.csv
+======================================================================

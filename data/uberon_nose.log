@@ -1,0 +1,30 @@
+======================================================================
+CellxGene Harvester - 0 Resolve Uberon
+======================================================================
+Started : 2026-02-16 07:38:23
+Log file: data/uberon_nose.log
+Command : python bin/0_resolve_uberon.py nose
+
+
+Resolving: 'nose'
+  Searching OLS4 for: 'nose'
+  Exact match: UBERON:0000004  nose
+  Root term: UBERON:0000004  nose
+  Found 143 descendants for UBERON:0000004
+  [terms resolved for 'nose']
+    Before :        1 terms
+    After  :      144 terms
+    Removed:     -143 terms  (-14300.0%)
+  [deduplication]
+    Before :      144 terms
+    After  :      144 terms
+    Removed:        0 terms  (0.0%)
+
+Saved JSON: data/uberon_nose.json
+Saved CSV : data/uberon_nose.csv
+Total terms: 144  (root + descendants)
+
+======================================================================
+Finished: 2026-02-16 07:38:26
+Output  : data/uberon_nose.csv
+======================================================================
