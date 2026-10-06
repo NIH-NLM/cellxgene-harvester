@@ -1,339 +1,277 @@
 #!/usr/bin/env python3
 """
-Step 5: Count normal cells using CellxGene Census API
+Step 5: Count cells for each dataset using the CellxGene Census
 
-Opens Census ONCE and reuses connection across all datasets.
-Resumes automatically - skips rows where normal_cell_count is already set.
+Reads the folder of <dataset_id>.filtered.json files written by Step 4. For
+each dataset that is not counted yet, reads the Census obs table for the whole
+dataset, then fills in both sides of every pair:
+
+  source_X   : all cells of the dataset in Census
+  filtered_X : the cells whose tissue id is in the uberon file, whose disease
+               id is in the disease file, and whose development stage id is in
+               the hsapdv file
+
+for the cell count, the donor count, and the six facets tissue, assay,
+cell_type, disease, development_stage and sex. Each facet has labels, ontology
+ids, and a summary of ids and cell counts. Only values that occur in the cells
+are counted. A filtered_ summary has the same ids as the source_ summary, with
+0 for an id whose cells were all removed by the filter.
+
+NOTE (2026-10-05): is_primary_data == True is NOT used as a filter. It is an
+unreliable filter at this time, so it is not read from Census and does not
+change any count. Revisit this decision before using it.
+
+Opens Census ONCE and reuses the connection for all datasets. Each file is
+written as soon as its dataset is counted. A file that already has a
+filtered_cell_count is skipped, so a stopped run can be started again.
 
 Usage:
 1. Python module execution:
 python -m harvester.count_normal_cells \
-        --input data/homo_sapiens_kidney_harvester.csv \
-        --uberon data/uberon_kidney.json \
-        --min-age 15
+        2026-08-03-run/homo_sapiens_kidney_harvester \
+        --uberon  2026-08-03-run/uberon_kidney.json \
+        --disease 2026-08-03-run/disease_normal.json \
+        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+        --exclude-assay 2026-08-03-run/assay_spatial.json \
+        --census-version latest
 2. CLI command (after pip install -e .):
-cellxgene-harvester count-normal-cells \
-        --input data/homo_sapiens_kidney_harvester.csv \
-        --uberon data/uberon_kidney.json \
-        --min-age 15
+cellxgene-harvester count-normal-cells 2026-08-03-run/homo_sapiens_kidney_harvester \
+        --uberon  2026-08-03-run/uberon_kidney.json \
+        --disease 2026-08-03-run/disease_normal.json \
+        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+        --exclude-assay 2026-08-03-run/assay_spatial.json \
+        --census-version latest
+
+--exclude-assay is optional: a file from resolve-assay. The cells whose assay
+ontology id is in it are left out of the filtered counts (a negative
+selection, for example to leave out spatial techniques). They stay in the
+source counts.
+
+--census-version is optional and defaults to latest. The release that was
+used is recorded in each file.
 """
 
+import glob
 import os
 import sys
-import json
-import pandas as pd
-from typing import Optional
-from harvester.logger import setup_logger, log_command, log_counts, log_finish
+import traceback
+
+from harvester import ontology_files
+from harvester.io_utils import FACETS, load_json, write_json
+from harvester.logger import setup_logger, log_command, log_finish
+
+CENSUS_VERSION = "latest"
+FILTER_FILES = ("uberon", "disease", "hsapdv", "exclude_assay")
 
 
-def load_obo_ids(json_path: str, label: str, logger) -> set:
-    """Load obo_ids from a resolve_uberon / resolve_disease / resolve_hsapdv JSON.
+def id_column(facet):
+    return f"{facet}_ontology_term_id"
 
-    All three resolve steps produce the same JSON structure, so this one
-    helper covers all three. Filtering is a uniform .isin(obo_ids) check —
-    no numeric age comparison, no text matching.
+
+def census_columns():
+    """The Census obs columns that are read."""
+    columns = ["donor_id"]
+    for facet in FACETS:
+        columns += [facet, id_column(facet)]
+    return columns
+
+
+def read_obs(census, dataset_id):
+    """Read the obs table of one whole dataset. The expression matrix is not read."""
+    obs = census["census_data"]["homo_sapiens"].obs
+    table = obs.read(value_filter=f"dataset_id == '{dataset_id}'",
+                     column_names=census_columns())
+    return table.concat().to_pandas()
+
+
+def count_facet(obs, facet):
+    """Return (labels, ids, summary) for one facet over the cells in obs.
+
+    Labels and ids are sorted lists of the values that occur. The summary
+    maps each id to its number of cells, largest first. A value that does not
+    occur is not listed.
     """
-    with open(json_path) as f:
-        data = json.load(f)
-    obo_ids = set(data["obo_ids"])
-    roots   = [t["label"] for t in data["root_terms"]]
-    logger.info(f"  Loaded {label} JSON : {json_path}")
-    logger.info(f"  Root terms          : {', '.join(roots)}")
-    logger.info(f"  Total obo_ids       : {len(obo_ids):,}")
-    return obo_ids
+    ids = obs[id_column(facet)].dropna().astype(str)
+    counts = sorted(ids.value_counts().items(), key=lambda pair: (-pair[1], pair[0]))
+    labels = sorted(obs[facet].dropna().astype(str).unique())
+    return labels, sorted(name for name, _ in counts), {name: int(n) for name, n in counts}
 
 
-def filter_normal_cells(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
-    if 'disease' not in obs_df.columns:
-        return obs_df
-    normal_mask = (
-        obs_df['disease'].str.lower().str.contains('normal',      na=False) |
-        obs_df['disease'].str.lower().str.contains('pato:0000461', na=False)
-    )
-    normal_df = obs_df[normal_mask]
-    log_counts(logger, "normal disease filter",
-               before=len(obs_df), after=len(normal_df), unit="cells")
-    return normal_df
-
-
-def filter_primary_data(obs_df: pd.DataFrame, logger) -> pd.DataFrame:
-    if 'is_primary_data' not in obs_df.columns:
-        return obs_df
-    # Handle both boolean True and string "True" from Census
-    col        = obs_df['is_primary_data']
-    mask       = (col == True) | (col.astype(str).str.lower() == 'true')
-    primary_df = obs_df[mask]
-    log_counts(logger, "primary data filter",
-               before=len(obs_df), after=len(primary_df), unit="cells")
-    return primary_df
-
-
-def extract_census_metadata(obs_df: pd.DataFrame) -> dict:
-    def get_most_common(col):
-        if col in obs_df.columns and len(obs_df) > 0:
-            vc = obs_df[col].value_counts()
-            return str(vc.index[0]) if len(vc) > 0 else ''
-        return ''
-
-    def get_all_unique(col):
-        if col in obs_df.columns and len(obs_df) > 0:
-            uv = obs_df[col].dropna().unique()
-            return ' | '.join(sorted([str(v) for v in uv])) if len(uv) > 0 else ''
-        return ''
-
-    # Tissue ontology summary
-    tissue_summary = ''
-    if 'tissue_ontology_term_id' in obs_df.columns:
-        tissue_counts = obs_df['tissue_ontology_term_id'].value_counts()
-        parts = [f"{tid}: {count:,}" for tid, count in tissue_counts.items() if count > 0]
-        tissue_summary = "; ".join(parts)
-
-    # Assay ontology summary
-    assay_summary = ''
-    if 'assay_ontology_term_id' in obs_df.columns:
-        assay_counts = obs_df['assay_ontology_term_id'].value_counts()
-        parts = [f"{aid}: {count:,}" for aid, count in assay_counts.items() if count > 0]
-        assay_summary = "; ".join(parts)
-
-    # Cell type ontology summary
-    cell_type_summary = ''
-    if 'cell_type_ontology_term_id' in obs_df.columns:
-        ct_counts = obs_df['cell_type_ontology_term_id'].value_counts()
-        parts = [f"{ct}: {count:,}" for ct, count in ct_counts.items() if count > 0]
-        cell_type_summary = "; ".join(parts)
-
-    # Disease ontology summary
-    disease_summary = ''
-    if 'disease_ontology_term_id' in obs_df.columns:
-        dis_counts = obs_df['disease_ontology_term_id'].value_counts()
-        parts = [f"{did}: {count:,}" for did, count in dis_counts.items() if count > 0]
-        disease_summary = "; ".join(parts)
-
-    # Sex ontology summary
-    sex_summary = ''
-    if 'sex_ontology_term_id' in obs_df.columns:
-        sex_counts = obs_df['sex_ontology_term_id'].value_counts()
-        parts = [f"{sid}: {count:,}" for sid, count in sex_counts.items() if count > 0]
-        sex_summary = "; ".join(parts)
-
-    dev_stage_summary = ''
-    if 'development_stage' in obs_df.columns and len(obs_df) > 0:
-        counts            = obs_df['development_stage'].value_counts()
-        dev_stage_summary = "; ".join(f"{s}: {c:,}" for s, c in counts.items())
-
-    donor_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
-
+def describe_cells(obs):
+    """Count the cells, the donors and the six facets of the cells in obs."""
     return {
-        'tissue_ontology_term_id':            get_all_unique('tissue_ontology_term_id'),
-        'assay_ontology_term_id':             get_all_unique('assay_ontology_term_id'),
-        'cell_type_ontology_term_id':         get_all_unique('cell_type_ontology_term_id'),
-        'disease_ontology_term_id':           get_all_unique('disease_ontology_term_id'),
-        'development_stage_ontology_term_id': get_all_unique('development_stage_ontology_term_id'),
-        'sex_ontology_term_id':               get_all_unique('sex_ontology_term_id'),
-        'is_primary_data':                    get_most_common('is_primary_data'),
-        'donor_id_count':                     donor_count,
-        'tissue_ontology_summary':            tissue_summary,
-        'assay_ontology_summary':             assay_summary,
-        'cell_type_ontology_summary':         cell_type_summary,
-        'disease_ontology_summary':           disease_summary,
-        'development_stage_summary':          dev_stage_summary,
-        'sex_ontology_summary':               sex_summary,
+        "cell_count": len(obs),
+        "donor_count": int(obs["donor_id"].nunique()),
+        "facets": {facet: count_facet(obs, facet) for facet in FACETS},
     }
 
 
-def process_dataset(dataset_id: str, uberon_ids: set, disease_ids: set,
-                    hsapdv_ids: set, census, logger) -> Optional[dict]:
-    """Process one dataset using an already-open Census connection.
+def keep_matching(obs, uberon_ids, disease_ids, hsapdv_ids, exclude_assay_ids=frozenset()):
+    """Keep the cells that pass the tissue, disease and age filters, and whose
+    assay is not in exclude_assay_ids.
 
-    Tissue and disease filters pushed server-side into Census query.
-    Age filter applied client-side as .isin(hsapdv_ids) — same pattern,
-    no numeric comparison. Age threshold is encoded in hsapdv_ids at
-    resolve time (cellxgene-harvester resolve-hsapdv --min-age N).
+    is_primary_data is not a filter here. It is unreliable at this time
+    (decision of 2026-10-05), so it is not read and not used.
     """
+    return obs[obs[id_column("tissue")].isin(uberon_ids)
+               & obs[id_column("disease")].isin(disease_ids)
+               & obs[id_column("development_stage")].isin(hsapdv_ids)
+               & ~obs[id_column("assay")].isin(exclude_assay_ids)]
+
+
+def api_values(record):
+    """The source_ values that Step 4 took from the CellxGene API."""
+    return {
+        "tissue ids": sorted(record["source_tissue_ontology_id"]),
+        "disease ids": sorted(record["source_disease_ontology_id"]),
+        "cell count": record["source_cell_count"],
+    }
+
+
+def fill_record(record, obs, uberon_ids, disease_ids, hsapdv_ids, exclude_assay_ids=frozenset()):
+    """Fill both sides of every pair in the record from the cells in obs.
+
+    Return a list of messages about values that differ from what Step 4
+    wrote: the API tissue ids, the API disease ids and the API cell count.
+    """
+    before = api_values(record)
+
+    source = describe_cells(obs)
+    kept = describe_cells(keep_matching(obs, uberon_ids, disease_ids, hsapdv_ids, exclude_assay_ids))
+
+    record["source_cell_count"] = source["cell_count"]
+    record["filtered_cell_count"] = kept["cell_count"]
+    record["source_donor_count"] = source["donor_count"]
+    record["filtered_donor_count"] = kept["donor_count"]
+
+    for facet in FACETS:
+        labels, ids, summary = source["facets"][facet]
+        kept_labels, kept_ids, kept_summary = kept["facets"][facet]
+        record[f"source_{facet}"] = labels
+        record[f"filtered_{facet}"] = kept_labels
+        record[f"source_{facet}_ontology_id"] = ids
+        record[f"filtered_{facet}_ontology_id"] = kept_ids
+        record[f"source_{facet}_ontology_id_summary"] = summary
+        record[f"filtered_{facet}_ontology_id_summary"] = {
+            name: kept_summary.get(name, 0) for name in summary}
+
+    after = api_values(record)
+    return [f"Census {name} {after[name]} differ from the Step 4 (API) value {before[name]}"
+            for name in before if before[name] and before[name] != after[name]]
+
+
+def record_filter_files(record, paths, census_label):
+    """Record the filter files used in this step. Return messages about any
+    file that is not the one recorded in Step 4."""
+    messages = []
+    choices = record["filter_choices"]
+    choices.pop("exclude_assay", None)
+    for name in FILTER_FILES:
+        if not paths.get(name):
+            continue
+        current = ontology_files.describe(paths[name])
+        recorded = choices.get(name)
+        if recorded and recorded["sha256"] != current["sha256"]:
+            messages.append(f"{name} file {paths[name]} is not the file recorded in Step 4 "
+                            f"({recorded['file']}); the file in use is now recorded")
+        choices[name] = current
+    choices["census_version"] = census_label
+    return messages
+
+
+def count_one(path, census, census_label, ids, paths, logger):
+    """Count one dataset and write its file. Return True if it was counted."""
+    record = load_json(path)
+    dataset_id = record["dataset"]["dataset_id"]
     try:
-        import cellxgene_census
-
-        tissue_ids_str  = ", ".join(f"'{t}'" for t in sorted(uberon_ids))
-        disease_ids_str = ", ".join(f"'{d}'" for d in sorted(disease_ids))
-        obs_filter = (
-            f"dataset_id == '{dataset_id}' "
-            f"and tissue_ontology_term_id in [{tissue_ids_str}] "
-            f"and disease_ontology_term_id in [{disease_ids_str}]"
-        )
-        logger.info(f"    Querying Census (server-side filtered)...")
-
-        adata = cellxgene_census.get_anndata(
-            census=census,
-            organism="Homo sapiens",
-            obs_value_filter=obs_filter,
-            obs_column_names=["tissue",
-                              "tissue_ontology_term_id",
-                              "disease",
-                              "disease_ontology_term_id",
-                              "development_stage",
-                              "development_stage_ontology_term_id",
-                              "assay_ontology_term_id",
-                              "cell_type_ontology_term_id",
-                              "sex_ontology_term_id",
-                              "is_primary_data",
-                              "donor_id",
-                              "suspension_type"]
-        )
-
-        if adata is None or adata.n_obs == 0:
-            logger.info(f"    Census returned 0 cells after server-side filters")
-            return {'normal_cell_count': 0, 'total_count': 0, 'adult_count': 0,
-                    **extract_census_metadata(pd.DataFrame())}
-
-        obs_df = adata.obs
-        logger.info(f"    Census returned {len(obs_df):,} cells (tissue+disease filtered)")
-
-        metadata = extract_census_metadata(obs_df)
-
-        # Age filter (client-side — .isin() on HsapDv obo_ids, same pattern as tissue/disease)
-        id_col      = 'development_stage_ontology_term_id'
-        adult_df    = obs_df[obs_df[id_col].isin(hsapdv_ids)] if id_col in obs_df.columns else obs_df
-        adult_count = len(adult_df)
-        log_counts(logger, "age filter (HsapDv IDs)",
-                   before=len(obs_df), after=adult_count, unit="cells")
-
-        if adult_count == 0:
-            return {'normal_cell_count': 0, 'total_count': len(obs_df),
-                    'adult_count': 0, **metadata}
-
-        normal_cell_count = len(adult_df)
-
-        return {
-            'normal_cell_count': normal_cell_count,
-            'total_count':       len(obs_df),
-            'adult_count':       adult_count,
-            **metadata
-        }
-
+        messages = record_filter_files(record, paths, census_label)
+        logger.info("    Reading the Census obs table for the whole dataset...")
+        obs = read_obs(census, dataset_id)
+        logger.info(f"    Census returned {len(obs)} cells")
+        messages += fill_record(record, obs, ids["uberon"], ids["disease"], ids["hsapdv"],
+                                ids["exclude_assay"])
+        write_json(path, record)
     except Exception as e:
         logger.error(f"    ERROR: {e}")
-        import traceback
         logger.error(traceback.format_exc())
-        return None
+        return False
+
+    for message in messages:
+        logger.warning(f"    WARNING: {message}")
+    logger.info(f"    {record['filtered_cell_count']} of {record['source_cell_count']} "
+                f"cells pass the filters")
+    return True
 
 
-def process_all_datasets(input_csv, output_csv, uberon_json, disease_json,
-                         hsapdv_json, logger):
+def list_files(folder):
+    return sorted(glob.glob(os.path.join(folder, "*.filtered.json")))
+
+
+def is_counted(path):
+    return load_json(path)["filtered_cell_count"] is not None
+
+
+def process_folder(folder, uberon_json, disease_json, hsapdv_json, logger,
+                   exclude_assay_json=None, census_version=CENSUS_VERSION):
     import cellxgene_census
 
-    uberon_ids  = load_obo_ids(uberon_json,  "UBERON",  logger)
-    disease_ids = load_obo_ids(disease_json, "disease", logger)
-    hsapdv_ids  = load_obo_ids(hsapdv_json,  "HsapDv",  logger)
-    logger.info("")
+    paths = {"uberon": uberon_json, "disease": disease_json, "hsapdv": hsapdv_json,
+             "exclude_assay": exclude_assay_json}
+    ids = {name: ontology_files.load_obo_ids(path) if path else set() for name, path in paths.items()}
 
-    # Load input - use output if it exists (resume)
-    if os.path.exists(output_csv):
-        df = pd.read_csv(output_csv, dtype=str)
-        logger.info(f"Resuming from: {output_csv} ({len(df):,} datasets)")
-    else:
-        df = pd.read_csv(input_csv, dtype=str)
-        logger.info(f"Starting fresh: {input_csv} ({len(df):,} datasets)")
+    files = list_files(folder)
+    done = [p for p in files if is_counted(p)]
+    logger.info(f"Datasets in {folder}: {len(files)}")
+    logger.info(f"Already counted     : {len(done)}\n")
 
-    # Ensure output columns exist
-    for col in ['normal_cell_count',
-                'tissue_ontology_term_id',
-                'assay_ontology_term_id',
-                'cell_type_ontology_term_id',
-                'disease_ontology_term_id',
-                'development_stage_ontology_term_id',
-                'sex_ontology_term_id',
-                'is_primary_data',
-                'donor_id_count',
-                'tissue_ontology_summary',
-                'assay_ontology_summary',
-                'cell_type_ontology_summary',
-                'disease_ontology_summary',
-                'development_stage_summary',
-                'sex_ontology_summary']:
-        if col not in df.columns:
-            df[col] = ''
-
-    df.to_csv(output_csv, index=False)
-
-    # Count already done
-    already_done = df['normal_cell_count'].notna() & (df['normal_cell_count'] != '')
-    logger.info(f"Already processed: {already_done.sum():,} / {len(df):,}\n")
-
-    stats = {'successful': 0, 'failed': 0, 'skipped': 0, 'resumed': int(already_done.sum())}
-
-    # Open Census ONCE for all datasets
+    stats = {"counted": 0, "failed": 0}
     logger.info("Opening Census connection (once for all datasets)...")
-    with cellxgene_census.open_soma(census_version="latest") as census:
-        logger.info("Census connection open\n")
+    with cellxgene_census.open_soma(census_version=census_version) as census:
+        description = cellxgene_census.get_census_version_description(census_version)
+        census_label = description.get("release_build", census_version)
+        logger.info(f"Census connection open (release {census_label})\n")
 
-        for idx, row in df.iterrows():
-            dataset_id   = str(row.get('dataset_id', '')).strip()
-            first_author = row.get('first_author', 'Unknown')
-            year         = row.get('year', 'Unknown')
-            journal      = row.get('journal', 'Unknown')
-
-            # Resume: skip already processed
-            existing = str(row.get('normal_cell_count', '')).strip()
-            if existing and existing not in ('', 'nan', 'None'):
-                logger.info(f"[{idx+1}/{len(df)}] SKIP (already done: {existing} normal cells) - {dataset_id}")
+        for i, path in enumerate(files, 1):
+            if path in done:
                 continue
-
-            logger.info(f"\n[{idx+1}/{len(df)}] {dataset_id}")
-            logger.info(f"  {first_author} ({year}) - {journal}")
-
-            if not dataset_id or dataset_id == 'nan':
-                logger.warning(f"  SKIPPED: Missing dataset_id")
-                stats['skipped'] += 1
-                continue
-
-            result = process_dataset(dataset_id, uberon_ids, disease_ids,
-                                     hsapdv_ids, census, logger)
-
-            if result is not None:
-                for key, val in result.items():
-                    if key in df.columns:
-                        df.loc[idx, key] = str(val)
-                logger.info(f"  SUCCESS: {result['normal_cell_count']:,} normal cells")
-                stats['successful'] += 1
-            else:
-                logger.warning(f"  FAILED")
-                stats['failed'] += 1
-
-            df.to_csv(output_csv, index=False)
+            logger.info(f"[{i}/{len(files)}] {os.path.basename(path)}")
+            counted = count_one(path, census, census_label, ids, paths, logger)
+            stats["counted" if counted else "failed"] += 1
 
     logger.info(f"\n{'='*70}")
-    logger.info(f"  Resumed (already done) : {stats['resumed']:,}")
-    logger.info(f"  Newly processed        : {stats['successful']:,}")
-    logger.info(f"  Failed                 : {stats['failed']:,}")
-    logger.info(f"  Skipped (no ID)        : {stats['skipped']:,}")
+    logger.info(f"  Already counted : {len(done)}")
+    logger.info(f"  Newly counted   : {stats['counted']}")
+    logger.info(f"  Failed          : {stats['failed']}")
+
 
 # =============================================================================
 # run_count_normal_cells
 # =============================================================================
 def run_count_normal_cells(
-        input_csv:    str,
+        folder:       str,
         uberon_json:  str,
         disease_json: str,
         hsapdv_json:  str,
+        exclude_assay_json: str = None,
+        census_version:     str = CENSUS_VERSION,
     ):
     """Main entry point called by CLI"""
-    base       = os.path.splitext(input_csv)[0]
-    output_csv = f"{base}_with_normal_counts.csv"
-
-    logger = setup_logger("5_count_normal_cells", output_csv=output_csv)
+    folder = folder.rstrip("/")
+    logger = setup_logger("5_count_normal_cells", output_csv=f"{folder}.count.log")
     log_command(logger)
     logger.info(f"UBERON file  : {uberon_json}")
     logger.info(f"Disease file : {disease_json}")
     logger.info(f"HsapDv file  : {hsapdv_json}")
-    logger.info(f"Output       : {output_csv}\n")
+    logger.info(f"Exclude assay: {exclude_assay_json or 'none'}")
+    logger.info(f"Census       : {census_version}")
+    logger.info(f"Folder       : {folder}\n")
 
     try:
-        import cellxgene_census
+        import cellxgene_census  # noqa: F401
     except ImportError:
         logger.error("ERROR: cellxgene_census not found")
         sys.exit(1)
 
-    process_all_datasets(input_csv, output_csv, uberon_json, disease_json,
-                         hsapdv_json, logger)
-    log_finish(logger, output_csv)
-
+    process_folder(folder, uberon_json, disease_json, hsapdv_json, logger,
+                   exclude_assay_json, census_version)
+    log_finish(logger, folder)

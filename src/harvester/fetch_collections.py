@@ -21,12 +21,10 @@ import requests
 import json
 import sys
 
+from harvester.run_dir import run_dir
+
 # API endpoint (no visibility filter - retrieves all public collections)
 COLLECTIONS_API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections"
-
-# Output configuration
-DATA_DIR = "data"
-OUTPUT_FILE = os.path.join(DATA_DIR, "collections_metadata.json")
 
 
 def fetch_collections():
@@ -49,11 +47,12 @@ def fetch_collections():
     print(f"Successfully fetched {len(collections)} collections")
     
     # Save to file
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(OUTPUT_FILE, "w") as f:
+    output_file = os.path.join(run_dir(), "collections_metadata.json")
+    os.makedirs(run_dir(), exist_ok=True)
+    with open(output_file, "w") as f:
         json.dump(collections, f, indent=2)
     
-    print(f"Saved collections metadata to: {OUTPUT_FILE}")
+    print(f"Saved collections metadata to: {output_file}")
     
     # Print summary statistics
     public_count = sum(1 for c in collections if c.get("visibility") == "PUBLIC")

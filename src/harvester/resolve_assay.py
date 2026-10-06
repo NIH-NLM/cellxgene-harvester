@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 """
-Step 0: Resolve UBERON tissue terms via OLS4 API
+Step 0d: Resolve assay (technique) terms via OLS4 API
 
-Given a tissue label or UBERON ID, fetches the term itself plus all
-hierarchical descendants, saves both JSON and CSV for use in downstream
-filtering steps (4 and 5).
+Given an assay label or an EFO ID, fetches the term itself plus all
+hierarchical descendants, saves both JSON and CSV for use in Step 5
+(count-normal-cells --exclude-assay).
+
+The file is used as a NEGATIVE selection: the cells whose
+assay_ontology_term_id is in the file are left out of the filtered counts, for
+example to leave out spatial techniques. Text matching on titles does not find
+a technique reliably (see the README). The assay ontology id of each cell does.
 
 Usage:
 1. Python module execution:
-python -m harvester.resolve_uberon "kidney"
+python -m harvester.resolve_assay "spatial transcriptomics"
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester resolve-uberon kidney
-cellxgene-harvester resolve-uberon kidney --output-prefix 2026-08-03-run/uberon_kidney
+cellxgene-harvester resolve-assay "spatial transcriptomics"
+cellxgene-harvester resolve-assay "spatial transcriptomics" MERFISH --output-prefix 2026-08-03-run/assay_spatial
 
 Output:
-    <run folder>/uberon_kidney.json   - full term list with metadata
-    <run folder>/uberon_kidney.csv    - flat table: obo_id, label, level
+    <run folder>/assay_spatial_transcriptomics.json   - full term list with metadata
+    <run folder>/assay_spatial_transcriptomics.csv    - flat table: obo_id, label, level
 """
 
 import os
@@ -29,14 +34,14 @@ from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
-OLS_BASE   = "https://www.ebi.ac.uk/ols4/api"
-UBERON_IRI = "http://purl.obolibrary.org/obo/{term_id}"
+OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
+EFO_IRI  = "http://www.ebi.ac.uk/efo/{term_id}"
 
 
-def search_uberon(label: str, logger) -> list:
-    """Search OLS4 for a UBERON term by label, return top matches."""
+def search_assay(label: str, logger) -> list:
+    """Search OLS4 for an EFO assay term by label, return top matches."""
     url    = f"{OLS_BASE}/search"
-    params = {"q": label, "ontology": "uberon", "type": "class", "rows": 10}
+    params = {"q": label, "ontology": "efo", "type": "class", "rows": 10}
 
     logger.info(f"  Searching OLS4 for: '{label}'")
     r = requests.get(url, params=params, timeout=15)
@@ -45,18 +50,17 @@ def search_uberon(label: str, logger) -> list:
     docs = r.json().get("response", {}).get("docs", [])
     return [
         {"obo_id": d.get("obo_id"), "label": d.get("label"), "iri": d.get("iri")}
-        for d in docs if d.get("obo_id", "").startswith("UBERON")
+        for d in docs if d.get("obo_id", "").startswith("EFO")
     ]
 
 
-def get_descendants(uberon_id: str, logger) -> list:
-    """Get all hierarchical descendants of a UBERON term."""
-    term_id = uberon_id.replace(":", "_")
-    iri     = UBERON_IRI.format(term_id=term_id)
+def get_descendants(term_id: str, logger) -> list:
+    """Get all hierarchical descendants of an EFO term."""
+    iri     = EFO_IRI.format(term_id=term_id.replace(":", "_"))
     iri_enc = requests.utils.quote(requests.utils.quote(iri, safe=""))
 
-    url  = f"{OLS_BASE}/ontologies/uberon/terms/{iri_enc}/hierarchicalDescendants"
-    page = 0
+    url       = f"{OLS_BASE}/ontologies/efo/terms/{iri_enc}/hierarchicalDescendants"
+    page      = 0
     all_terms = []
 
     while True:
@@ -69,7 +73,7 @@ def get_descendants(uberon_id: str, logger) -> list:
         embedded = data.get("_embedded", {}).get("terms", [])
         all_terms.extend([
             {"obo_id": t.get("obo_id"), "label": t.get("label"), "level": "descendant"}
-            for t in embedded if t.get("obo_id", "").startswith("UBERON")
+            for t in embedded if t.get("obo_id", "").startswith("EFO")
         ])
 
         # Check for next page
@@ -78,22 +82,22 @@ def get_descendants(uberon_id: str, logger) -> list:
             break
         page += 1
 
-    logger.info(f"  Found {len(all_terms)} descendants for {uberon_id}")
+    logger.info(f"  Found {len(all_terms)} descendants for {term_id}")
     return all_terms
 
 
 def resolve_term(query: str, logger) -> tuple:
     """
-    Resolve a label or UBERON ID to (uberon_id, label).
+    Resolve a label or EFO ID to (efo_id, label).
     Auto-selects exact label match, otherwise prompts user.
     """
-    if re.match(r"UBERON:\d+", query.strip(), re.IGNORECASE):
-        uberon_id = query.strip().upper()
-        return uberon_id, uberon_id
+    if re.match(r"EFO:\d+", query.strip(), re.IGNORECASE):
+        efo_id = query.strip().upper()
+        return efo_id, efo_id
 
-    results = search_uberon(query, logger)
+    results = search_assay(query, logger)
     if not results:
-        logger.error(f"  No UBERON terms found for '{query}'")
+        logger.error(f"  No EFO terms found for '{query}'")
         sys.exit(1)
 
     # Auto-select exact label match
@@ -113,28 +117,37 @@ def resolve_term(query: str, logger) -> tuple:
     return selected["obo_id"], selected["label"]
 
 
-def resolve_uberon(queries: list, output_prefix: str, logger):
+def resolve_assay(queries: list, output_prefix: str, logger):
     """
-    Resolve one or more tissue queries, combine all terms,
+    Resolve one or more assay queries, combine all terms,
     save JSON and CSV.
+
+    JSON structure mirrors uberon JSON for consistent downstream loading:
+        {
+          "queries":    [...],
+          "root_terms": [{obo_id, label, level}, ...],
+          "obo_ids":    [...],          # all IDs including descendants
+          "terms":      [{obo_id, label, level}, ...],
+          "total":      N
+        }
     """
-    all_terms    = []
-    root_terms   = []
+    all_terms  = []
+    root_terms = []
 
     for query in queries:
         query = query.strip()
         logger.info(f"\nResolving: '{query}'")
 
-        uberon_id, label = resolve_term(query, logger)
+        efo_id, label = resolve_term(query, logger)
 
         # Add the root term itself
-        root = {"obo_id": uberon_id, "label": label, "level": "root"}
+        root = {"obo_id": efo_id, "label": label, "level": "root"}
         root_terms.append(root)
         all_terms.append(root)
-        logger.info(f"  Root term: {uberon_id}  {label}")
+        logger.info(f"  Root term: {efo_id}  {label}")
 
         # Get all descendants
-        descendants = get_descendants(uberon_id, logger)
+        descendants = get_descendants(efo_id, logger)
         all_terms.extend(descendants)
 
         log_counts(logger, f"terms resolved for '{query}'",
@@ -170,31 +183,30 @@ def resolve_uberon(queries: list, output_prefix: str, logger):
 
     # Save CSV
     csv_path = f"{output_prefix}.csv"
-    df = pd.DataFrame(deduped)
-    write_dataframe_csv(df, csv_path)
+    write_dataframe_csv(pd.DataFrame(deduped), csv_path)
     logger.info(f"Saved CSV : {csv_path}")
     logger.info(f"Total terms: {len(deduped)}  (root + descendants)")
 
     return json_path, csv_path
 
+
 # =============================================================================
-# run_resolve_uberon
+# run_resolve_assay
 # =============================================================================
-def run_resolve_uberon(queries: list, output_prefix: str = None, multi: bool = False):
+def run_resolve_assay(queries: list, output_prefix: str = None):
     """Main entry point called by CLI"""
     os.makedirs(run_dir(), exist_ok=True)
-    
+
     if output_prefix:
         out_prefix = output_prefix
     else:
         slug = re.sub(r"[^a-z0-9]+", "_", queries[0].lower()).strip("_")
-        out_prefix = os.path.join(run_dir(), f"uberon_{slug}")
-    
-    log_file = f"{out_prefix}.log"
-    logger = setup_logger("0_resolve_uberon", output_csv=log_file)
-    log_command(logger)
-    
-    resolve_uberon(queries, out_prefix, logger)
-    
-    log_finish(logger, out_prefix + ".csv")
+        out_prefix = os.path.join(run_dir(), f"assay_{slug}")
 
+    log_file = f"{out_prefix}.log"
+    logger = setup_logger("0d_resolve_assay", output_csv=log_file)
+    log_command(logger)
+
+    resolve_assay(queries, out_prefix, logger)
+
+    log_finish(logger, out_prefix + ".csv")

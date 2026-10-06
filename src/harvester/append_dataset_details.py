@@ -26,10 +26,8 @@ import time
 import requests
 from typing import Tuple
 
-# Input/Output configuration
-DATA_DIR = "data"
-INPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
-OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets_complete.csv")
+from harvester.io_utils import write_csv
+from harvester.run_dir import run_dir
 
 # API configuration
 API_TEMPLATE = (
@@ -95,15 +93,17 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
 
 def append_details():
     """Append dataset details to the metadata CSV."""
+    input_csv = os.path.join(run_dir(), "all_datasets.csv")
+    output_csv = os.path.join(run_dir(), "all_datasets_complete.csv")
     
     # Load input CSV
-    if not os.path.exists(INPUT_CSV):
-        print(f"ERROR: Input file not found: {INPUT_CSV}", file=sys.stderr)
+    if not os.path.exists(input_csv):
+        print(f"ERROR: Input file not found: {input_csv}", file=sys.stderr)
         print("Please run '2_generate_metadata_csv.py' first.", file=sys.stderr)
         sys.exit(1)
     
-    print(f"Loading datasets from: {INPUT_CSV}")
-    with open(INPUT_CSV, newline="") as f:
+    print(f"Loading datasets from: {input_csv}")
+    with open(input_csv, newline="") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
         original_fieldnames = reader.fieldnames or []
@@ -156,16 +156,13 @@ def append_details():
         time.sleep(REQUEST_DELAY)
     
     # Write output CSV
-    with open(OUTPUT_CSV, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_csv(output_csv, fieldnames, rows)
     
     print(f"\nResults:")
     print(f"  Total datasets: {len(rows)}")
     print(f"  Successfully fetched: {successful}")
     print(f"  Failed/skipped: {failed}")
-    print(f"\nOutput saved to: {OUTPUT_CSV}")
+    print(f"\nOutput saved to: {output_csv}")
 
 # =============================================================================
 # run_append_dataset_details

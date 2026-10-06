@@ -2,166 +2,171 @@
 """
 Step 4: Filter datasets using UBERON and disease ontology IDs
 
-Filters the all_datasets_complete.csv (Step 3 output) down to only datasets
-that are relevant for a given tissue and disease state, using exact ontology
-ID matching against the tissue_ontology_term_id and disease_ontology_term_id
-columns populated by generate_metadata (Step 2).
+Reads all_datasets_complete.csv (Step 3 output), keeps the datasets that are
+relevant for a tissue and a disease state, and writes one JSON file for each
+dataset that is kept: <dataset_id>.filtered.json.
 
-Both filters are INCLUSIVE:
-  - Tissue : keep if ANY of the dataset's tissue IDs are in uberon obo_ids
-  - Disease: keep if the target disease ID is AMONG the dataset's disease IDs
-             (a dataset with [normal, COVID-19] is retained — it has normal cells)
+Both ontology filters are INCLUSIVE:
+  - Tissue : keep if ANY of the dataset's tissue IDs are in the uberon obo_ids
+  - Disease: keep if ANY of the dataset's disease IDs are in the disease obo_ids
+             (a dataset with [normal, COVID-19] is kept: it has normal cells)
 
-Age filtering (HsapDv) is NOT applied here — development_stage is absent at
-the dataset level and is only available after the Census query in Step 5.
+Cancer and spatial datasets are NOT screened here. The disease file already
+decides which disease states count, and a technique is screened by its assay
+ontology id in Step 5 (--exclude-assay). Text matching does not find either
+reliably; see the README.
+
+Age filtering (HsapDv) is NOT applied here. Development stage is absent at the
+dataset level and is only available after the Census query in Step 5. The
+optional --hsapdv file is only recorded, so the age choice is on file from
+this step on.
+
+Each JSON file records the choices made here (filter_choices), the organ (the
+root term given to resolve-uberon), and the source_ values for tissue and
+disease. The filtered_ values stay empty until Step 5.
 
 Usage:
 1. Python module execution:
 python -m harvester.filter_datasets \
-        data/all_datasets_complete.csv \
-        --uberon  data/uberon_kidney.json \
-        --disease data/disease_normal.json \
+        2026-08-03-run/all_datasets_complete.csv \
+        --uberon  2026-08-03-run/uberon_kidney.json \
+        --disease 2026-08-03-run/disease_normal.json \
+        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
         --organism "Homo sapiens" \
         --no-preprints \
-        --exclude-cancer \
-        --exclude-spatial \
-        --output  data/homo_sapiens_kidney_harvester.csv
+        --output  2026-08-03-run/homo_sapiens_kidney_harvester
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester filter-datasets data/all_datasets_complete.csv \
-        --uberon  data/uberon_kidney.json \
-        --disease data/disease_normal.json \
+cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
+        --uberon  2026-08-03-run/uberon_kidney.json \
+        --disease 2026-08-03-run/disease_normal.json \
+        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
         --organism "Homo sapiens" \
         --no-preprints \
-        --exclude-cancer \
-        --exclude-spatial \
-        --output  data/homo_sapiens_kidney_harvester.csv
+        --output  2026-08-03-run/homo_sapiens_kidney_harvester
 
+The --output value is a folder.
 """
 
-import sys
-import json
+import os
+from datetime import date
+
 import pandas as pd
+
+from harvester import __version__, ontology_files
+from harvester.io_utils import merge_curation, write_json
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
+from harvester.records import new_record, split_cell
 
 
-def load_obo_ids(json_path: str, label: str, logger) -> set:
-    """Load obo_ids from a resolve_uberon / resolve_disease JSON.
-
-    Both JSON files share the same structure produced by their resolve steps,
-    so one helper covers both. Returns a set of ontology ID strings for use
-    with set intersection against the ontology_term_id columns in the CSV.
-
-    Example (uberon_kidney.json):
-        {"obo_ids": ["UBERON:0002113", "UBERON:0001225", ...], "terms": [...], ...}
-    """
-    with open(json_path) as f:
-        data = json.load(f)
-    obo_ids = set(data["obo_ids"])
-    roots   = [t["label"] for t in data["root_terms"]]
-    logger.info(f"  Loaded {label} JSON : {json_path}")
-    logger.info(f"  Root terms          : {', '.join(roots)}")
-    logger.info(f"  Total obo_ids       : {len(obo_ids):,}")
-    return obo_ids
+def read_rows(input_csv):
+    """Read the CSV with every cell as text, so "2022" stays text."""
+    return pd.read_csv(input_csv, dtype=str, keep_default_na=False)
 
 
-def filter_datasets(input_csv, output_csv, logger,
-                    uberon_json=None, disease_json=None, organism=None,
-                    no_preprints=False, exclude_cancer=False,
-                    exclude_spatial=False):
+def overlaps(cell, ids):
+    """True if any id in a " | " joined cell is in the set of ids."""
+    return bool(set(split_cell(cell)) & ids)
 
-    logger.info(f"Input : {input_csv}")
-    df            = pd.read_csv(input_csv)
-    initial_count = len(df)
-    logger.info(f"Loaded {initial_count:,} datasets\n")
 
-    # ------------------------------------------------------------------
-    # UBERON tissue filter — exact ontology ID matching on
-    # tissue_ontology_term_id column (populated by generate_metadata Step 2).
-    # Keep a dataset if ANY of its tissue IDs are in the uberon obo_ids set.
-    # This is far more precise than text matching and uses the same IDs
-    # that the Census query in Step 5 will use.
-    # ------------------------------------------------------------------
+def keep_tissue(df, uberon_ids):
+    return df[df["tissue_ontology_term_id"].apply(lambda cell: overlaps(cell, uberon_ids))]
+
+
+def keep_disease(df, disease_ids):
+    return df[df["disease_ontology_term_id"].apply(lambda cell: overlaps(cell, disease_ids))]
+
+
+def keep_organism(df, organism):
+    return df[df["organism"].str.lower() == organism.lower()]
+
+
+def drop_preprints(df):
+    return df[df["is_preprint"].str.lower() == "false"]
+
+
+def log_ontology_file(logger, label, path):
+    info = ontology_files.describe(path)
+    roots = ", ".join(t["label"] for t in info["root_terms"])
+    logger.info(f"  Loaded {label} JSON : {path}")
+    logger.info(f"  Root terms          : {roots}")
+    logger.info(f"  Total obo_ids       : {info['term_count']}")
+
+
+def filter_rows(df, logger, uberon_json, disease_json, organism, no_preprints):
+    """Apply the filters in order and log the counts after each one."""
+    steps = []
     if uberon_json:
-        uberon_ids = load_obo_ids(uberon_json, "UBERON", logger)
-        before     = len(df)
-
-        def has_matching_tissue(id_str):
-            if pd.isna(id_str) or str(id_str).strip() == "":
-                return False
-            # tissue_ontology_term_id is " | "-joined (safe_ontology_ids separator)
-            dataset_ids = set(str(id_str).split(" | "))
-            return bool(dataset_ids & uberon_ids)  # non-empty intersection
-
-        mask = df['tissue_ontology_term_id'].apply(has_matching_tissue)
-        df   = df[mask]
-        log_counts(logger, "UBERON ontology ID tissue filter", before=before, after=len(df))
+        uberon_ids = ontology_files.load_obo_ids(uberon_json)
+        steps.append(("UBERON ontology ID tissue filter",
+                      lambda d: keep_tissue(d, uberon_ids)))
     else:
         logger.warning("  WARNING: No --uberon file provided - skipping tissue filter")
-
-    # ------------------------------------------------------------------
-    # Disease filter — exact ontology ID matching on disease_ontology_term_id.
-    # Inclusive: keep if the target disease is AMONG the dataset's diseases,
-    # not requiring all diseases to match.  A dataset with [normal, COVID-19]
-    # should still be retained because it contains normal cells.
-    # ------------------------------------------------------------------
     if disease_json:
-        disease_ids = load_obo_ids(disease_json, "disease", logger)
-        before      = len(df)
-
-        def has_matching_disease(id_str):
-            if pd.isna(id_str) or str(id_str).strip() == "":
-                return False
-            dataset_ids = set(str(id_str).split(" | "))
-            return bool(dataset_ids & disease_ids)
-
-        mask = df['disease_ontology_term_id'].apply(has_matching_disease)
-        df   = df[mask]
-        log_counts(logger, "disease ontology ID filter (inclusive)", before=before, after=len(df))
+        disease_ids = ontology_files.load_obo_ids(disease_json)
+        steps.append(("disease ontology ID filter (inclusive)",
+                      lambda d: keep_disease(d, disease_ids)))
     else:
         logger.warning("  WARNING: No --disease file provided - skipping disease filter")
-
-    # Organism filter
     if organism:
-        before = len(df)
-        df     = df[df['organism'].astype(str).str.lower() == organism.lower()]
-        log_counts(logger, f"organism filter ({organism})", before=before, after=len(df))
-
-    # Preprint filter
+        steps.append((f"organism filter ({organism})", lambda d: keep_organism(d, organism)))
     if no_preprints:
-        before          = len(df)
-        preprint_values = df['is_preprint'].astype(str).str.lower()
-        df              = df[preprint_values == 'false']
-        log_counts(logger, "preprint exclusion", before=before, after=len(df))
+        steps.append(("preprint exclusion", drop_preprints))
 
-    # Cancer filter
-    if exclude_cancer:
-        before      = len(df)
-        cancer_mask = (
-            df['disease'].astype(str).str.lower().str.contains('cancer',    na=False) |
-            df['disease'].astype(str).str.lower().str.contains('carcinoma', na=False)
-        )
-        df = df[~cancer_mask]
-        log_counts(logger, "cancer exclusion", before=before, after=len(df))
+    for name, step in steps:
+        before = len(df)
+        df = step(df)
+        log_counts(logger, name, before=before, after=len(df))
+    return df
 
-    # Spatial filter
-    if exclude_spatial:
-        before        = len(df)
-        spatial_terms = ['spatial', 'visium', 'slide-seq', 'slideseq', 'merfish',
-                         'seqfish', 'cosmx', 'xenium', 'stereo-seq', 'stereoseq']
-        spatial_mask  = pd.Series([False] * len(df), index=df.index)
-        for term in spatial_terms:
-            spatial_mask |= df['dataset_title'].astype(str).str.lower().str.contains(term, na=False)
-            spatial_mask |= df['disease'].astype(str).str.lower().str.contains(term, na=False)
-            spatial_mask |= df['tissue'].astype(str).str.lower().str.contains(term, na=False)
-        df = df[~spatial_mask]
-        log_counts(logger, "spatial exclusion", before=before, after=len(df))
 
-    # Total summary
+def make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_preprints):
+    """Everything the user chose in this step, to be written in each file."""
+    choices = {
+        "organism": organism,
+        "no_preprints": no_preprints,
+    }
+    for name, path in (("uberon", uberon_json), ("disease", disease_json), ("hsapdv", hsapdv_json)):
+        if path:
+            choices[name] = ontology_files.describe(path)
+    choices["harvester_version"] = __version__
+    choices["run_date"] = date.today().isoformat()
+    return choices
+
+
+def write_records(df, output_dir, organ, filter_choices):
+    """Write one <dataset_id>.filtered.json for each row. Return the paths."""
+    paths = []
+    for _, row in df.iterrows():
+        path = os.path.join(output_dir, f"{row['dataset_id']}.filtered.json")
+        record = new_record(row, organ, filter_choices)
+        write_json(path, merge_curation(record, path))
+        paths.append(path)
+    return paths
+
+
+def filter_datasets(input_csv, output_dir, logger,
+                    uberon_json=None, disease_json=None, hsapdv_json=None,
+                    organism=None, no_preprints=False):
+
+    logger.info(f"Input : {input_csv}")
+    df = read_rows(input_csv)
+    initial_count = len(df)
+    logger.info(f"Loaded {initial_count} datasets\n")
+
+    for label, path in (("UBERON", uberon_json), ("disease", disease_json), ("HsapDv", hsapdv_json)):
+        if path:
+            log_ontology_file(logger, label, path)
+
+    df = filter_rows(df, logger, uberon_json, disease_json, organism, no_preprints)
+
     logger.info("")
     log_counts(logger, "TOTAL", before=initial_count, after=len(df))
 
-    df.to_csv(output_csv, index=False)
+    organ = ontology_files.organ_from(uberon_json) if uberon_json else None
+    choices = make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_preprints)
+    paths = write_records(df, output_dir, organ, choices)
+    logger.info(f"Wrote {len(paths)} JSON files to {output_dir}")
 
 
 # =============================================================================
@@ -169,29 +174,28 @@ def filter_datasets(input_csv, output_csv, logger,
 # =============================================================================
 def run_filter_datasets(
         input_csv,
-        output_csv,
+        output_dir,
         uberon_json=None,
         disease_json=None,
+        hsapdv_json=None,
         organism=None,
-        no_preprints=False,
-        exclude_cancer=False,
-        exclude_spatial=False):
+        no_preprints=False):
 
     """Main entry point called by CLI"""
-    logger = setup_logger("4_filter_datasets", output_csv=output_csv)
+    output_dir = output_dir.rstrip("/")
+    os.makedirs(output_dir, exist_ok=True)
+    logger = setup_logger("4_filter_datasets", output_csv=f"{output_dir}.filter.log")
     log_command(logger)
 
     filter_datasets(
         input_csv=input_csv,
-        output_csv=output_csv,
+        output_dir=output_dir,
         logger=logger,
         uberon_json=uberon_json,
         disease_json=disease_json,
+        hsapdv_json=hsapdv_json,
         organism=organism,
         no_preprints=no_preprints,
-        exclude_cancer=exclude_cancer,
-        exclude_spatial=exclude_spatial,
     )
-    
-    log_finish(logger, output_csv)
 
+    log_finish(logger, output_dir)

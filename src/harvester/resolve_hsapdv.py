@@ -17,11 +17,11 @@ python -m harvester.resolve_hsapdv --min-age 15
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-hsapdv --min-age 15
-cellxgene-harvester resolve-hsapdv --min-age 15 --output-prefix data/hsapdv_adult_15
+cellxgene-harvester resolve-hsapdv --min-age 15 --output-prefix 2026-08-03-run/hsapdv_adult_15
 
 Output:
-    data/hsapdv_adult_15.json   - obo_ids for all HsapDv terms with start age >= 15
-    data/hsapdv_adult_15.csv    - flat table: obo_id, label, start_years_post_birth
+    <run folder>/hsapdv_adult_15.json   - obo_ids for all HsapDv terms with start age >= 15
+    <run folder>/hsapdv_adult_15.csv    - flat table: obo_id, label, start_years_post_birth
 """
 
 import os
@@ -29,10 +29,11 @@ import sys
 import json
 import requests
 import pandas as pd
+from harvester.io_utils import write_dataframe_csv
+from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
-DATA_DIR = "data"
 
 # Kept for CLI signature compatibility with cli.py (obo_url parameter); not used.
 HSAPDV_OBO_URL = None
@@ -95,13 +96,13 @@ def fetch_all_hsapdv_terms(logger) -> list:
             })
 
         logger.info(f"  Page {page}: {len(embedded)} terms "
-                    f"(running total: {len(all_terms):,})")
+                    f"(running total: {len(all_terms)})")
 
         if "next" not in data.get("_links", {}):
             break
         page += 1
 
-    logger.info(f"Fetched {len(all_terms):,} HsapDv terms total\n")
+    logger.info(f"Fetched {len(all_terms)} HsapDv terms total\n")
     return all_terms
 
 
@@ -113,6 +114,7 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
     JSON structure matches resolve_uberon / resolve_disease:
         {
           "queries":    ["min_age=15"],
+          "min_age":    15,
           "root_terms": [{obo_id, label}, ...],
           "obo_ids":    [...],
           "terms":      [{obo_id, label, start_years_post_birth}, ...],
@@ -134,9 +136,9 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
         else:
             n_below += 1
 
-    logger.info(f"  start age >= {min_age} yr → included : {len(included):,}")
-    logger.info(f"  start age <  {min_age} yr → excluded : {n_below:,}")
-    logger.info(f"  no age annotation        → excluded : {n_no_age:,}")
+    logger.info(f"  start age >= {min_age} yr → included : {len(included)}")
+    logger.info(f"  start age <  {min_age} yr → excluded : {n_below}")
+    logger.info(f"  no age annotation        → excluded : {n_no_age}")
 
     # Spot-checks using known terms
     logger.info("\n  Spot-checks:")
@@ -172,6 +174,7 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
 
     output = {
         "queries":    [f"min_age={min_age}"],
+        "min_age":    min_age,
         "root_terms": root_terms,
         "obo_ids":    obo_ids,
         "terms":      included,
@@ -184,9 +187,9 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
     logger.info(f"\nSaved JSON: {json_path}")
 
     csv_path = f"{output_prefix}.csv"
-    pd.DataFrame(included).to_csv(csv_path, index=False)
+    write_dataframe_csv(pd.DataFrame(included), csv_path)
     logger.info(f"Saved CSV : {csv_path}")
-    logger.info(f"Total included terms: {len(included):,}  (start age >= {min_age} yr)")
+    logger.info(f"Total included terms: {len(included)}  (start age >= {min_age} yr)")
 
     return json_path, csv_path
 
@@ -198,13 +201,13 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
 def run_resolve_hsapdv(min_age: float, output_prefix: str = None,
                        obo_url: str = None):
     """Main entry point called by CLI."""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(run_dir(), exist_ok=True)
 
     if output_prefix:
         out_prefix = output_prefix
     else:
         age_str    = str(int(min_age)) if min_age == int(min_age) else str(min_age)
-        out_prefix = os.path.join(DATA_DIR, f"hsapdv_adult_{age_str}")
+        out_prefix = os.path.join(run_dir(), f"hsapdv_adult_{age_str}")
 
     log_file = f"{out_prefix}.log"
     logger   = setup_logger("0c_resolve_hsapdv", output_csv=log_file)

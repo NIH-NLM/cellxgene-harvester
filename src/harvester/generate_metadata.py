@@ -12,21 +12,10 @@ Usage:
 import os
 import sys
 import json
-import csv
 from datetime import datetime
 
-# Input/Output configuration
-DATA_DIR = "data"
-INPUT_FILE = os.path.join(DATA_DIR, "collections_metadata.json")
-OUTPUT_CSV = os.path.join(DATA_DIR, "all_datasets.csv")
-
-STATIC_FIELDS = {
-    "filter_normal": "TRUE",
-    "metric": "euclidean",
-    "save_scores": "TRUE",
-    "save_cluster_summary": "TRUE",
-    "save_annotation": "TRUE",
-}
+from harvester.io_utils import write_csv
+from harvester.run_dir import run_dir
 
 # CSV header with collection_name and dataset_title placeholders
 # CSV header with user-friendly ordering
@@ -57,11 +46,6 @@ CSV_HEADER = [
     "visibility",
     "organism",
     # Static processing fields
-    "filter_normal",
-    "metric",
-    "save_scores",
-    "save_cluster_summary",
-    "save_annotation",
     "h5ad_url",
     # Ontology ID columns (all together after h5ad_url)
     "tissue_ontology_term_id",
@@ -219,15 +203,17 @@ def get_latest_dataset_versions(datasets):
 
 def generate_csv():
     """Generate metadata CSV from collections JSON."""
+    input_file = os.path.join(run_dir(), "collections_metadata.json")
+    output_csv = os.path.join(run_dir(), "all_datasets.csv")
     
     # Load collections
-    if not os.path.exists(INPUT_FILE):
-        print(f"ERROR: Input file not found: {INPUT_FILE}", file=sys.stderr)
+    if not os.path.exists(input_file):
+        print(f"ERROR: Input file not found: {input_file}", file=sys.stderr)
         print("Please run '1_fetch_collections.py' first.", file=sys.stderr)
         sys.exit(1)
     
-    print(f"Loading collections from: {INPUT_FILE}")
-    with open(INPUT_FILE) as f:
+    print(f"Loading collections from: {input_file}")
+    with open(input_file) as f:
         collections = json.load(f)
     
     if not isinstance(collections, list):
@@ -291,24 +277,18 @@ def generate_csv():
                 "revised_at": ds["revised_at"],
                 "visibility": visibility,
                 "organism": ds["organism"],
-                # Static processing fields
-                **STATIC_FIELDS,
                 "h5ad_url": "",  # Will be filled in step 3
             }
             rows.append(row)
     
     # Write CSV
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADER)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_csv(output_csv, CSV_HEADER, rows)
     
     print(f"\nResults:")
     print(f"  Total collections processed: {len(collections)}")
     print(f"  Collections skipped (no datasets): {skipped_collections}")
     print(f"  Datasets written: {len(rows)}")
-    print(f"\nOutput saved to: {OUTPUT_CSV}")
+    print(f"\nOutput saved to: {output_csv}")
     print(f"\nNote: If any datasets had multiple versions, only the latest was included.")
 
 def run_generate_metadata():
