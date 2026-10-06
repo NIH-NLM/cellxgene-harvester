@@ -12,11 +12,11 @@ python -m harvester.resolve_uberon "kidney"
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-uberon kidney
-cellxgene-harvester resolve-uberon kidney --output-prefix data/uberon_kidney
+cellxgene-harvester resolve-uberon kidney --output-prefix 2026-08-03-run/uberon_kidney
 
 Output:
-    data/uberon_kidney.json   - full term list with metadata
-    data/uberon_kidney.csv    - flat table: obo_id, label, level
+    <run folder>/uberon_kidney.json   - full term list with metadata
+    <run folder>/uberon_kidney.csv    - flat table: obo_id, label, level
 """
 
 import os
@@ -25,11 +25,12 @@ import sys
 import json
 import requests
 import pandas as pd
+from harvester.io_utils import write_dataframe_csv
+from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE   = "https://www.ebi.ac.uk/ols4/api"
 UBERON_IRI = "http://purl.obolibrary.org/obo/{term_id}"
-DATA_DIR   = "data"
 
 
 def search_uberon(label: str, logger) -> list:
@@ -77,7 +78,7 @@ def get_descendants(uberon_id: str, logger) -> list:
             break
         page += 1
 
-    logger.info(f"  Found {len(all_terms):,} descendants for {uberon_id}")
+    logger.info(f"  Found {len(all_terms)} descendants for {uberon_id}")
     return all_terms
 
 
@@ -170,9 +171,9 @@ def resolve_uberon(queries: list, output_prefix: str, logger):
     # Save CSV
     csv_path = f"{output_prefix}.csv"
     df = pd.DataFrame(deduped)
-    df.to_csv(csv_path, index=False)
+    write_dataframe_csv(df, csv_path)
     logger.info(f"Saved CSV : {csv_path}")
-    logger.info(f"Total terms: {len(deduped):,}  (root + descendants)")
+    logger.info(f"Total terms: {len(deduped)}  (root + descendants)")
 
     return json_path, csv_path
 
@@ -181,13 +182,13 @@ def resolve_uberon(queries: list, output_prefix: str, logger):
 # =============================================================================
 def run_resolve_uberon(queries: list, output_prefix: str = None, multi: bool = False):
     """Main entry point called by CLI"""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(run_dir(), exist_ok=True)
     
     if output_prefix:
         out_prefix = output_prefix
     else:
         slug = re.sub(r"[^a-z0-9]+", "_", queries[0].lower()).strip("_")
-        out_prefix = os.path.join(DATA_DIR, f"uberon_{slug}")
+        out_prefix = os.path.join(run_dir(), f"uberon_{slug}")
     
     log_file = f"{out_prefix}.log"
     logger = setup_logger("0_resolve_uberon", output_csv=log_file)

@@ -13,10 +13,16 @@ Pipeline modules:
     fetch_collections            - Step 1:  Fetch public collections from CellxGene API
     generate_metadata            - Step 2:  Generate base metadata CSV
     append_dataset_details       - Step 3:  Append dataset details (titles, cell counts, URLs)
-    filter_datasets              - Step 4:  Filter by UBERON labels and quality criteria
-    count_normal_cells           - Step 5:  Count normal adult cells via Census (sequential)
-    count_normal_cells_single    - Step 5:  Count normal cells for one dataset (Nextflow scatter)
-    final_cleanup                - Step 6:  Remove datasets with 0 normal cells
+    filter_datasets              - Step 4:  Filter datasets, write one JSON file for each one kept
+    count_normal_cells           - Step 5:  Count source and filtered cells via Census (whole folder)
+    count_normal_cells_single    - Step 5:  Count source and filtered cells for one dataset file
+    final_cleanup                - Step 6:  Delete the files of datasets with 0 filtered cells
+    export_datasets_csv          - Step 7:  Write the datasets CSV that sc-nsforest-qc-nf reads
+
+Shared by Steps 4 to 6:
+    io_utils                     - Check and write the JSON files
+    ontology_files               - Read the resolve-uberon / -disease / -hsapdv files
+    records                      - Build the JSON record of one dataset
 
 Utilities:
     check_uberon                 - Interactive UBERON term lookup via OLS4 API

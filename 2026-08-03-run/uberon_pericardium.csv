@@ -1,0 +1,20 @@
+obo_id,label,level
+UBERON:0002407,pericardium,root
+UBERON:0007187,pericardial parietal mesothelium,descendant
+UBERON:0007186,pericardial visceral mesothelium,descendant
+UBERON:0004271,outflow tract pericardium,descendant
+UBERON:0003388,mesothelium of pericardial cavity,descendant
+UBERON:0002359,fibrous pericardium,descendant
+UBERON:0002406,pericardial sac,descendant
+UBERON:0007188,mesothelium of serous pericardium,descendant
+UBERON:0002357,serous pericardium,descendant
+UBERON:0001074,pericardial cavity,descendant
+UBERON:0015128,subepicardial layer of epicardium,descendant
+UBERON:0002425,visceral serous pericardium,descendant
+UBERON:0002408,parietal serous pericardium,descendant
+UBERON:0010279,pericardial sinus,descendant
+UBERON:0015129,epicardial fat,descendant
+UBERON:0002348,epicardium,descendant
+UBERON:0010283,oblique pericardial sinus,descendant
+UBERON:0002248,transverse pericardial sinus,descendant
+UBERON:0001082,epicardium of ventricle,descendant

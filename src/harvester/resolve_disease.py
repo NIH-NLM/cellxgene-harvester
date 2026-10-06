@@ -13,15 +13,15 @@ resolving 'normal' to PATO:0000461 for filtering CellxGene data.
 Usage:
 1. Python module execution:
 python -m harvester.resolve_disease normal \
-        --output-prefix data/disease_normal
+        --output-prefix 2026-08-03-run/disease_normal
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-disease normal
-cellxgene-harvester resolve-disease normal --output-prefix data/disease_normal
+cellxgene-harvester resolve-disease normal --output-prefix 2026-08-03-run/disease_normal
 
 Output:
-    data/disease_normal.json   - full term list with metadata
-    data/disease_normal.csv    - flat table: obo_id, label, level
+    <run folder>/disease_normal.json   - full term list with metadata
+    <run folder>/disease_normal.csv    - flat table: obo_id, label, level
 """
 
 import os
@@ -30,10 +30,11 @@ import sys
 import json
 import requests
 import pandas as pd
+from harvester.io_utils import write_dataframe_csv
+from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
-DATA_DIR = "data"
 
 # Ontologies searched in priority order when a bare label is given.
 # PATO covers phenotypic qualities (normal, abnormal, …).
@@ -130,7 +131,7 @@ def get_descendants(term_id: str, logger) -> list:
             break
         page += 1
 
-    logger.info(f"  Found {len(all_terms):,} descendants for {term_id}")
+    logger.info(f"  Found {len(all_terms)} descendants for {term_id}")
     return all_terms
 
 
@@ -227,9 +228,9 @@ def resolve_disease(queries: list, output_prefix: str, logger):
     logger.info(f"\nSaved JSON: {json_path}")
 
     csv_path = f"{output_prefix}.csv"
-    pd.DataFrame(deduped).to_csv(csv_path, index=False)
+    write_dataframe_csv(pd.DataFrame(deduped), csv_path)
     logger.info(f"Saved CSV : {csv_path}")
-    logger.info(f"Total terms: {len(deduped):,}  (root + descendants)")
+    logger.info(f"Total terms: {len(deduped)}  (root + descendants)")
 
     return json_path, csv_path
 
@@ -240,13 +241,13 @@ def resolve_disease(queries: list, output_prefix: str, logger):
 
 def run_resolve_disease(queries: list, output_prefix: str = None):
     """Main entry point called by CLI."""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(run_dir(), exist_ok=True)
 
     if output_prefix:
         out_prefix = output_prefix
     else:
         slug       = re.sub(r"[^a-z0-9]+", "_", queries[0].lower()).strip("_")
-        out_prefix = os.path.join(DATA_DIR, f"disease_{slug}")
+        out_prefix = os.path.join(run_dir(), f"disease_{slug}")
 
     log_file = f"{out_prefix}.log"
     logger   = setup_logger("0c_resolve_disease", output_csv=log_file)
