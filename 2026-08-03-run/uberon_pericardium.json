@@ -1,0 +1,131 @@
+{
+  "queries": [
+    "pericardium"
+  ],
+  "root_terms": [
+    {
+      "obo_id": "UBERON:0002407",
+      "label": "pericardium",
+      "level": "root"
+    }
+  ],
+  "obo_ids": [
+    "UBERON:0002407",
+    "UBERON:0007187",
+    "UBERON:0007186",
+    "UBERON:0004271",
+    "UBERON:0003388",
+    "UBERON:0002359",
+    "UBERON:0002406",
+    "UBERON:0007188",
+    "UBERON:0002357",
+    "UBERON:0001074",
+    "UBERON:0015128",
+    "UBERON:0002425",
+    "UBERON:0002408",
+    "UBERON:0010279",
+    "UBERON:0015129",
+    "UBERON:0002348",
+    "UBERON:0010283",
+    "UBERON:0002248",
+    "UBERON:0001082"
+  ],
+  "terms": [
+    {
+      "obo_id": "UBERON:0002407",
+      "label": "pericardium",
+      "level": "root"
+    },
+    {
+      "obo_id": "UBERON:0007187",
+      "label": "pericardial parietal mesothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007186",
+      "label": "pericardial visceral mesothelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004271",
+      "label": "outflow tract pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003388",
+      "label": "mesothelium of pericardial cavity",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002359",
+      "label": "fibrous pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002406",
+      "label": "pericardial sac",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007188",
+      "label": "mesothelium of serous pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002357",
+      "label": "serous pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001074",
+      "label": "pericardial cavity",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015128",
+      "label": "subepicardial layer of epicardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002425",
+      "label": "visceral serous pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002408",
+      "label": "parietal serous pericardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010279",
+      "label": "pericardial sinus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015129",
+      "label": "epicardial fat",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002348",
+      "label": "epicardium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010283",
+      "label": "oblique pericardial sinus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002248",
+      "label": "transverse pericardial sinus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001082",
+      "label": "epicardium of ventricle",
+      "level": "descendant"
+    }
+  ],
+  "total": 19
+}

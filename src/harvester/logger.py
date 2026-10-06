@@ -11,7 +11,7 @@ Provides consistent logging across all pipeline steps:
 Usage:
     from harvester_logger import setup_logger, log_command, log_counts
 
-    logger = setup_logger("step_4_filter", output_csv="data/filtered.csv")
+    logger = setup_logger("step_4_filter", output_csv="2026-08-03-run/filtered.csv")
     log_command(logger)
     log_counts(logger, "organism filter", before=1000, after=800)
 """
@@ -21,19 +21,21 @@ import sys
 import logging
 from datetime import datetime
 
+from harvester.run_dir import run_dir
 
-def setup_logger(step_name: str, output_csv: str = None, log_dir: str = "data/logs") -> logging.Logger:
+
+def setup_logger(step_name: str, output_csv: str = None, log_dir: str = None) -> logging.Logger:
     """
     Set up a logger that writes to both console and a log file.
 
     Log file location:
     - If output_csv is provided: alongside the CSV as <output_csv>.log
-    - Otherwise: data/logs/<step_name>_<timestamp>.log
+    - Otherwise: <run folder>/logs/<step_name>_<timestamp>.log
 
     Args:
         step_name:  Short name for the step, e.g. "step_4_filter"
         output_csv: Path to the output CSV for this step (optional)
-        log_dir:    Fallback directory for log files
+        log_dir:    Fallback directory for log files (default: <run folder>/logs)
 
     Returns:
         Configured logger
@@ -42,6 +44,7 @@ def setup_logger(step_name: str, output_csv: str = None, log_dir: str = "data/lo
     if output_csv:
         log_file = os.path.splitext(output_csv)[0] + ".log"
     else:
+        log_dir = log_dir or os.path.join(run_dir(), "logs")
         os.makedirs(log_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file = os.path.join(log_dir, f"{step_name}_{timestamp}.log")
@@ -102,9 +105,9 @@ def log_counts(logger: logging.Logger, filter_name: str, before: int, after: int
     removed = before - after
     pct = (removed / before * 100) if before > 0 else 0
     logger.info(f"  [{filter_name}]")
-    logger.info(f"    Before : {before:>8,} {unit}")
-    logger.info(f"    After  : {after:>8,} {unit}")
-    logger.info(f"    Removed: {removed:>8,} {unit}  ({pct:.1f}%)")
+    logger.info(f"    Before : {before:>8} {unit}")
+    logger.info(f"    After  : {after:>8} {unit}")
+    logger.info(f"    Removed: {removed:>8} {unit}  ({pct:.1f}%)")
 
 
 def log_finish(logger: logging.Logger, output_csv: str = None) -> None:

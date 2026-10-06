@@ -1,281 +1,71 @@
 #!/usr/bin/env python3
 """
-Step 5 (single dataset): Count normal cells for one dataset via CellxGene Census.
+Step 5 (single dataset): Count cells for one dataset via the CellxGene Census.
 
-Called by Nextflow count_normal_cells module - one process per dataset_id.
-Results are collected and merged by Nextflow into the final CSV.
+Does for one <dataset_id>.filtered.json file what count_normal_cells does for
+a whole folder, with the same counting code. Meant for running one dataset at
+a time, for example as one Nextflow process per dataset.
 
-Filters applied server-side in Census query (memory efficient):
-  - tissue_ontology_term_id IN uberon_ids
-  - is_primary_data == True
-  - disease == 'normal'
-
-Filters applied client-side:
-  - age >= min_age
+The file is updated in place. Exit code 1 if the dataset could not be counted.
 
 Usage:
-    python src/5_count_normal_cells_single.py \
-        --dataset-id   "066943a2-fdac-4b29-b348-40cede398e4e" \
-        --uberon       data/uberon_kidney.json \
-        --min-age      15 \
-        --first-author "Sikkema" \
-        --year         "2023" \
-        --journal      "Nat Med" \
-        --output       066943a2_normal_count.csv
+    python -m harvester.count_normal_cells_single \
+        --record  2026-08-03-run/homo_sapiens_kidney_harvester/066943a2-fdac-4b29-b348-40cede398e4e.filtered.json \
+        --uberon  2026-08-03-run/uberon_kidney.json \
+        --disease 2026-08-03-run/disease_normal.json \
+        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+        --exclude-assay 2026-08-03-run/assay_spatial.json \
+        --census-version latest
 """
 
-import os
-import sys
-import json
 import argparse
-import pandas as pd
-from typing import Optional
+import sys
+
+from harvester import ontology_files
+from harvester.count_normal_cells import CENSUS_VERSION, count_one
+from harvester.logger import setup_logger, log_command, log_finish
 
 
-def load_obo_ids(json_path: str, label: str) -> set:
-    """Load obo_ids from a resolve_uberon / resolve_disease / resolve_hsapdv JSON.
-
-    All three resolve steps produce the same JSON structure, so this one
-    helper covers all three. Filtering is a uniform .isin(obo_ids) check —
-    no numeric age comparison, no text matching.
-    """
-    with open(json_path) as f:
-        data = json.load(f)
-    obo_ids = set(data["obo_ids"])
-    roots   = [t["label"] for t in data["root_terms"]]
-    print(f"  Loaded {label} JSON : {json_path}")
-    print(f"  Root terms          : {', '.join(roots)}")
-    print(f"  Total obo_ids       : {len(obo_ids):,}")
-    return obo_ids
-
-
-def extract_metadata(obs_df: pd.DataFrame) -> dict:
-    def get_most_common(col):
-        if col in obs_df.columns and len(obs_df) > 0:
-            vc = obs_df[col].value_counts()
-            return str(vc.index[0]) if len(vc) > 0 else ''
-        return ''
-
-    def get_all_unique(col):
-        if col in obs_df.columns and len(obs_df) > 0:
-            uv = obs_df[col].dropna().unique()
-            return ' | '.join(sorted(str(v) for v in uv))
-        return ''
-
-    # Tissue ontology summary
-    tissue_summary = ''
-    if 'tissue_ontology_term_id' in obs_df.columns:
-        tissue_counts = obs_df['tissue_ontology_term_id'].value_counts()
-        parts = [f"{tid}: {count:,}" for tid, count in tissue_counts.items() if count > 0]
-        tissue_summary = "; ".join(parts)
-
-    # Assay ontology summary
-    assay_summary = ''
-    if 'assay_ontology_term_id' in obs_df.columns:
-        assay_counts = obs_df['assay_ontology_term_id'].value_counts()
-        parts = [f"{aid}: {count:,}" for aid, count in assay_counts.items() if count > 0]
-        assay_summary = "; ".join(parts)
-
-    # Cell type ontology summary
-    cell_type_summary = ''
-    if 'cell_type_ontology_term_id' in obs_df.columns:
-        ct_counts = obs_df['cell_type_ontology_term_id'].value_counts()
-        parts = [f"{ct}: {count:,}" for ct, count in ct_counts.items() if count > 0]
-        cell_type_summary = "; ".join(parts)
-
-    # Disease ontology summary
-    disease_summary = ''
-    if 'disease_ontology_term_id' in obs_df.columns:
-        dis_counts = obs_df['disease_ontology_term_id'].value_counts()
-        parts = [f"{did}: {count:,}" for did, count in dis_counts.items() if count > 0]
-        disease_summary = "; ".join(parts)
-
-    # Sex ontology summary
-    sex_summary = ''
-    if 'sex_ontology_term_id' in obs_df.columns:
-        sex_counts = obs_df['sex_ontology_term_id'].value_counts()
-        parts = [f"{sid}: {count:,}" for sid, count in sex_counts.items() if count > 0]
-        sex_summary = "; ".join(parts)
-
-    dev_stage_summary = ''
-    if 'development_stage' in obs_df.columns and len(obs_df) > 0:
-        counts            = obs_df['development_stage'].value_counts()
-        dev_stage_summary = "; ".join(f"{s}: {c:,}" for s, c in counts.items())
-
-    donor_count = obs_df['donor_id'].nunique() if 'donor_id' in obs_df.columns else 0
-
-    return {
-        'tissue_ontology_term_id':            get_all_unique('tissue_ontology_term_id'),
-        'assay_ontology_term_id':             get_all_unique('assay_ontology_term_id'),
-        'cell_type_ontology_term_id':         get_all_unique('cell_type_ontology_term_id'),
-        'disease_ontology_term_id':           get_all_unique('disease_ontology_term_id'),
-        'development_stage_ontology_term_id': get_all_unique('development_stage_ontology_term_id'),
-        'sex_ontology_term_id':               get_all_unique('sex_ontology_term_id'),
-        'is_primary_data':                    get_most_common('is_primary_data'),
-        'donor_id_count':                     donor_count,
-        'tissue_ontology_summary':            tissue_summary,
-        'assay_ontology_summary':             assay_summary,
-        'cell_type_ontology_summary':         cell_type_summary,
-        'disease_ontology_summary':           disease_summary,
-        'development_stage_summary':          dev_stage_summary,
-        'sex_ontology_summary':               sex_summary,
-    }
-
-
-def count_normal_cells_single(dataset_id, uberon_ids, disease_ids, hsapdv_ids):
-    """
-    Query Census for one dataset, apply server-side filters, count normal adult cells.
-
-    Args:
-        dataset_id:  CellxGene dataset UUID
-        uberon_ids:  set of UBERON obo_ids from resolve_uberon
-        disease_ids: set of disease obo_ids from resolve_disease
-        hsapdv_ids:  set of HsapDv obo_ids from resolve_hsapdv --min-age N
-    """
+def count_single(record_path, uberon_json, disease_json, hsapdv_json, logger,
+                 exclude_assay_json=None, census_version=CENSUS_VERSION):
+    """Count the one dataset in record_path. Return True if it was counted."""
     import cellxgene_census
 
-    tissue_ids_str  = ", ".join(f"'{t}'" for t in sorted(uberon_ids))
-    disease_ids_str = ", ".join(f"'{d}'" for d in sorted(disease_ids))
-    obs_filter = (
-        f"dataset_id == '{dataset_id}' "
-        f"and tissue_ontology_term_id in [{tissue_ids_str}] "
-        f"and is_primary_data == True "
-        f"and disease_ontology_term_id in [{disease_ids_str}]"
-    )
+    paths = {"uberon": uberon_json, "disease": disease_json, "hsapdv": hsapdv_json,
+             "exclude_assay": exclude_assay_json}
+    ids = {name: ontology_files.load_obo_ids(path) if path else set() for name, path in paths.items()}
 
-    print(f"  Querying Census (server-side filtered)...")
-
-    with cellxgene_census.open_soma(census_version="latest") as census:
-        adata = cellxgene_census.get_anndata(
-            census=census,
-            organism="Homo sapiens",
-            obs_value_filter=obs_filter,
-            obs_column_names=[
-                "tissue",
-                "tissue_ontology_term_id",
-                "disease",
-                "disease_ontology_term_id",
-                "development_stage",
-                "development_stage_ontology_term_id",
-                "assay_ontology_term_id",
-                "cell_type_ontology_term_id",
-                "sex_ontology_term_id",
-                "is_primary_data",
-                "donor_id",
-                "suspension_type"
-            ]
-        )
-
-    if adata is None or adata.n_obs == 0:
-        print(f"  Census returned 0 cells after server-side filters")
-        return {
-            'normal_cell_count': 0,
-            'total_count':       0,
-            'adult_count':       0,
-            **extract_metadata(pd.DataFrame())
-        }
-
-    obs_df = adata.obs
-    print(f"  Census returned {len(obs_df):,} cells (tissue + primary + disease filtered)")
-
-    metadata = extract_metadata(obs_df)
-
-    # Age filter (client-side — .isin() on HsapDv obo_ids, same pattern as tissue/disease)
-    id_col      = 'development_stage_ontology_term_id'
-    adult_df    = obs_df[obs_df[id_col].isin(hsapdv_ids)] if id_col in obs_df.columns else obs_df
-    adult_count = len(adult_df)
-    print(f"  After age filter (HsapDv IDs): {adult_count:,} cells")
-
-    return {
-        'normal_cell_count': adult_count,
-        'total_count':       len(obs_df),
-        'adult_count':       adult_count,
-        **metadata
-    }
+    with cellxgene_census.open_soma(census_version=census_version) as census:
+        description = cellxgene_census.get_census_version_description(census_version)
+        census_label = description.get("release_build", census_version)
+        return count_one(record_path, census, census_label, ids, paths, logger)
 
 
-def write_result(result, dataset_id, first_author, year, journal, output_csv):
-    """Write single-row result CSV."""
-    row = {
-        'dataset_id':       dataset_id,
-        'first_author':     first_author,
-        'year':             year,
-        'journal':          journal,
-        'normal_cell_count': result['normal_cell_count'],
-        'total_count':      result['total_count'],
-        'adult_count':      result['adult_count'],
-        **{k: v for k, v in result.items()
-           if k not in ('normal_cell_count', 'total_count', 'adult_count')}
-    }
-    pd.DataFrame([row]).to_csv(output_csv, index=False)
-    print(f"  Saved: {output_csv}")
+def main():
+    parser = argparse.ArgumentParser(
+        description="Count cells for one dataset file via the CellxGene Census")
+    parser.add_argument("--record",  required=True, help="<dataset_id>.filtered.json from step 4")
+    parser.add_argument("--uberon",  required=True, help="UBERON JSON from resolve-uberon")
+    parser.add_argument("--disease", required=True, help="Disease JSON from resolve-disease")
+    parser.add_argument("--hsapdv",  required=True, help="HsapDv JSON from resolve-hsapdv")
+    parser.add_argument("--exclude-assay", default=None, help="Assay JSON from resolve-assay: its cells are left out of the filtered counts")
+    parser.add_argument("--census-version", default=CENSUS_VERSION, help="Census release (default: latest)")
+    args = parser.parse_args()
 
+    logger = setup_logger("5_count_single", output_csv=f"{args.record}.count.log")
+    log_command(logger)
 
-def write_empty_result(dataset_id, first_author, year, journal, output_csv, reason=""):
-    """Write zero-count row so Nextflow collect still works."""
-    row = {
-        'dataset_id':        dataset_id,
-        'first_author':      first_author,
-        'year':              year,
-        'journal':           journal,
-        'normal_cell_count': 0,
-        'total_count':       0,
-        'adult_count':       0,
-        'error':             reason,
-    }
-    pd.DataFrame([row]).to_csv(output_csv, index=False)
-    print(f"  Saved empty result: {output_csv} ({reason})")
+    try:
+        import cellxgene_census  # noqa: F401
+    except ImportError:
+        logger.error("ERROR: cellxgene_census not installed")
+        sys.exit(1)
+
+    counted = count_single(args.record, args.uberon, args.disease, args.hsapdv, logger,
+                           args.exclude_assay, args.census_version)
+    log_finish(logger, args.record)
+    sys.exit(0 if counted else 1)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Count normal cells for a single dataset via CellxGene Census"
-    )
-    parser.add_argument('--dataset-id',   required=True)
-    parser.add_argument('--uberon',       required=True,
-                        help='UBERON JSON from resolve-uberon')
-    parser.add_argument('--disease',      required=True,
-                        help='Disease JSON from resolve-disease')
-    parser.add_argument('--hsapdv',       required=True,
-                        help='HsapDv JSON from resolve-hsapdv --min-age N')
-    parser.add_argument('--first-author', default='')
-    parser.add_argument('--year',         default='')
-    parser.add_argument('--journal',      default='')
-    parser.add_argument('--output',       required=True)
-
-    args = parser.parse_args()
-
-    print(f"\n{'='*60}")
-    print(f"Dataset : {args.dataset_id}")
-    print(f"Author  : {args.first_author} ({args.year}) - {args.journal}")
-    print(f"UBERON  : {args.uberon}")
-    print(f"Disease : {args.disease}")
-    print(f"HsapDv  : {args.hsapdv}")
-    print(f"{'='*60}")
-
-    uberon_ids  = load_obo_ids(args.uberon,  "UBERON")
-    disease_ids = load_obo_ids(args.disease, "disease")
-    hsapdv_ids  = load_obo_ids(args.hsapdv,  "HsapDv")
-
-    try:
-        import cellxgene_census
-    except ImportError:
-        print("ERROR: cellxgene_census not installed")
-        write_empty_result(args.dataset_id, args.first_author, args.year,
-                           args.journal, args.output, "cellxgene_census not installed")
-        sys.exit(1)
-
-    try:
-        result = count_normal_cells_single(args.dataset_id, uberon_ids,
-                                           disease_ids, hsapdv_ids)
-        write_result(result, args.dataset_id, args.first_author,
-                     args.year, args.journal, args.output)
-        print(f"\nResult: {result['normal_cell_count']:,} normal cells")
-
-    except Exception as e:
-        import traceback
-        print(f"ERROR: {e}")
-        print(traceback.format_exc())
-        write_empty_result(args.dataset_id, args.first_author, args.year,
-                           args.journal, args.output, str(e))
-        sys.exit(1)
+    main()

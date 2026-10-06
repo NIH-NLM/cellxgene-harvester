@@ -1,0 +1,881 @@
+{
+  "queries": [
+    "nose"
+  ],
+  "root_terms": [
+    {
+      "obo_id": "UBERON:0000004",
+      "label": "nose",
+      "level": "root"
+    }
+  ],
+  "obo_ids": [
+    "UBERON:0000004",
+    "UBERON:8600089",
+    "UBERON:2001428",
+    "UBERON:0019306",
+    "UBERON:0015788",
+    "UBERON:0015245",
+    "UBERON:0015216",
+    "UBERON:0011931",
+    "UBERON:0008522",
+    "UBERON:0008340",
+    "UBERON:0006813",
+    "UBERON:0007827",
+    "UBERON:0006332",
+    "UBERON:0006266",
+    "UBERON:0005928",
+    "UBERON:0005870",
+    "UBERON:0004101",
+    "UBERON:0002255",
+    "UBERON:0002109",
+    "UBERON:0001706",
+    "UBERON:0001681",
+    "UBERON:0001823",
+    "UBERON:0019307",
+    "UBERON:0005384",
+    "UBERON:0004692",
+    "UBERON:0003367",
+    "UBERON:0003356",
+    "UBERON:0001826",
+    "UBERON:0001707",
+    "UBERON:0015246",
+    "UBERON:0013208",
+    "UBERON:0015223",
+    "UBERON:0015222",
+    "UBERON:0015220",
+    "UBERON:0015219",
+    "UBERON:0015221",
+    "UBERON:0007163",
+    "UBERON:0010953",
+    "UBERON:0008589",
+    "UBERON:0008588",
+    "UBERON:3010827",
+    "UBERON:3000644",
+    "UBERON:3000601",
+    "UBERON:3000569",
+    "UBERON:3000586",
+    "UBERON:3000565",
+    "UBERON:3000454",
+    "UBERON:3000448",
+    "UBERON:3000441",
+    "UBERON:3000434",
+    "UBERON:3000381",
+    "UBERON:3000329",
+    "UBERON:3000290",
+    "UBERON:3000264",
+    "UBERON:3000263",
+    "UBERON:3000234",
+    "UBERON:3000118",
+    "UBERON:3000117",
+    "UBERON:3000113",
+    "UBERON:3000079",
+    "UBERON:3000069",
+    "UBERON:3000068",
+    "UBERON:3000016",
+    "UBERON:3000015",
+    "UBERON:3000002",
+    "UBERON:3000389",
+    "UBERON:3000440",
+    "UBERON:3000438",
+    "UBERON:3000437",
+    "UBERON:0036254",
+    "UBERON:0011167",
+    "UBERON:1000013",
+    "UBERON:1000012",
+    "UBERON:0016464",
+    "UBERON:0015476",
+    "UBERON:0012128",
+    "UBERON:0011256",
+    "UBERON:0008341",
+    "UBERON:0006906",
+    "UBERON:3000316",
+    "UBERON:3000260",
+    "UBERON:3000259",
+    "UBERON:2001427",
+    "UBERON:2001426",
+    "UBERON:0013477",
+    "UBERON:0012304",
+    "UBERON:0010893",
+    "UBERON:0005931",
+    "UBERON:0003421",
+    "UBERON:3000294",
+    "UBERON:0005018",
+    "UBERON:0003415",
+    "UBERON:0003407",
+    "UBERON:7500074",
+    "UBERON:7500073",
+    "UBERON:3000547",
+    "UBERON:0018508",
+    "UBERON:0007822",
+    "UBERON:0007821",
+    "UBERON:0007820",
+    "UBERON:0007819",
+    "UBERON:0007818",
+    "UBERON:0009672",
+    "UBERON:0009671",
+    "UBERON:0005385",
+    "UBERON:0001997",
+    "UBERON:0015786",
+    "UBERON:0012278",
+    "UBERON:0005386",
+    "UBERON:3010197",
+    "UBERON:3000089",
+    "UBERON:3000086",
+    "UBERON:3000085",
+    "UBERON:3000088",
+    "UBERON:3000087",
+    "UBERON:0004110",
+    "UBERON:0000402",
+    "UBERON:3000059",
+    "UBERON:3000449",
+    "UBERON:3000563",
+    "UBERON:3000645",
+    "UBERON:3000155",
+    "UBERON:3000333",
+    "UBERON:3000291",
+    "UBERON:3000190",
+    "UBERON:3000189",
+    "UBERON:3000171",
+    "UBERON:3000170",
+    "UBERON:3000167",
+    "UBERON:3000166",
+    "UBERON:3000164",
+    "UBERON:3000162",
+    "UBERON:3000161",
+    "UBERON:3000160",
+    "UBERON:0035077",
+    "UBERON:0013233",
+    "UBERON:0002232",
+    "UBERON:3000646",
+    "UBERON:3000509",
+    "UBERON:3000492",
+    "UBERON:3000110",
+    "UBERON:0015785",
+    "UBERON:0015784",
+    "UBERON:3000647"
+  ],
+  "terms": [
+    {
+      "obo_id": "UBERON:0000004",
+      "label": "nose",
+      "level": "root"
+    },
+    {
+      "obo_id": "UBERON:8600089",
+      "label": "transverse nasal root vein",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:2001428",
+      "label": "olfactory rosette",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0019306",
+      "label": "nose epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015788",
+      "label": "olfactory apparatus chamber",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015245",
+      "label": "septal olfactory organ",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015216",
+      "label": "nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011931",
+      "label": "nasal hair",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008522",
+      "label": "nasal muscle",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008340",
+      "label": "nasal bridge",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006813",
+      "label": "nasal skeleton",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007827",
+      "label": "external nose",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006332",
+      "label": "nasal capsule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006266",
+      "label": "nasolacrimal groove",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005928",
+      "label": "external naris",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005870",
+      "label": "olfactory pit",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004101",
+      "label": "nasolabial region",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002255",
+      "label": "vomeronasal organ",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002109",
+      "label": "pair of nares",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001706",
+      "label": "nasal septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001681",
+      "label": "nasal bone",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001823",
+      "label": "nasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0019307",
+      "label": "epithelium of external nose",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005384",
+      "label": "nasal cavity epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004692",
+      "label": "external naris epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003367",
+      "label": "epithelium of vomeronasal organ",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003356",
+      "label": "epithelium of nasal septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001826",
+      "label": "nasal cavity mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001707",
+      "label": "nasal cavity",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015246",
+      "label": "septal organ of Masera",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013208",
+      "label": "Grueneberg ganglion",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015223",
+      "label": "dorsal nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015222",
+      "label": "ventral nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015220",
+      "label": "inferior nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015219",
+      "label": "middle nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015221",
+      "label": "common nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007163",
+      "label": "superior nasal meatus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010953",
+      "label": "nasalis muscle",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008589",
+      "label": "depressor septi nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008588",
+      "label": "procerus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3010827",
+      "label": "anterior prenasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000644",
+      "label": "processus lingularis of nasal skeleton",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000601",
+      "label": "tectum nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000569",
+      "label": "solum nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000586",
+      "label": "superior prenasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000565",
+      "label": "skeletal support for eminentia olfactoria",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000454",
+      "label": "postnasal wall",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000448",
+      "label": "posterior maxillary process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000441",
+      "label": "planum triangulare",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000434",
+      "label": "planum antorbitale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000381",
+      "label": "paranasal commissure",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000329",
+      "label": "oblique cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000290",
+      "label": "medial inferior prenasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000264",
+      "label": "lamina superior",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000263",
+      "label": "lamina precerebralis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000234",
+      "label": "inferior prenasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000118",
+      "label": "crista supraorbitalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000117",
+      "label": "crista subnasalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000113",
+      "label": "crista intermedia",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000079",
+      "label": "cartilago retronarina",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000069",
+      "label": "cartilago infranarina",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000068",
+      "label": "cartilago ectochoanalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000016",
+      "label": "anterior nasal wall",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000015",
+      "label": "anterior maxillary process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000002",
+      "label": "alary cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000389",
+      "label": "paries nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000440",
+      "label": "planum terminale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000438",
+      "label": "planum internasale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000437",
+      "label": "planum conchale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0036254",
+      "label": "piriform aperture",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011167",
+      "label": "septomaxilla bone",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:1000013",
+      "label": "nose vertex",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:1000012",
+      "label": "nose anterior margin",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0016464",
+      "label": "dorsum of nose",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015476",
+      "label": "nose skin",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012128",
+      "label": "nose tip",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0011256",
+      "label": "rhinarium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0008341",
+      "label": "columella nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0006906",
+      "label": "ala of nose",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000316",
+      "label": "nasal opening",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000260",
+      "label": "lamina nariochoanalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000259",
+      "label": "lamina inferior",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:2001427",
+      "label": "anterior naris",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:2001426",
+      "label": "posterior naris",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013477",
+      "label": "blowhole",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012304",
+      "label": "nasal diverticulum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0010893",
+      "label": "median external naris",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005931",
+      "label": "primary choana",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003421",
+      "label": "mesenchyme of vomeronasal organ",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000294",
+      "label": "median prenasal process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005018",
+      "label": "mucosa of nasal septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003415",
+      "label": "mesenchyme of nasal septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0003407",
+      "label": "cartilage of nasal septum",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7500074",
+      "label": "right nasal bone",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:7500073",
+      "label": "left nasal bone",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000547",
+      "label": "rostral process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0018508",
+      "label": "foramen of nasal bone",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007822",
+      "label": "vomeronasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007821",
+      "label": "lateral nasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007820",
+      "label": "accessory nasal cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007819",
+      "label": "minor alar cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0007818",
+      "label": "major alar cartilage",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009672",
+      "label": "oronasal membrane",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0009671",
+      "label": "nasal fin",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005385",
+      "label": "nasal cavity respiratory epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0001997",
+      "label": "olfactory epithelium",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015786",
+      "label": "respiratory segment of nasal mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0012278",
+      "label": "gland of nasal mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0005386",
+      "label": "olfactory segment of nasal mucosa",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3010197",
+      "label": "lateral recess",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000089",
+      "label": "cavum principale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000086",
+      "label": "cavum internasale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000085",
+      "label": "cavum inferius",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000088",
+      "label": "cavum praenasale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000087",
+      "label": "cavum medius",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0004110",
+      "label": "midnasal cavity",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0000402",
+      "label": "nasal vestibule",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000059",
+      "label": "capsular process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000449",
+      "label": "posterior maxillary process dorsal process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000563",
+      "label": "seydels palatal process",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000645",
+      "label": "corpus",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000155",
+      "label": "extremitas anterior",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000333",
+      "label": "olfactory foramen",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000291",
+      "label": "medial orbitonasal foramen",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000190",
+      "label": "foramen orbitonasale mediale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000189",
+      "label": "foramen orbitonasale laterale",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000171",
+      "label": "fenestra prechoanalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000170",
+      "label": "fenestra precerebralis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000167",
+      "label": "fenestra nasolateralis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000166",
+      "label": "fenestra nasobasalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000164",
+      "label": "fenestra lateralis nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000162",
+      "label": "fenestra endonarina communis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000161",
+      "label": "fenestra endochoanalis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000160",
+      "label": "fenestra dorsalis nasi",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0035077",
+      "label": "lateral nasal gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0013233",
+      "label": "supraorbital gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0002232",
+      "label": "olfactory gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000646",
+      "label": "margo libera",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000509",
+      "label": "processus suprafenestralis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000492",
+      "label": "processus infrafenestralis",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000110",
+      "label": "crista contacta",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015785",
+      "label": "acinus of olfactory gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:0015784",
+      "label": "duct of olfactory gland",
+      "level": "descendant"
+    },
+    {
+      "obo_id": "UBERON:3000647",
+      "label": "crista interna",
+      "level": "descendant"
+    }
+  ],
+  "total": 144
+}

@@ -1,0 +1,308 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "dataset_id": "9813a1d4-d107-459e-9b2e-7687be935f69",
+    "dataset_version_id": "9b87c411-2e17-4de4-918b-e2c476ad48a7",
+    "collection_id": "b953c942-f5d8-434f-9da7-e726ba7c1481",
+    "collection_version_id": "1916410f-d8e0-4486-9157-a74f64180cc0",
+    "collection_name": "Single-soma transcriptomics of tangle-bearing neurons in Alzheimer’s disease",
+    "dataset_title": "Single-soma transcriptomics of tangle-bearing neurons in Alzheimer’s disease - Inhibitory",
+    "first_author": "Otero-Garcia",
+    "journal": "Neuron",
+    "doi": "10.1016/j.neuron.2022.06.021",
+    "collection_url": "https://cellxgene.cziscience.com/collections/b953c942-f5d8-434f-9da7-e726ba7c1481",
+    "explorer_url": "https://cellxgene.cziscience.com/e/9813a1d4-d107-459e-9b2e-7687be935f69.cxg/",
+    "h5ad_url": "https://datasets.cellxgene.cziscience.com/9b87c411-2e17-4de4-918b-e2c476ad48a7.h5ad",
+    "organism": "Homo sapiens",
+    "visibility": "PUBLIC",
+    "year": 2022,
+    "is_preprint": false
+  },
+  "curation": {
+    "reference": "unk",
+    "author_cell_type": "",
+    "embedding": "",
+    "filter_normal": null
+  },
+  "organ": {
+    "name": "neocortex",
+    "uberon_id": "UBERON:0001950"
+  },
+  "filter_choices": {
+    "organism": "Homo sapiens",
+    "no_preprints": true,
+    "uberon": {
+      "file": "2026-08-03-run/uberon_neocortex.json",
+      "queries": [
+        "neocortex"
+      ],
+      "root_terms": [
+        {
+          "obo_id": "UBERON:0001950",
+          "label": "neocortex"
+        }
+      ],
+      "term_count": 101,
+      "sha256": "fecb679977c31fcf98899680e40ed662f7334d56d9046d97d4137b1e7a676f00"
+    },
+    "disease": {
+      "file": "2026-08-03-run/disease_normal.json",
+      "queries": [
+        "normal"
+      ],
+      "root_terms": [
+        {
+          "obo_id": "PATO:0000461",
+          "label": "normal"
+        }
+      ],
+      "term_count": 1,
+      "sha256": "2df67a878c51cf4013503da40494cd4c322412a6d5643275369d21a832f3fff2"
+    },
+    "hsapdv": {
+      "file": "2026-08-03-run/hsapdv_adult_15.json",
+      "queries": [
+        "min_age=15.0"
+      ],
+      "root_terms": [
+        {
+          "obo_id": "HsapDv:0000109",
+          "label": "15-year-old stage"
+        },
+        {
+          "obo_id": "HsapDv:0000226",
+          "label": "prime adult stage"
+        },
+        {
+          "obo_id": "HsapDv:0000258",
+          "label": "adult stage"
+        },
+        {
+          "obo_id": "HsapDv:0000266",
+          "label": "young adult stage"
+        },
+        {
+          "obo_id": "HsapDv:0000268",
+          "label": "15-19 year-old"
+        }
+      ],
+      "term_count": 119,
+      "sha256": "89b075ab170e55b47b6ae0cd036286daa181137859020f4f567f06a8234e193b",
+      "min_age": 15.0
+    },
+    "harvester_version": "1.0.0",
+    "run_date": "2026-10-05",
+    "exclude_assay": {
+      "file": "2026-08-03-run/assay_spatial_transcriptomics.json",
+      "queries": [
+        "spatial transcriptomics",
+        "MERFISH"
+      ],
+      "root_terms": [
+        {
+          "obo_id": "EFO:0008994",
+          "label": "spatial transcriptomics"
+        },
+        {
+          "obo_id": "EFO:0008992",
+          "label": "MERFISH"
+        }
+      ],
+      "term_count": 30,
+      "sha256": "504e6e7a37114c79bbd972805551110901d06e3c41a51fdcfda9561db5ea49ab"
+    },
+    "census_version": "2025-11-17"
+  },
+  "source_cell_count": 23197,
+  "filtered_cell_count": 11464,
+  "source_donor_count": 16,
+  "filtered_donor_count": 8,
+  "source_tissue": [
+    "prefrontal cortex"
+  ],
+  "filtered_tissue": [
+    "prefrontal cortex"
+  ],
+  "source_tissue_ontology_id": [
+    "UBERON:0000451"
+  ],
+  "filtered_tissue_ontology_id": [
+    "UBERON:0000451"
+  ],
+  "source_tissue_ontology_id_summary": {
+    "UBERON:0000451": 23197
+  },
+  "filtered_tissue_ontology_id_summary": {
+    "UBERON:0000451": 11464
+  },
+  "source_assay": [
+    "10x 3' v2",
+    "10x 3' v3"
+  ],
+  "filtered_assay": [
+    "10x 3' v2",
+    "10x 3' v3"
+  ],
+  "source_assay_ontology_id": [
+    "EFO:0009899",
+    "EFO:0009922"
+  ],
+  "filtered_assay_ontology_id": [
+    "EFO:0009899",
+    "EFO:0009922"
+  ],
+  "source_assay_ontology_id_summary": {
+    "EFO:0009899": 16987,
+    "EFO:0009922": 6210
+  },
+  "filtered_assay_ontology_id_summary": {
+    "EFO:0009899": 5254,
+    "EFO:0009922": 6210
+  },
+  "source_cell_type": [
+    "inhibitory interneuron"
+  ],
+  "filtered_cell_type": [
+    "inhibitory interneuron"
+  ],
+  "source_cell_type_ontology_id": [
+    "CL:0000498"
+  ],
+  "filtered_cell_type_ontology_id": [
+    "CL:0000498"
+  ],
+  "source_cell_type_ontology_id_summary": {
+    "CL:0000498": 23197
+  },
+  "filtered_cell_type_ontology_id_summary": {
+    "CL:0000498": 11464
+  },
+  "source_disease": [
+    "Alzheimer disease",
+    "normal"
+  ],
+  "filtered_disease": [
+    "normal"
+  ],
+  "source_disease_ontology_id": [
+    "MONDO:0004975",
+    "PATO:0000461"
+  ],
+  "filtered_disease_ontology_id": [
+    "PATO:0000461"
+  ],
+  "source_disease_ontology_id_summary": {
+    "MONDO:0004975": 11733,
+    "PATO:0000461": 11464
+  },
+  "filtered_disease_ontology_id_summary": {
+    "MONDO:0004975": 0,
+    "PATO:0000461": 11464
+  },
+  "source_development_stage": [
+    "57-year-old stage",
+    "61-year-old stage",
+    "62-year-old stage",
+    "66-year-old stage",
+    "67-year-old stage",
+    "68-year-old stage",
+    "71-year-old stage",
+    "72-year-old stage",
+    "73-year-old stage",
+    "79-year-old stage",
+    "80 year-old and over stage",
+    "81-year-old stage",
+    "87-year-old stage",
+    "89-year-old stage"
+  ],
+  "filtered_development_stage": [
+    "61-year-old stage",
+    "66-year-old stage",
+    "67-year-old stage",
+    "68-year-old stage",
+    "71-year-old stage",
+    "72-year-old stage",
+    "87-year-old stage"
+  ],
+  "source_development_stage_ontology_id": [
+    "HsapDv:0000095",
+    "HsapDv:0000151",
+    "HsapDv:0000155",
+    "HsapDv:0000156",
+    "HsapDv:0000160",
+    "HsapDv:0000161",
+    "HsapDv:0000162",
+    "HsapDv:0000165",
+    "HsapDv:0000166",
+    "HsapDv:0000167",
+    "HsapDv:0000173",
+    "HsapDv:0000207",
+    "HsapDv:0000213",
+    "HsapDv:0000215"
+  ],
+  "filtered_development_stage_ontology_id": [
+    "HsapDv:0000155",
+    "HsapDv:0000160",
+    "HsapDv:0000161",
+    "HsapDv:0000162",
+    "HsapDv:0000165",
+    "HsapDv:0000166",
+    "HsapDv:0000213"
+  ],
+  "source_development_stage_ontology_id_summary": {
+    "HsapDv:0000207": 2564,
+    "HsapDv:0000155": 2429,
+    "HsapDv:0000156": 2183,
+    "HsapDv:0000173": 2172,
+    "HsapDv:0000166": 2097,
+    "HsapDv:0000160": 1899,
+    "HsapDv:0000161": 1769,
+    "HsapDv:0000151": 1608,
+    "HsapDv:0000167": 1440,
+    "HsapDv:0000165": 1254,
+    "HsapDv:0000095": 1061,
+    "HsapDv:0000213": 1056,
+    "HsapDv:0000162": 960,
+    "HsapDv:0000215": 705
+  },
+  "filtered_development_stage_ontology_id_summary": {
+    "HsapDv:0000207": 0,
+    "HsapDv:0000155": 2429,
+    "HsapDv:0000156": 0,
+    "HsapDv:0000173": 0,
+    "HsapDv:0000166": 2097,
+    "HsapDv:0000160": 1899,
+    "HsapDv:0000161": 1769,
+    "HsapDv:0000151": 0,
+    "HsapDv:0000167": 0,
+    "HsapDv:0000165": 1254,
+    "HsapDv:0000095": 0,
+    "HsapDv:0000213": 1056,
+    "HsapDv:0000162": 960,
+    "HsapDv:0000215": 0
+  },
+  "source_sex": [
+    "female",
+    "male"
+  ],
+  "filtered_sex": [
+    "female",
+    "male"
+  ],
+  "source_sex_ontology_id": [
+    "PATO:0000383",
+    "PATO:0000384"
+  ],
+  "filtered_sex_ontology_id": [
+    "PATO:0000383",
+    "PATO:0000384"
+  ],
+  "source_sex_ontology_id_summary": {
+    "PATO:0000384": 13672,
+    "PATO:0000383": 9525
+  },
+  "filtered_sex_ontology_id_summary": {
+    "PATO:0000384": 8735,
+    "PATO:0000383": 2729
+  }
+}
