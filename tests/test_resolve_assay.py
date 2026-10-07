@@ -1,8 +1,9 @@
 """
-Tests for step 0d, harvester.resolve_assay. It works as resolve_uberon and
-resolve_disease do: an exact label match is chosen without asking, any other
-query asks which of the top matches to use. The OLS4 web service is replaced by a
-small stand-in, so no network is needed.
+Tests for step 0d, harvester.resolve_assay. You give the assays you want. Each is
+resolved on its own (no root term, no descendants). The ones that resolve are
+written to the file, the others are listed as unresolved and skipped. Nothing is
+ever asked. The OLS4 web service is replaced by a small stand-in, so no network is
+needed.
 
 Run from the repository root:
     python -m pytest tests/test_resolve_assay.py -v
@@ -22,30 +23,17 @@ from harvester import ontology_files
 from harvester import resolve_assay as step0d
 from harvester.cli import app
 
-SPATIAL_IRI = "http://www.ebi.ac.uk/efo/EFO_0008994"
-MERFISH_IRI = "http://www.ebi.ac.uk/efo/EFO_0008992"
-HTS_IRI = "http://www.ebi.ac.uk/efo/EFO_0030005"
-
-TERMS = [  # (obo id, iri, label), in the order the stand-in search lists them
-    ("EFO:0008994", SPATIAL_IRI, "spatial transcriptomics"),
-    ("EFO:0008992", MERFISH_IRI, "MERFISH"),
-    ("EFO:0030005", HTS_IRI, "spatial transcriptomics by high-throughput sequencing"),
+TERMS = [  # (obo id, label), in the order the stand-in search lists them
+    ("EFO:0009922", "10x 3' v3"),
+    ("EFO:0009899", "10x 3' v2"),
+    ("EFO:0008931", "Smart-seq2"),
+    ("EFO:0022857", "Visium Spatial Gene Expression V1"),
 ]
-# descendants by iri, page by page; the spatial root has two pages and one non-EFO term
-DESCENDANTS = {
-    SPATIAL_IRI: [
-        [{"obo_id": "EFO:0010961", "label": "Visium Spatial Gene Expression"},
-         {"obo_id": "OBI:0000999", "label": "not an EFO term"}],
-        [{"obo_id": "EFO:0030062", "label": "Slide-seqV2"}],
-    ],
-    MERFISH_IRI: [[]],
-    HTS_IRI: [[]],
-}
 
 
 class Reply:
-    def __init__(self, data, status=200):
-        self.data, self.status_code = data, status
+    def __init__(self, data):
+        self.data = data
 
     def json(self):
         return self.data
@@ -58,20 +46,21 @@ def fake_get(url, params=None, timeout=None):
     params = params or {}
     if url.endswith("/search"):
         q = params["q"].lower()
-        docs = [{"obo_id": i, "label": label, "iri": iri} for i, iri, label in TERMS if q in label.lower()]
-        docs.append({"obo_id": "OBI:0000001", "label": params["q"], "iri": "x"})  # a term of another ontology
+        docs = [{"obo_id": i, "label": label} for i, label in TERMS if q in label.lower()]
+        docs.append({"obo_id": "OBI:0000001", "label": params["q"]})  # a term of another ontology
         return Reply({"response": {"docs": docs}})
-    if url.endswith("/hierarchicalDescendants"):
-        iri = next(i for i in DESCENDANTS if i.replace(":", "%253A").replace("/", "%252F") in url)
-        pages, page = DESCENDANTS[iri], params["page"]
-        links = {"next": {}} if page + 1 < len(pages) else {}
-        return Reply({"_embedded": {"terms": pages[page]}, "_links": links})
+    if url.endswith("/terms"):
+        short = params["short_form"]
+        found = [{"obo_id": i, "label": label} for i, label in TERMS if i.replace(":", "_") == short]
+        return Reply({"_embedded": {"terms": found}})
     raise AssertionError(f"unexpected request {url}")
 
 
 @pytest.fixture(autouse=True)
 def stand_in_for_ols(monkeypatch):
     monkeypatch.setattr(step0d.requests, "get", fake_get)
+    # nothing may ask a question
+    monkeypatch.setattr("builtins.input", lambda prompt="": pytest.fail("the step asked a question"))
 
 
 def quiet():
@@ -80,132 +69,112 @@ def quiet():
     return logger
 
 
-def no_question(monkeypatch):
-    def refuse(prompt=""):
-        raise AssertionError("the step asked a question")
-    monkeypatch.setattr("builtins.input", refuse)
+# ---- resolving one assay ---------------------------------------------------
+
+def test_an_exact_label_resolves_ignoring_case():
+    """Input: "10X 3' V3". Pass: the term EFO:0009922 with its label."""
+    assert step0d.resolve_term("10X 3' V3", quiet()) == {"obo_id": "EFO:0009922", "label": "10x 3' v3"}
 
 
-def answer(monkeypatch, text):
-    asked = []
-    monkeypatch.setattr("builtins.input", lambda prompt="": asked.append(prompt) or text)
-    return asked
+def test_an_efo_id_is_looked_up_and_gets_its_label():
+    """Input: 'efo:0008931' in lower case. Pass: the term Smart-seq2 with its label."""
+    assert step0d.resolve_term("efo:0008931", quiet()) == {"obo_id": "EFO:0008931", "label": "Smart-seq2"}
 
 
-# ---- choosing the term ----------------------------------------------------
-
-def test_an_exact_label_is_chosen_without_asking_ignoring_case(monkeypatch):
-    """Input: 'Spatial Transcriptomics', which also matches a longer label. Pass: the
-    exact match EFO:0008994 is chosen and no question is asked."""
-    no_question(monkeypatch)
-    assert step0d.resolve_term("Spatial Transcriptomics", quiet()) == ("EFO:0008994", "spatial transcriptomics")
+def test_an_unknown_id_does_not_resolve():
+    """Input: EFO:9999999. Pass: None."""
+    assert step0d.resolve_term("EFO:9999999", quiet()) is None
 
 
-def test_an_efo_id_is_taken_as_given_without_a_web_request(monkeypatch):
-    """Input: 'efo:0008992' in lower case. Pass: ('EFO:0008992', 'EFO:0008992') as
-    resolve_uberon does for an id, with no web request and no question."""
-    no_question(monkeypatch)
-    monkeypatch.setattr(step0d.requests, "get", lambda *a, **k: pytest.fail("a web request was made"))
-    assert step0d.resolve_term("efo:0008992", quiet()) == ("EFO:0008992", "EFO:0008992")
+def test_a_partial_label_does_not_resolve_and_nothing_is_chosen():
+    """Input: 'Smart-seq' (it is part of the label Smart-seq2). Pass: None; no match
+    is picked for you and no question is asked."""
+    assert step0d.resolve_term("Smart-seq", quiet()) is None
 
 
 def test_terms_of_other_ontologies_are_ignored():
     """Input: a search that also returns an OBI term. Pass: only EFO terms are listed."""
-    assert [t["obo_id"] for t in step0d.search_assay("MERFISH", quiet())] == ["EFO:0008992"]
+    assert all(t["obo_id"].startswith("EFO") for t in step0d.search_assay("Smart-seq2", quiet()))
 
 
-def test_no_match_stops_with_exit_code_1(monkeypatch):
-    """Input: a label that nothing matches. Pass: SystemExit with code 1."""
-    no_question(monkeypatch)
-    with pytest.raises(SystemExit) as stopped:
-        step0d.resolve_term("no such assay", quiet())
-    assert stopped.value.code == 1
+# ---- the files -------------------------------------------------------------
 
-
-def test_a_partial_label_asks_which_of_the_top_matches_to_use(monkeypatch):
-    """Input: 'transcriptomics' (two terms contain it) and the answer 2. Pass: one
-    question is asked and the second term is chosen."""
-    asked = answer(monkeypatch, "2")
-    assert step0d.resolve_term("transcriptomics", quiet())[0] == "EFO:0030005"
-    assert len(asked) == 1
-
-
-def test_an_empty_answer_chooses_the_first_match(monkeypatch):
-    """Input: 'transcriptomics' and an empty answer. Pass: the first term is chosen."""
-    answer(monkeypatch, "")
-    assert step0d.resolve_term("transcriptomics", quiet())[0] == "EFO:0008994"
-
-
-# ---- descendants and the files --------------------------------------------
-
-def test_descendants_come_from_every_page_and_only_from_efo():
-    """Input: a root whose descendants are on two pages, with one OBI term. Pass: the
-    two EFO terms are returned, as descendants."""
-    found = step0d.get_descendants("EFO:0008994", quiet())
-    assert [t["obo_id"] for t in found] == ["EFO:0010961", "EFO:0030062"]
-    assert {t["level"] for t in found} == {"descendant"}
-
-
-def test_several_queries_make_one_file_in_the_layout_of_the_other_resolve_files(tmp_path, monkeypatch):
-    """Input: 'spatial transcriptomics' and 'MERFISH' (in EFO, MERFISH is not under
-    spatial transcriptomics). Pass: one JSON with queries, both root terms, the ids
-    of both roots and the descendants, terms, and total; and a CSV of obo_id, label,
-    level."""
-    no_question(monkeypatch)
-    json_path, csv_path = step0d.resolve_assay(["spatial transcriptomics", "MERFISH"],
-                                               str(tmp_path / "assay_spatial"), quiet())
+def test_resolved_assays_are_written_and_unresolved_ones_are_listed_and_skipped(tmp_path):
+    """Input: two labels, one id, and one label that is not an assay. Pass: the JSON
+    lists the three assays (query, id, label), the unresolved label, the three ids and
+    the total 3; it has no root_terms; the CSV has the columns obo_id, label, query."""
+    queries = ["10x 3' v3", "Smart-seq2", "EFO:0009899", "not an assay"]
+    json_path, csv_path = step0d.resolve_assay(queries, str(tmp_path / "assay_published"), quiet())
     data = json.load(open(json_path))
-    assert list(data) == ["queries", "root_terms", "obo_ids", "terms", "total"]
-    assert data["queries"] == ["spatial transcriptomics", "MERFISH"]
-    assert data["root_terms"] == [
-        {"obo_id": "EFO:0008994", "label": "spatial transcriptomics", "level": "root"},
-        {"obo_id": "EFO:0008992", "label": "MERFISH", "level": "root"}]
-    assert data["obo_ids"] == ["EFO:0008994", "EFO:0010961", "EFO:0030062", "EFO:0008992"]
-    assert data["total"] == 4 and len(data["terms"]) == 4
+    assert list(data) == ["queries", "assays", "unresolved", "obo_ids", "total"]
+    assert data["queries"] == queries
+    assert data["assays"] == [
+        {"query": "10x 3' v3", "obo_id": "EFO:0009922", "label": "10x 3' v3"},
+        {"query": "Smart-seq2", "obo_id": "EFO:0008931", "label": "Smart-seq2"},
+        {"query": "EFO:0009899", "obo_id": "EFO:0009899", "label": "10x 3' v2"}]
+    assert data["unresolved"] == ["not an assay"]
+    assert data["obo_ids"] == ["EFO:0009922", "EFO:0008931", "EFO:0009899"] and data["total"] == 3
+    assert "root_terms" not in data
     rows = list(csv.DictReader(open(csv_path, newline="")))
-    assert [r["obo_id"] for r in rows] == data["obo_ids"] and list(rows[0]) == ["obo_id", "label", "level"]
+    assert list(rows[0]) == ["obo_id", "label", "query"] and len(rows) == 3
 
 
-def test_a_term_listed_twice_is_kept_once_in_its_first_place(tmp_path, monkeypatch):
-    """Input: a second root that is also a descendant of the first root. Pass: it is
-    listed once, where it was first listed."""
-    no_question(monkeypatch)
-    DESCENDANTS[SPATIAL_IRI][1].append({"obo_id": "EFO:0008992", "label": "MERFISH"})
-    try:
-        json_path, _ = step0d.resolve_assay(["spatial transcriptomics", "MERFISH"], str(tmp_path / "a"), quiet())
-    finally:
-        DESCENDANTS[SPATIAL_IRI][1].pop()
-    ids = json.load(open(json_path))["obo_ids"]
-    assert ids.count("EFO:0008992") == 1 and ids.index("EFO:0008992") == 3
+def test_there_are_no_descendants(tmp_path):
+    """Input: one assay. Pass: the file holds that assay and nothing else."""
+    json_path, _ = step0d.resolve_assay(["Smart-seq2"], str(tmp_path / "a"), quiet())
+    assert json.load(open(json_path))["obo_ids"] == ["EFO:0008931"]
 
 
-def test_the_file_is_read_by_the_same_helpers_as_the_other_resolve_files(tmp_path, monkeypatch):
-    """Input: the written file. Pass: load_obo_ids and describe work on it as on an
-    uberon file; there is no min_age."""
-    no_question(monkeypatch)
-    json_path, _ = step0d.resolve_assay(["MERFISH"], str(tmp_path / "a"), quiet())
-    assert ontology_files.load_obo_ids(json_path) == {"EFO:0008992"}
+def test_an_assay_given_twice_is_kept_once(tmp_path):
+    """Input: the same assay by label and by id. Pass: one entry, from the first query."""
+    json_path, _ = step0d.resolve_assay(["Smart-seq2", "EFO:0008931"], str(tmp_path / "a"), quiet())
+    data = json.load(open(json_path))
+    assert data["total"] == 1 and data["assays"][0]["query"] == "Smart-seq2"
+
+
+def test_when_nothing_resolves_the_step_stops_and_writes_no_file(tmp_path):
+    """Input: only labels that are not assays. Pass: exit code 1 and no JSON file."""
+    prefix = str(tmp_path / "a")
+    with pytest.raises(SystemExit) as stopped:
+        step0d.resolve_assay(["nothing", "nope"], prefix, quiet())
+    assert stopped.value.code == 1 and not os.path.exists(prefix + ".json")
+
+
+def test_the_unresolved_label_is_named_in_the_log(tmp_path):
+    """Input: one assay and one label that is not an assay, run through the command
+    entry point. Pass: the log file says NOT RESOLVED and names the label."""
+    prefix = str(tmp_path / "assay_x")
+    step0d.run_resolve_assay(["Smart-seq2", "not an assay"], prefix)
+    log = open(prefix + ".log", encoding="utf-8").read()
+    assert "NOT RESOLVED: 'not an assay'" in log
+
+
+def test_the_file_is_read_by_the_same_helpers_as_the_other_resolve_files(tmp_path):
+    """Input: the written file. Pass: load_obo_ids gives the ids; describe records the
+    resolved assays, the unresolved labels, the term count and the hash, and has no
+    root_terms."""
+    json_path, _ = step0d.resolve_assay(["Smart-seq2", "not an assay"], str(tmp_path / "a"), quiet())
+    assert ontology_files.load_obo_ids(json_path) == {"EFO:0008931"}
     info = ontology_files.describe(json_path)
-    assert info["root_terms"] == [{"obo_id": "EFO:0008992", "label": "MERFISH"}]
-    assert info["term_count"] == 1 and "min_age" not in info
+    assert info["assays"] == [{"obo_id": "EFO:0008931", "label": "Smart-seq2"}]
+    assert info["unresolved"] == ["not an assay"] and info["term_count"] == 1
+    assert len(info["sha256"]) == 64 and "root_terms" not in info
 
 
 def test_the_default_file_name_is_in_the_run_folder(tmp_path, monkeypatch):
     """Input: no output prefix and the run folder set. Pass: the files are
     <run folder>/assay_<first query>.json, .csv and .log."""
-    no_question(monkeypatch)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("HARVESTER_RUN_DIR", "2026-08-03-run")
-    step0d.run_resolve_assay(["Spatial Transcriptomics"])
+    step0d.run_resolve_assay(["Smart-seq2"])
     for ext in (".json", ".csv", ".log"):
-        assert os.path.exists(f"2026-08-03-run/assay_spatial_transcriptomics{ext}")
+        assert os.path.exists(f"2026-08-03-run/assay_smart_seq2{ext}")
 
 
-def test_the_command_runs(tmp_path, monkeypatch):
-    """Input: the resolve-assay command with an exact label and an output prefix.
-    Pass: exit code 0 and the JSON file exists."""
-    no_question(monkeypatch)
-    prefix = str(tmp_path / "assay_merfish")
-    result = CliRunner().invoke(app, ["resolve-assay", "MERFISH", "--output-prefix", prefix])
+def test_the_command_runs(tmp_path):
+    """Input: the resolve-assay command with two assays and an output prefix. Pass:
+    exit code 0 and the JSON file lists both."""
+    prefix = str(tmp_path / "assay_cmd")
+    result = CliRunner().invoke(app, ["resolve-assay", "Smart-seq2", "10x 3' v3", "--output-prefix", prefix])
     assert result.exit_code == 0, result.output
-    assert os.path.exists(prefix + ".json")
+    assert json.load(open(prefix + ".json"))["total"] == 2

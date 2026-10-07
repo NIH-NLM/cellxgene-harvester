@@ -13,7 +13,7 @@ Both ontology filters are INCLUSIVE:
 
 Cancer and spatial datasets are NOT screened here. The disease file already
 decides which disease states count, and a technique is screened by its assay
-ontology id in Step 5 (--exclude-assay). Text matching does not find either
+ontology id in Step 5 (--assay). Text matching does not find either
 reliably; see the README.
 
 Age filtering (HsapDv) is NOT applied here. Development stage is absent at the

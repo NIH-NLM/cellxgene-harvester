@@ -251,13 +251,11 @@ def test_command_line_writes_json_into_the_output_folder(tmp_path):
     assert written(out) == ["d1.filtered.json"]
 
 
-def test_filter_normal_is_not_taken_from_the_csv_and_a_hand_set_value_survives(tmp_path):
-    """Input: an older CSV that still has a filter_normal column holding TRUE, and a
-    JSON whose filter_normal was set to false by hand before step 4 runs again.
-    Pass: a new file starts with filter_normal null (the column is ignored); the
-    hand-set false is kept."""
-    rows = [make_row(dataset_id="new"), make_row(dataset_id="old")]
-    csv_path = write_csv(tmp_path / "in.csv", rows)
+def test_curation_holds_only_the_three_hand_set_values(tmp_path):
+    """Input: an older CSV that still has a filter_normal column holding TRUE. Pass:
+    the curation block of the new file has reference, author_cell_type and embedding
+    and nothing else; the old column is ignored."""
+    csv_path = write_csv(tmp_path / "in.csv", [make_row(dataset_id="d1")])
     import pandas as pd
     table = pd.read_csv(csv_path, dtype=str, keep_default_na=False)
     table["filter_normal"] = "TRUE"
@@ -266,11 +264,4 @@ def test_filter_normal_is_not_taken_from_the_csv_and_a_hand_set_value_survives(t
     out = str(tmp_path / "out")
     filter_datasets.run_filter_datasets(csv_path, out, uberon_json=files["uberon"],
                                         disease_json=files["disease"], hsapdv_json=files["hsapdv"])
-    assert read(out, "new")["curation"]["filter_normal"] is None
-    path = os.path.join(out, "old.filtered.json")
-    record = json.load(open(path, encoding="utf-8"))
-    record["curation"]["filter_normal"] = False
-    json.dump(record, open(path, "w", encoding="utf-8"))
-    filter_datasets.run_filter_datasets(csv_path, out, uberon_json=files["uberon"],
-                                        disease_json=files["disease"], hsapdv_json=files["hsapdv"])
-    assert read(out, "old")["curation"]["filter_normal"] is False
+    assert list(read(out, "d1")["curation"]) == ["reference", "author_cell_type", "embedding"]

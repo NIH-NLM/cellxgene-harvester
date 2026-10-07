@@ -22,7 +22,7 @@ from helpers import make_row
 USED_BY_NSFOREST = [
     "reference", "collection_name", "dataset_title", "author_cell_type", "embedding",
     "first_author", "journal", "year", "doi", "collection_url", "explorer_url",
-    "disease", "dataset_version_id", "filter_normal", "h5ad_url",
+    "disease", "dataset_version_id", "h5ad_url",
 ]
 
 
@@ -51,12 +51,12 @@ def test_columns_include_everything_sc_nsforest_reads(tmp_path):
 
 def test_row_values_come_from_the_json(tmp_path):
     """Input: a dataset with year 2022.0 in the CSV and reference 'yes'. Pass: the
-    row holds year as 2022 (not 2022.0), reference yes, an empty filter_normal, and the
+    row holds year as 2022 (not 2022.0), reference yes, and the
     ids and url as written in step 4."""
     write_file(tmp_path, "d1", 5, reference="yes")
     row = export(tmp_path)[0]
     assert row["year"] == "2022" and row["reference"] == "yes"
-    assert row["filter_normal"] == ""
+    assert "filter_normal" not in row
     assert row["dataset_id"] == "d1" and row["dataset_version_id"] == "dv1"
     assert row["h5ad_url"] == "https://example.org/d1.h5ad"
 
@@ -141,50 +141,12 @@ def test_command_line_writes_the_csv(tmp_path):
     assert len(list(csv.DictReader(open(out, newline="")))) == 1
 
 
-# ---- filter_normal: no default, set by hand ---------------------------------
+# ---- filter_normal is not a column ----------------------------------------
 
-def set_filter_normal(folder, dataset_id, value):
-    from harvester.io_utils import load_json
-    path = str(folder / f"{dataset_id}.filtered.json")
-    record = load_json(path)
-    record["curation"]["filter_normal"] = value
-    write_json(path, record)
-
-
-def test_filter_normal_starts_empty_and_is_exported_empty(tmp_path):
-    """Input: a dataset file as step 4 writes it. Pass: curation.filter_normal is
-    null and the CSV cell is empty; there is no default of true."""
+def test_there_is_no_filter_normal_column(tmp_path):
+    """Input: a counted dataset. Pass: the CSV has no filter_normal column. The
+    sc-nsforest-qc-nf command filters normal adult cells by default, so the column
+    had no effect and was removed on 2026-10-07."""
     write_file(tmp_path, "d1", 5)
-    from harvester.io_utils import load_json
-    assert load_json(str(tmp_path / "d1.filtered.json"))["curation"]["filter_normal"] is None
-    assert export(tmp_path)[0]["filter_normal"] == ""
-
-
-def test_filter_normal_set_by_hand_is_exported_as_True_or_False(tmp_path):
-    """Input: files with filter_normal true and false. Pass: the CSV holds the text
-    True and False, the form sc-nsforest-qc-nf compares with."""
-    write_file(tmp_path, "yes", 5)
-    write_file(tmp_path, "no", 5)
-    set_filter_normal(tmp_path, "yes", True)
-    set_filter_normal(tmp_path, "no", False)
-    rows = {r["dataset_id"]: r["filter_normal"] for r in export(tmp_path)}
-    assert rows == {"no": "False", "yes": "True"}
-
-
-def test_empty_filter_normal_is_warned_about_in_the_log(tmp_path):
-    """Input: two files, one set and one empty. Pass: the log warns that filter_normal
-    is empty for 1 datasets, and says what to do."""
-    write_file(tmp_path, "set", 5)
-    write_file(tmp_path, "empty", 5)
-    set_filter_normal(tmp_path, "set", True)
-    export(tmp_path)
-    log = open(str(tmp_path / "datasets.log"), encoding="utf-8").read()
-    assert "filter_normal is empty for 1 datasets" in log and "curation block" in log
-
-
-def test_no_warning_when_every_filter_normal_is_set(tmp_path):
-    """Input: one file with filter_normal set. Pass: the log has no such warning."""
-    write_file(tmp_path, "d1", 5)
-    set_filter_normal(tmp_path, "d1", True)
-    export(tmp_path)
-    assert "filter_normal is empty" not in open(str(tmp_path / "datasets.log"), encoding="utf-8").read()
+    assert "filter_normal" not in export(tmp_path)[0]
+    assert "filter_normal" not in step7.COLUMNS

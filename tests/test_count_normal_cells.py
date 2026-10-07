@@ -252,7 +252,7 @@ def quiet_logger():
 
 
 def ids_for(files):
-    return {"uberon": KIDNEY, "disease": NORMAL, "hsapdv": ADULT, "exclude_assay": set()}
+    return {"uberon": KIDNEY, "disease": NORMAL, "hsapdv": ADULT, "assay": set()}
 
 
 def write_step4_file(folder, dataset_id, **row):
@@ -383,78 +383,87 @@ def test_is_primary_data_does_not_change_the_counts():
         assert record["filtered_cell_count"] == 3
 
 
-# ---- negative selection by assay: --exclude-assay (resolve-assay file) ------
+# ---- the assay file is an allow-list: --assay (resolve-assay file) ----------
 
-SPATIAL = {"EFO:0022857"}
+TENX = {"EFO:0009922"}
 
 
-def obs_with_spatial_cells():
-    """Four passing cells: two 10x and two Visium (EFO:0022857)."""
+def obs_with_two_assays():
+    """Four cells that pass the other filters: two 10x 3' v3 and two Visium (EFO:0022857)."""
     return make_obs([{}, {}, {"assay": "Visium", "assay_ontology_term_id": "EFO:0022857"},
                      {"assay": "Visium", "assay_ontology_term_id": "EFO:0022857"}])
 
 
-def test_excluded_assay_leaves_cells_out_of_the_filtered_side_only():
-    """Input: four cells that pass the filters, two with a Visium assay; the Visium
-    id is excluded. Pass: filtered count 2, source count 4; the source assay summary
-    still lists Visium and the filtered summary lists it with 0."""
+def write_assay_file(path, ids=("EFO:0009922",), unresolved=()):
+    """A file shaped like the output of resolve-assay."""
+    import json
+    assays = [{"query": i, "obo_id": i, "label": f"label {i}"} for i in ids]
+    with open(path, "w") as f:
+        json.dump({"queries": list(ids) + list(unresolved), "assays": assays, "unresolved": list(unresolved),
+                   "obo_ids": list(ids), "total": len(ids)}, f)
+    return str(path)
+
+
+def test_only_the_wanted_assays_are_counted_on_the_filtered_side():
+    """Input: four cells that pass the filters, two 10x and two Visium; the 10x id is
+    the only assay in the file. Pass: filtered count 2, source count 4; the source
+    assay summary lists both assays and the filtered summary lists Visium with 0."""
     record = step4_record()
-    step5.fill_record(record, obs_with_spatial_cells(), KIDNEY, NORMAL, ADULT, SPATIAL)
+    step5.fill_record(record, obs_with_two_assays(), KIDNEY, NORMAL, ADULT, TENX)
     assert (record["source_cell_count"], record["filtered_cell_count"]) == (4, 2)
     assert record["source_assay_ontology_id_summary"] == {"EFO:0009922": 2, "EFO:0022857": 2}
     assert record["filtered_assay_ontology_id_summary"] == {"EFO:0009922": 2, "EFO:0022857": 0}
 
 
-def test_without_an_excluded_assay_nothing_is_left_out():
-    """Input: the same four cells, no excluded assay. Pass: filtered count is 4."""
+def test_without_an_assay_file_every_assay_is_counted():
+    """Input: the same four cells, no assay file. Pass: filtered count is 4."""
     record = step4_record()
-    step5.fill_record(record, obs_with_spatial_cells(), KIDNEY, NORMAL, ADULT)
+    step5.fill_record(record, obs_with_two_assays(), KIDNEY, NORMAL, ADULT)
     assert record["filtered_cell_count"] == 4
 
 
-def test_a_dataset_with_only_excluded_cells_has_a_filtered_count_of_zero():
-    """Input: cells that all have the excluded assay. Pass: filtered count 0, not null,
-    so step 6 can remove the dataset."""
+def test_a_spatial_technique_is_left_out_by_not_being_in_the_file():
+    """Input: cells of a Visium dataset and a file that lists only 10x assays. Pass:
+    the filtered count is 0 (not null), so step 6 can remove the dataset."""
     obs = make_obs([{"assay_ontology_term_id": "EFO:0022857"}] * 3)
     record = step4_record()
-    step5.fill_record(record, obs, KIDNEY, NORMAL, ADULT, SPATIAL)
+    step5.fill_record(record, obs, KIDNEY, NORMAL, ADULT, TENX)
     assert record["filtered_cell_count"] == 0 and record["source_cell_count"] == 3
 
 
-def test_the_excluded_assay_file_is_recorded_and_dropped_when_not_given(tmp_path):
-    """Input: step 5 run with an assay file, then again without one. Pass: the first
-    record holds exclude_assay with its file, root terms and hash; the second has no
-    exclude_assay entry."""
+def test_the_assay_file_is_recorded_and_dropped_when_not_given(tmp_path):
+    """Input: step 5 run with an assay file that has one unresolved label, then again
+    without one. Pass: the first record holds the assay entry with its file, the
+    resolved assays, the unresolved label and no root terms; the second has no assay
+    entry."""
     files = kidney_files(tmp_path)
-    files["exclude_assay"] = write_resolve_file(
-        tmp_path / "assay_spatial.json", ["spatial transcriptomics"],
-        [("EFO:0008994", "spatial transcriptomics")], ["EFO:0008994", "EFO:0022857"])
+    files["assay"] = write_assay_file(tmp_path / "assay_published.json", unresolved=["Smart-seq 2"])
     record = step4_record()
     step5.record_filter_files(record, files, "rel")
-    assert record["filter_choices"]["exclude_assay"]["file"] == files["exclude_assay"]
-    assert record["filter_choices"]["exclude_assay"]["root_terms"][0]["label"] == "spatial transcriptomics"
-    files["exclude_assay"] = None
+    entry = record["filter_choices"]["assay"]
+    assert entry["file"] == files["assay"] and entry["unresolved"] == ["Smart-seq 2"]
+    assert entry["assays"] == [{"obo_id": "EFO:0009922", "label": "label EFO:0009922"}]
+    assert "root_terms" not in entry
+    files["assay"] = None
     step5.record_filter_files(record, files, "rel")
-    assert "exclude_assay" not in record["filter_choices"]
+    assert "assay" not in record["filter_choices"]
 
 
-def test_process_folder_excludes_the_assay_of_the_file_it_is_given(tmp_path, monkeypatch):
-    """Input: a folder run with an assay file that names Visium. Pass: the file is
+def test_process_folder_counts_only_the_assays_of_the_file_it_is_given(tmp_path, monkeypatch):
+    """Input: a folder run with an assay file that names 10x only. Pass: the file is
     counted without the Visium cells and records the assay file."""
     files = kidney_files(tmp_path)
-    assay = write_resolve_file(tmp_path / "assay_spatial.json", ["spatial transcriptomics"],
-                               [("EFO:0008994", "spatial transcriptomics")],
-                               ["EFO:0008994", "EFO:0022857"])
+    assay = write_assay_file(tmp_path / "assay_published.json")
     folder = tmp_path / "out"
     folder.mkdir()
     path = write_step4_file(folder, "d1")
-    monkeypatch.setattr(step5, "read_obs", lambda census, dataset_id: obs_with_spatial_cells())
+    monkeypatch.setattr(step5, "read_obs", lambda census, dataset_id: obs_with_two_assays())
     fake_census(monkeypatch)
     step5.process_folder(str(folder), files["uberon"], files["disease"], files["hsapdv"],
-                         quiet_logger(), exclude_assay_json=assay)
+                         quiet_logger(), assay_json=assay)
     record = load_json(path)
     assert record["filtered_cell_count"] == 2
-    assert record["filter_choices"]["exclude_assay"]["file"] == assay
+    assert record["filter_choices"]["assay"]["file"] == assay
 
 
 # ---- --census-version, default latest -------------------------------------
@@ -488,7 +497,7 @@ def test_census_version_can_be_chosen(tmp_path, monkeypatch):
 
 
 def test_the_command_passes_the_options_on(monkeypatch, tmp_path):
-    """Input: count-normal-cells with --exclude-assay and --census-version. Pass:
+    """Input: count-normal-cells with --assay and --census-version. Pass:
     run_count_normal_cells receives both; without them it receives None and 'latest'."""
     from typer.testing import CliRunner
     from harvester.cli import app
@@ -496,6 +505,6 @@ def test_the_command_passes_the_options_on(monkeypatch, tmp_path):
     monkeypatch.setattr("harvester.count_normal_cells.run_count_normal_cells", lambda **kw: got.append(kw))
     base = ["count-normal-cells", str(tmp_path), "--uberon", "u.json", "--disease", "d.json", "--hsapdv", "h.json"]
     assert CliRunner().invoke(app, base).exit_code == 0
-    assert CliRunner().invoke(app, base + ["--exclude-assay", "a.json", "--census-version", "2025-01-30"]).exit_code == 0
-    assert (got[0]["exclude_assay_json"], got[0]["census_version"]) == (None, "latest")
-    assert (got[1]["exclude_assay_json"], got[1]["census_version"]) == ("a.json", "2025-01-30")
+    assert CliRunner().invoke(app, base + ["--assay", "a.json", "--census-version", "2025-01-30"]).exit_code == 0
+    assert (got[0]["assay_json"], got[0]["census_version"]) == (None, "latest")
+    assert (got[1]["assay_json"], got[1]["census_version"]) == ("a.json", "2025-01-30")

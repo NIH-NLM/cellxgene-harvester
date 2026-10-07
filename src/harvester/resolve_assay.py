@@ -2,26 +2,30 @@
 """
 Step 0d: Resolve assay (technique) terms via OLS4 API
 
-Given an assay label or an EFO ID, fetches the term itself plus all
-hierarchical descendants, saves both JSON and CSV for use in Step 5
-(count-normal-cells --exclude-assay).
+You give the assays you WANT, each by its EFO label or EFO ID. Each assay is
+resolved on its own: there is no root term and no descendants. The assays that
+resolve are written to a JSON and a CSV file. An assay that does not resolve is
+listed under "unresolved" in the JSON and in the log, and is skipped.
 
-The file is used as a NEGATIVE selection: the cells whose
-assay_ontology_term_id is in the file are left out of the filtered counts, for
-example to leave out spatial techniques. Text matching on titles does not find
-a technique reliably (see the README). The assay ontology id of each cell does.
+The file is used in Step 5 (count-normal-cells --assay): only the cells whose
+assay_ontology_term_id is in the file are counted on the filtered side. Every
+other assay, for example every spatial technique, is left out by not being in
+the file. A label that does not resolve is also left out, so read the
+"unresolved" list.
+
+Text matching on titles does not find a technique reliably (see the README).
+The assay ontology id of each cell does.
 
 Usage:
 1. Python module execution:
-python -m harvester.resolve_assay "spatial transcriptomics"
+python -m harvester.resolve_assay "10x 3' v3" "Smart-seq2" EFO:0009900
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester resolve-assay "spatial transcriptomics"
-cellxgene-harvester resolve-assay "spatial transcriptomics" MERFISH --output-prefix 2026-08-03-run/assay_spatial
+cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2" EFO:0009900 --output-prefix 2026-08-03-run/assay_published
 
 Output:
-    <run folder>/assay_spatial_transcriptomics.json   - full term list with metadata
-    <run folder>/assay_spatial_transcriptomics.csv    - flat table: obo_id, label, level
+    <run folder>/assay_10x_3_v3.json   - the resolved assays and the unresolved labels
+    <run folder>/assay_10x_3_v3.csv    - flat table: obo_id, label, query
 """
 
 import os
@@ -35,13 +39,12 @@ from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
-EFO_IRI  = "http://www.ebi.ac.uk/efo/{term_id}"
 
 
 def search_assay(label: str, logger) -> list:
     """Search OLS4 for an EFO assay term by label, return top matches."""
     url    = f"{OLS_BASE}/search"
-    params = {"q": label, "ontology": "efo", "type": "class", "rows": 10}
+    params = {"q": label, "ontology": "efo", "type": "class", "rows": 20}
 
     logger.info(f"  Searching OLS4 for: '{label}'")
     r = requests.get(url, params=params, timeout=15)
@@ -49,130 +52,83 @@ def search_assay(label: str, logger) -> list:
 
     docs = r.json().get("response", {}).get("docs", [])
     return [
-        {"obo_id": d.get("obo_id"), "label": d.get("label"), "iri": d.get("iri")}
-        for d in docs if d.get("obo_id", "").startswith("EFO")
+        {"obo_id": d.get("obo_id"), "label": d.get("label")}
+        for d in docs if (d.get("obo_id") or "").startswith("EFO")
     ]
 
 
-def get_descendants(term_id: str, logger) -> list:
-    """Get all hierarchical descendants of an EFO term."""
-    iri     = EFO_IRI.format(term_id=term_id.replace(":", "_"))
-    iri_enc = requests.utils.quote(requests.utils.quote(iri, safe=""))
-
-    url       = f"{OLS_BASE}/ontologies/efo/terms/{iri_enc}/hierarchicalDescendants"
-    page      = 0
-    all_terms = []
-
-    while True:
-        r = requests.get(url, params={"size": 200, "page": page}, timeout=15)
-        if r.status_code == 404:
-            break
-        r.raise_for_status()
-
-        data     = r.json()
-        embedded = data.get("_embedded", {}).get("terms", [])
-        all_terms.extend([
-            {"obo_id": t.get("obo_id"), "label": t.get("label"), "level": "descendant"}
-            for t in embedded if t.get("obo_id", "").startswith("EFO")
-        ])
-
-        # Check for next page
-        links = data.get("_links", {})
-        if "next" not in links:
-            break
-        page += 1
-
-    logger.info(f"  Found {len(all_terms)} descendants for {term_id}")
-    return all_terms
+def get_term(efo_id: str, logger) -> dict:
+    """Look up one EFO term by its id. Return None if there is no such term."""
+    logger.info(f"  Looking up OLS4 for: {efo_id}")
+    r = requests.get(f"{OLS_BASE}/ontologies/efo/terms",
+                     params={"short_form": efo_id.replace(":", "_")}, timeout=15)
+    r.raise_for_status()
+    terms = r.json().get("_embedded", {}).get("terms", [])
+    if not terms:
+        return None
+    return {"obo_id": terms[0].get("obo_id"), "label": terms[0].get("label")}
 
 
-def resolve_term(query: str, logger) -> tuple:
+def resolve_term(query: str, logger) -> dict:
     """
-    Resolve a label or EFO ID to (efo_id, label).
-    Auto-selects exact label match, otherwise prompts user.
+    Resolve a label or an EFO ID to {"obo_id", "label"}, or None.
+    A label must match one EFO term exactly (ignoring case). Nothing is asked
+    and nothing is chosen for you: a label with no exact match is not resolved.
     """
-    if re.match(r"EFO:\d+", query.strip(), re.IGNORECASE):
-        efo_id = query.strip().upper()
-        return efo_id, efo_id
+    if re.fullmatch(r"EFO:\d+", query.strip(), re.IGNORECASE):
+        return get_term(query.strip().upper(), logger)
 
-    results = search_assay(query, logger)
-    if not results:
-        logger.error(f"  No EFO terms found for '{query}'")
-        sys.exit(1)
-
-    # Auto-select exact label match
-    exact = [r for r in results if r["label"].lower() == query.lower()]
-    if exact:
-        logger.info(f"  Exact match: {exact[0]['obo_id']}  {exact[0]['label']}")
-        return exact[0]["obo_id"], exact[0]["label"]
-
-    # Show options and prompt
-    logger.info(f"  Top matches:")
-    for i, r in enumerate(results[:5], 1):
-        logger.info(f"    {i}. {r['obo_id']:20s}  {r['label']}")
-
-    choice = input("\n  Use which? [1]: ").strip() or "1"
-    selected = results[int(choice) - 1]
-    logger.info(f"  Selected: {selected['obo_id']}  {selected['label']}")
-    return selected["obo_id"], selected["label"]
+    exact = [t for t in search_assay(query, logger)
+             if (t["label"] or "").lower() == query.lower()]
+    return exact[0] if exact else None
 
 
 def resolve_assay(queries: list, output_prefix: str, logger):
     """
-    Resolve one or more assay queries, combine all terms,
-    save JSON and CSV.
+    Resolve each assay on its own, write the resolved assays and the
+    unresolved labels to JSON, and the resolved assays to CSV.
 
-    JSON structure mirrors uberon JSON for consistent downstream loading:
+    JSON structure:
         {
           "queries":    [...],
-          "root_terms": [{obo_id, label, level}, ...],
-          "obo_ids":    [...],          # all IDs including descendants
-          "terms":      [{obo_id, label, level}, ...],
+          "assays":     [{query, obo_id, label}, ...],
+          "unresolved": [...],
+          "obo_ids":    [...],          # the resolved ids, each once
           "total":      N
         }
     """
-    all_terms  = []
-    root_terms = []
+    assays     = []
+    unresolved = []
+    seen       = set()
 
     for query in queries:
         query = query.strip()
         logger.info(f"\nResolving: '{query}'")
+        term = resolve_term(query, logger)
+        if term is None:
+            logger.warning(f"  NOT RESOLVED: '{query}' (no exact EFO label or id) - skipped")
+            unresolved.append(query)
+            continue
+        if term["obo_id"] in seen:
+            logger.info(f"  {term['obo_id']} {term['label']} is already in the list - kept once")
+            continue
+        seen.add(term["obo_id"])
+        assays.append({"query": query, "obo_id": term["obo_id"], "label": term["label"]})
+        logger.info(f"  Resolved: {term['obo_id']}  {term['label']}")
 
-        efo_id, label = resolve_term(query, logger)
-
-        # Add the root term itself
-        root = {"obo_id": efo_id, "label": label, "level": "root"}
-        root_terms.append(root)
-        all_terms.append(root)
-        logger.info(f"  Root term: {efo_id}  {label}")
-
-        # Get all descendants
-        descendants = get_descendants(efo_id, logger)
-        all_terms.extend(descendants)
-
-        log_counts(logger, f"terms resolved for '{query}'",
-                   before=1, after=1 + len(descendants), unit="terms")
-
-    # Deduplicate by obo_id
-    before_dedup = len(all_terms)
-    seen     = set()
-    deduped  = []
-    for t in all_terms:
-        if t["obo_id"] not in seen:
-            seen.add(t["obo_id"])
-            deduped.append(t)
-
-    log_counts(logger, "deduplication", before=before_dedup, after=len(deduped), unit="terms")
-
-    # Build output
-    obo_ids = [t["obo_id"] for t in deduped]
+    log_counts(logger, "assays resolved", before=len(queries), after=len(assays), unit="assays")
+    if unresolved:
+        logger.warning(f"\n  WARNING: {len(unresolved)} not resolved and left out: {unresolved}")
+    if not assays:
+        logger.error("ERROR: no assay resolved, so there is no file to write")
+        sys.exit(1)
 
     output = {
         "queries":    queries,
-        "root_terms": root_terms,
-        "obo_ids":    obo_ids,
-        "terms":      deduped,
-        "total":      len(deduped),
+        "assays":     assays,
+        "unresolved": unresolved,
+        "obo_ids":    [a["obo_id"] for a in assays],
+        "total":      len(assays),
     }
 
     # Save JSON
@@ -183,9 +139,9 @@ def resolve_assay(queries: list, output_prefix: str, logger):
 
     # Save CSV
     csv_path = f"{output_prefix}.csv"
-    write_dataframe_csv(pd.DataFrame(deduped), csv_path)
+    write_dataframe_csv(pd.DataFrame(assays, columns=["obo_id", "label", "query"]), csv_path)
     logger.info(f"Saved CSV : {csv_path}")
-    logger.info(f"Total terms: {len(deduped)}  (root + descendants)")
+    logger.info(f"Total assays: {len(assays)}")
 
     return json_path, csv_path
 
