@@ -50,15 +50,12 @@ def dataset_block(row):
 def curation_block(row):
     """The values that are set or edited by hand after the first pass.
 
-    filter_normal starts empty (null). It is never taken from the CSV and has no
-    default. It is set by hand to true or false in the JSON file, and a later
-    run of Step 4 keeps the value that is there.
+    A later run of Step 4 keeps the values that are already in the file.
     """
     return {
         "reference": row["reference"],
         "author_cell_type": row["author_cell_type"],
         "embedding": row["embedding"],
-        "filter_normal": None,
     }
 
 
@@ -85,6 +82,7 @@ def new_record(row, organ, filter_choices):
         "filtered_cell_count": None,
         "source_donor_count": None,
         "filtered_donor_count": None,
+        "filtered_h5ad_url": None,
     }
     for facet in FACETS:
         record.update(empty_facet(facet))

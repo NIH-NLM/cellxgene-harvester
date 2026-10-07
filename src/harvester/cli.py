@@ -8,12 +8,12 @@ Usage:
     cellxgene-harvester [--run-dir 2026-08-03-run] resolve-uberon kidney
     cellxgene-harvester resolve-disease normal
     cellxgene-harvester resolve-hsapdv --min-age 15
-    cellxgene-harvester resolve-assay "spatial transcriptomics"
+    cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2"
     cellxgene-harvester fetch-collections
     cellxgene-harvester generate-metadata
     cellxgene-harvester append-details
     cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv --output FOLDER --uberon ... --disease ... --hsapdv ...
-    cellxgene-harvester count-normal-cells FOLDER --uberon ... --disease ... --hsapdv ... [--exclude-assay ...] [--census-version ...]
+    cellxgene-harvester count-normal-cells FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...] [--h5ad-out ... --h5ad-url-prefix ...] [--source census --census-version ...]
     cellxgene-harvester final-cleanup FOLDER
     cellxgene-harvester export-datasets-csv FOLDER --output datasets.csv
 """
@@ -92,10 +92,10 @@ def resolve_hsapdv_command(
 
 @app.command(name="resolve-assay")
 def resolve_assay_command(
-    queries: List[str] = typer.Argument(..., help="Assay (technique) label(s) or EFO ID(s), e.g. 'spatial transcriptomics'"),
+    queries: List[str] = typer.Argument(..., help="The assay (technique) labels or EFO IDs you want, e.g. \"10x 3' v3\" EFO:0009900. Each is resolved on its own"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
 ):
-    """Step 0d: Resolve assay (technique) terms via OLS4 (EFO), for --exclude-assay in step 5"""
+    """Step 0d: Resolve the assays (techniques) you want via OLS4 (EFO), for --assay in step 5"""
     resolve_assay.run_resolve_assay(queries, output_prefix)
 
 
@@ -145,17 +145,23 @@ def count_normal_cells_command(
     uberon:  Path = typer.Option(...,   help="UBERON JSON from resolve-uberon"),
     disease: Path = typer.Option(...,   help="Disease JSON from resolve-disease"),
     hsapdv:  Path = typer.Option(...,   help="HsapDv JSON from resolve-hsapdv --min-age N"),
-    exclude_assay: Optional[Path] = typer.Option(None, "--exclude-assay", help="Assay JSON from resolve-assay: its cells are left out of the filtered counts (negative selection)"),
-    census_version: str = typer.Option("latest", "--census-version", help="Census release to read (default: latest)"),
+    assay: Optional[Path] = typer.Option(None, "--assay", help="Assay JSON from resolve-assay: only the cells of these assays are counted on the filtered side"),
+    source: str = typer.Option("h5ad", "--source", help="Where the cells are read: h5ad (the dataset's h5ad file, default) or census"),
+    h5ad_out: Optional[Path] = typer.Option(None, "--h5ad-out", help="Folder for the filtered h5ad files (default: <input>_h5ad)"),
+    h5ad_url_prefix: Optional[str] = typer.Option(None, "--h5ad-url-prefix", help="Public address where the filtered h5ad files are published, e.g. s3://bucket/prod/kidney (a temporary choice until the location is set)"),
+    census_version: str = typer.Option("latest", "--census-version", help="Census release to read, with --source census (default: latest)"),
 ):
-    """Step 5: Count source and filtered cells via CellxGene Census"""
+    """Step 5: Count source and filtered cells, and write the filtered cells to an h5ad file"""
     count_normal_cells.run_count_normal_cells(
         folder=str(input),
         uberon_json=str(uberon),
         disease_json=str(disease),
         hsapdv_json=str(hsapdv),
-        exclude_assay_json=str(exclude_assay) if exclude_assay else None,
+        assay_json=str(assay) if assay else None,
         census_version=census_version,
+        source=source,
+        h5ad_out=str(h5ad_out) if h5ad_out else None,
+        h5ad_url_prefix=h5ad_url_prefix,
     )
 
 

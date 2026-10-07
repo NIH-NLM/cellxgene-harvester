@@ -13,11 +13,11 @@ ones are listed in the log.
 Usage:
 1. Python module execution:
 python -m harvester.export_datasets_csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-        --output 2026-08-03-run/homo_sapiens_kidney_nsforest_datasets.csv
+        --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-        --output 2026-08-03-run/homo_sapiens_kidney_nsforest_datasets.csv
+        --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
 """
 
 import glob
@@ -30,7 +30,7 @@ from harvester.logger import setup_logger, log_command, log_counts, log_finish
 COLUMNS = [
     "reference", "collection_name", "dataset_title", "author_cell_type", "embedding",
     "first_author", "journal", "year", "doi", "collection_url", "explorer_url",
-    "disease", "dataset_id", "dataset_version_id", "filter_normal", "h5ad_url",
+    "disease", "dataset_id", "dataset_version_id", "h5ad_url",
 ]
 
 # sc-nsforest-qc-nf passes the disease column to scsilhouette as one text, as
@@ -45,15 +45,6 @@ def list_files(folder):
 
 def text(value):
     """Empty cells are empty text, not "None"."""
-    return "" if value is None else str(value)
-
-
-def flag(value):
-    """True and False as the text True and False; None as empty text.
-
-    sc-nsforest-qc-nf applies its disease and age filters when this text is
-    exactly True.
-    """
     return "" if value is None else str(value)
 
 
@@ -76,8 +67,7 @@ def to_row(record):
         "disease": DISEASE_JOIN.join(record["source_disease"]),
         "dataset_id": text(dataset["dataset_id"]),
         "dataset_version_id": text(dataset["dataset_version_id"]),
-        "filter_normal": flag(record["curation"]["filter_normal"]),
-        "h5ad_url": text(dataset["h5ad_url"]),
+        "h5ad_url": text(record.get("filtered_h5ad_url") or dataset["h5ad_url"]),
     }
 
 
@@ -90,6 +80,9 @@ def select_records(paths, logger):
         if count is None:
             logger.warning(f"  NOT COUNTED, left out : {os.path.basename(path)}")
         elif count > 0:
+            if not record.get("filtered_h5ad_url"):
+                logger.warning(f"  NO filtered h5ad, the original CellxGene URL is used : "
+                               f"{os.path.basename(path)}")
             kept.append(record)
         else:
             logger.info(f"  0 filtered cells, left out : {os.path.basename(path)}")
@@ -101,11 +94,6 @@ def export_folder(folder, output_csv, logger):
     paths = list_files(folder)
     records = select_records(paths, logger)
     log_counts(logger, "datasets with filtered cells", before=len(paths), after=len(records))
-    empty = [r["dataset"]["dataset_id"] for r in records if r["curation"]["filter_normal"] is None]
-    if empty:
-        logger.warning(f"  WARNING: filter_normal is empty for {len(empty)} datasets. "
-                       f"Set it to true or false in the curation block of each JSON file. "
-                       f"sc-nsforest-qc-nf applies its disease and age filters only when it is True.")
     write_csv(output_csv, COLUMNS, [to_row(r) for r in records])
     return len(records)
 

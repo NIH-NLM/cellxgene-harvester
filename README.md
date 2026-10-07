@@ -3,7 +3,7 @@
 [![Build and Publish Docker image to GHCR](https://github.com/NIH-NLM/cellxgene-harvester/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/NIH-NLM/cellxgene-harvester/actions/workflows/docker-publish.yml)
 [![Build and Deploy Sphinx Documentation](https://github.com/NIH-NLM/cellxgene-harvester/actions/workflows/docs.yml/badge.svg)](https://github.com/NIH-NLM/cellxgene-harvester/actions/workflows/docs.yml)
 
-Harvest, filter, and count normal cells from the [CellxGene Census](https://chanzuckerberg.github.io/cellxgene-census/) using ontology-based filtering (UBERON tissue, PATO/MONDO disease, HsapDv age).
+Harvest, filter, and count normal cells of the CellxGene datasets using ontology-based filtering (UBERON tissue, PATO/MONDO disease, HsapDv age). The cells are read from the h5ad file of each dataset, and the cells that pass the filters are written to a new, filtered h5ad file that [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) reads. The [CellxGene Census](https://chanzuckerberg.github.io/cellxgene-census/) is still available as another source (`--source census`).
 
 ---
 
@@ -11,36 +11,39 @@ Harvest, filter, and count normal cells from the [CellxGene Census](https://chan
 
 The pipeline separates **ontology resolution** (Steps 0a–0d) from **data collection** (Steps 1–7).
 
-The three resolve steps are run **once per organ/disease/age threshold** and produce JSON files that encode the full ontology hierarchy for that scope. These JSON files then flow through every filtering step in cellxgene-harvester and are also consumed directly by [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) for cell-level filtering inside `.h5ad` files — giving both pipelines a shared, reproducible filter definition.
+The resolve steps are run **once per organ, disease, age threshold and (optionally) set of assays** and produce JSON files that encode the full ontology hierarchy for that scope. These JSON files then flow through every filtering step in cellxgene-harvester and are also consumed directly by [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) for cell-level filtering inside `.h5ad` files — giving both pipelines a shared, reproducible filter definition.
 
 All filters use a uniform `.isin(obo_ids)` pattern against `*_ontology_term_id` columns. No text matching. No hardcoded disease strings. No numeric age comparisons in filter code.
 
 ```
-Steps 0a–0d  (resolve — run once per scope, reuse across all datasets; 0d, the assay file, is optional)
-┌──────────────────┐  ┌─────────────────┐  ┌──────────────────┐
-│ resolve-uberon   │  │ resolve-disease  │  │ resolve-hsapdv   │
-│ kidney           │  │ normal           │  │ --min-age 15     │
-└────────┬─────────┘  └────────┬────────┘  └────────┬─────────┘
-         │                     │                     │
-  uberon_kidney.json   disease_normal.json   hsapdv_adult_15.json
-         │                     │                     │
-         ▼                     ▼                     │
-Steps 1–3  (fetch + flatten + enrich CellxGene metadata)
-         │                     │                     │
-         ▼                     ▼                     │
-Step 4   filter-datasets    (uberon + disease JSON; hsapdv recorded)
-         │   one {dataset_id}.filtered.json for each dataset kept
-         ▼                                           ▼
-Step 5   count-normal-cells (uberon + disease + hsapdv JSON)
-         │   fills source_ and filtered_ values in each JSON
+Steps 0a–0d  (resolve — run once per scope, reuse across all datasets)
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ resolve-uberon  │ │ resolve-disease │ │ resolve-hsapdv  │ │ resolve-assay   │
+│ kidney          │ │ normal          │ │ --min-age 15    │ │ (optional)      │
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+         │                   │                   │                   │
+  uberon_kidney.json  disease_normal.json  hsapdv_adult_15.json  assay_<name>.json
+         │                   │                   │                   │
+         ▼                   ▼                   │                   │
+Steps 1–3  (fetch + flatten + enrich CellxGene metadata)             │
+         │                   │                   │                   │
+         ▼                   ▼                   │                   │
+Step 4   filter-datasets    (uberon + disease JSON; hsapdv recorded) │
+         │   one {dataset_id}.filtered.json for each dataset kept    │
+         ▼                                       ▼                   ▼
+Step 5   count-normal-cells (uberon + disease + hsapdv JSON;
+         │                   only the cells of the assays in the assay file are counted)
+         │   fills source_ and filtered_ values in each JSON, reading the dataset's h5ad file
+         │   writes {dataset_id}.filtered.h5ad (the cells that pass) and filtered_h5ad_url
          ▼
 Step 6   final-cleanup ──► 2026-08-03-run/homo_sapiens_kidney_harvester/  (JSON files)
          │
          ▼
 Step 7   export-datasets-csv ──► CSV for sc-nsforest-qc-nf
 
-The same three JSON files are passed to sc-nsforest-qc-nf
+The uberon, disease and hsapdv JSON files are also passed to sc-nsforest-qc-nf
 for cell-level h5ad filtering (filter_adata, compute_scsilhouette).
+The assay file is an allow-list: only the cells of the assays in it are counted.
 ```
 
 ---
@@ -147,18 +150,32 @@ cellxgene-harvester resolve-hsapdv --min-age 15 --output-prefix 2026-08-03-run/h
 
 ### Step 0d — resolve-assay
 
-**Input:** Assay (technique) label(s) or EFO ID(s)
+**Input:** The assay (technique) labels or EFO IDs you want
 **Output:** `<run folder>/assay_{name}.json` + `.csv`
 
-Works as Steps 0a and 0b do. Each query is a root term: an exact label match in EFO is chosen without asking, any other label shows the top matches and asks which to use, and an EFO ID is taken as given. The file holds the root terms and all hierarchical descendants, in the same layout as the other resolve files.
+You give the assays you **want**. Each one is resolved on its own: there is no root term and no descendants. Every assay that resolves is written to the file and used in the filter step. A label that does not resolve is listed under `unresolved` in the JSON and in the log, and is skipped. Nothing is asked and nothing is chosen for you: a label must match one EFO term exactly (ignoring case), or be an EFO ID.
 
 ```bash
-cellxgene-harvester resolve-assay "spatial transcriptomics" MERFISH
+cellxgene-harvester resolve-assay "10x 3' v3" "10x 3' v2" "Smart-seq2" EFO:0009900 \
+    --output-prefix 2026-08-03-run/assay_published
 ```
 
-The file is used as a **negative selection**: `count-normal-cells --exclude-assay FILE` leaves the cells whose assay ontology id is in the file out of the filtered counts.
+The file has this layout:
 
-Give every technique its own root term. In EFO, Visium and Slide-seqV2 are under `spatial transcriptomics` (EFO:0008994), but MERFISH is under `smFISH` and `in-situ hybridization assay`, not under `spatial transcriptomics`. As of 2026-10-05, `spatial transcriptomics` plus `MERFISH` gives 30 terms.
+```json
+{
+  "queries":    ["10x 3' v3", "Smart-seq2", "not an assay"],
+  "assays":     [{"query": "10x 3' v3", "obo_id": "EFO:0009922", "label": "10x 3' v3"},
+                 {"query": "Smart-seq2", "obo_id": "EFO:0008931", "label": "Smart-seq2"}],
+  "unresolved": ["not an assay"],
+  "obo_ids":    ["EFO:0009922", "EFO:0008931"],
+  "total":      2
+}
+```
+
+The file is an **allow-list**: `count-normal-cells --assay FILE` counts, on the filtered side, only the cells whose assay ontology id is in the file. Every other assay is left out by not being in the file. No spatial technique is in the list, so none is counted. **Read the `unresolved` list**: a label that did not resolve is left out too.
+
+**The assays of the published datasets (2026-10-07).** The 73 published datasets use 12 assays, all single-cell RNA methods: 10x 3' v1 (`EFO:0009901`), 10x 3' v2 (`EFO:0009899`), 10x 3' v3 (`EFO:0009922`), 10x 5' v1 (`EFO:0011025`), 10x 5' v2 (`EFO:0009900`), 10x 5' transcription profiling (`EFO:0030004`), 10x multiome (`EFO:0030059`), CEL-seq2 (`EFO:0010010`), Smart-seq2 (`EFO:0008931`), Seq-Well S3 (`EFO:0030019`), microwell-seq (`EFO:0030002`) and BD Rhapsody Targeted mRNA (`EFO:0700004`). All 12 labels resolve exactly.
 
 **Why the assay ontology and not text.** CellxGene gives every dataset a list of assays as EFO ids. In the collections file of 2026-08-03 (2210 dataset versions), 673 have a Visium Spatial Gene Expression V1 (EFO:0022857, 350), Slide-seqV2 (EFO:0030062, 310) or MERFISH (EFO:0008992, 13) assay. The earlier text rule (the words `spatial`, `visium`, `slide-seq`, `merfish` and others in the title, disease or tissue) was tested against that:
 
@@ -251,7 +268,7 @@ cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
 | Organism | Label match on `organism` column | Only with `--organism`; if it is left out, no organism filter is applied. Step 5 reads human data only |
 | Optional | `--no-preprints` | Excludes preprints |
 
-There are no cancer or spatial text filters. The disease file decides which disease states count: a dataset with `[cancer, normal]` is kept, and Step 5 counts only its normal cells. A technique is screened by its assay ontology id, with `--exclude-assay` in Step 5. Text matching on these words was removed on 2026-10-05 (see [Step 0d](#step-0d--resolve-assay)).
+There are no cancer or spatial text filters. The disease file decides which disease states count: a dataset with `[cancer, normal]` is kept, and Step 5 counts only its normal cells. A technique is selected by its assay ontology id: only the assays in the file given to `--assay` in Step 5 are counted. Text matching on these words was removed on 2026-10-05 (see [Step 0d](#step-0d--resolve-assay)).
 
 **HsapDv age is NOT applied here.** `development_stage_ontology_term_id` is absent at the dataset level; it is only available at the cell level via Census in Step 5. The `--hsapdv` file is only recorded, so the age choice is on file from this step on.
 
@@ -263,22 +280,30 @@ The Step 2 CSV keeps its `" | "` joined cells. Step 4 is the one place they are 
 
 ### Step 5 — count-normal-cells
 
-**Input:** the Step 4 folder + all three resolve JSON files
-**Output:** the same JSON files, updated in place
+**Input:** the Step 4 folder + all three resolve JSON files (and the h5ad file of each dataset)
+**Output:** the same JSON files, updated in place, and one filtered h5ad file for each dataset that has cells after filtering
 
-Opens Census once and reads the obs table of each whole dataset (not the expression matrix). The counts are made on both sides of every pair:
+Reads the h5ad file of each dataset in backed mode: only the cell metadata (obs) is loaded, not the expression matrix. The counts are made on both sides of every pair:
 
 ```bash
 cellxgene-harvester count-normal-cells 2026-08-03-run/homo_sapiens_kidney_harvester \
     --uberon  2026-08-03-run/uberon_kidney.json \
     --disease 2026-08-03-run/disease_normal.json \
-    --hsapdv  2026-08-03-run/hsapdv_adult_15.json
+    --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+    --h5ad-out 2026-08-03-run/homo_sapiens_kidney_harvester_h5ad \
+    --h5ad-url-prefix s3://my-public-bucket/prod/kidney
 ```
+
+**Where the cells come from.** `--source h5ad` (the default) reads the file at the dataset's `h5ad_url` (a local path, or an http or https address that is downloaded for the count and deleted afterwards). An `s3://` address must be staged as a local file first (the Nextflow workflow does this). The file must hold the `donor_id` column and a label and an ontology id column for each of the six facets; a missing column stops that dataset with a message that names it. `--source census` reads the Census instead (see below); nothing is written then.
+
+**The filtered h5ad file.** The cells that pass the filters are written, with their expression matrix, obs, var, obsm and uns, to `<h5ad-out>/<dataset_id>.filtered.h5ad` (default folder `<input>_h5ad`, gzip compressed). `filtered_h5ad_url` in the JSON says where it is published: `<h5ad-url-prefix>/<dataset_id>.filtered.h5ad`, or the path of the file written when no prefix is given. A dataset with no cells after filtering gets no file and a `filtered_h5ad_url` of `null`. The input h5ad file is never changed. Step 7 puts this address in the CSV, and sc-nsforest-qc-nf reads that file.
+
+> **The public location of the filtered files is not set yet.** The files must end up in a public S3 bucket on the STRIDES account, where Lifebit runs. Until it is known, give the placeholder you want as `--h5ad-url-prefix`. When the location is known, it is the only value that changes.
 
 **Per dataset:**
 
 ```
-source_*    all cells of the dataset in Census
+source_*    all cells of the dataset
 
 filtered_*  the cells that pass all three filters, each an .isin(obo_ids) check:
   tissue_ontology_term_id            in the uberon ids
@@ -286,17 +311,17 @@ filtered_*  the cells that pass all three filters, each an .isin(obo_ids) check:
   development_stage_ontology_term_id in the hsapdv ids
 ```
 
-**Negative selection by technique.** `--exclude-assay FILE` (a file from [Step 0d](#step-0d--resolve-assay)) leaves the cells whose assay ontology id is in the file out of the filtered counts. They stay in the source counts, so the file shows what was left out. The file is recorded under `filter_choices.exclude_assay` (path, queries, root terms, term count, SHA-256). Without the option nothing is left out.
+**Selecting the assays.** `--assay FILE` (a file from [Step 0d](#step-0d--resolve-assay)) counts, on the filtered side, only the cells whose assay ontology id is in the file. The cells of the other assays stay in the source counts, so the file shows what was left out. The file is recorded under `filter_choices.assay` (path, queries, the resolved assays, the unresolved labels, term count, SHA-256). Without the option no assay is left out.
 
-**Census release.** `--census-version` chooses the release and defaults to `latest`. The release that was read is recorded in each file as `filter_choices.census_version`. A release holds the datasets that existed when it was built: the release of 2025-11-17 holds 1852 of the 2210 dataset versions in the collections file of 2026-08-03, so the other 358 have no cells in it and finish with a `source_cell_count` of 0 from Census and a `filtered_cell_count` of 0, and Step 6 deletes them. That release also holds no cell, human or mouse, with any of the 30 spatial technique ids of `resolve-assay "spatial transcriptomics" MERFISH`, so against this release `--exclude-assay` removes nothing; the spatial datasets already have 0 cells in Census. Check the release before a run.
+**Census release (`--source census` only).** `--census-version` chooses the release and defaults to `latest`. The release that was read is recorded in each file as `filter_choices.census_version`. With the h5ad source the file read is recorded instead, as `filter_choices.h5ad.file`, and there is no `census_version`. A release holds the datasets that existed when it was built: the release of 2025-11-17 holds 1852 of the 2210 dataset versions in the collections file of 2026-08-03, so the other 358 have no cells in it and finish with a `source_cell_count` of 0 from Census and a `filtered_cell_count` of 0, and Step 6 deletes them. That release also holds no cell, human or mouse, with any of 30 spatial technique ids (the terms under `spatial transcriptomics` and `MERFISH` in EFO, resolved on 2026-10-05), so the spatial datasets already have 0 cells in Census. Check the release before a run.
 
 **`is_primary_data` is not used as a filter.** As of 2026-10-05, `is_primary_data == True` is an unreliable filter, so Step 5 does not read it and it changes no count. The filtered side is tissue, disease and age only. Revisit this before using it.
 
-Each file is written as soon as its dataset is counted. A file that already has a `filtered_cell_count` is skipped, so a stopped run can be started again. The step also records the three filter files used (path, SHA-256) and the Census release, and warns if a file is not the one recorded in Step 4.
+Each file is written as soon as its dataset is counted. A file that already has a `filtered_cell_count` is skipped, so a stopped run can be started again. The step also records the three filter files used (path, SHA-256) and the h5ad file (or the Census release), and warns if a file is not the one recorded in Step 4.
 
 Only values that occur in the cells are counted. The old CSV listed about 150 development stages with a count of 0 (every stage of the HsapDv ontology). A `filtered_` summary now has the same ids as its `source_` summary, with 0 where the filter removed every cell of an id.
 
-**Single dataset:** `python -m harvester.count_normal_cells_single --record FILE ...` counts one file with the same code, for running one dataset at a time.
+**Single dataset:** `python -m harvester.count_normal_cells_single --record FILE ...` counts one file with the same code, for running one dataset at a time. `--h5ad FILE` reads a local file instead of the record's `h5ad_url`; `--h5ad-out` and `--h5ad-url-prefix` work as above.
 
 ---
 
@@ -322,15 +347,16 @@ sc-nsforest-qc-nf reads its datasets from a CSV. This step writes that CSV from 
 
 ```bash
 cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-    --output 2026-08-03-run/homo_sapiens_kidney_nsforest_datasets.csv
+    --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
 ```
 
-**Columns:** `reference`, `collection_name`, `dataset_title`, `author_cell_type`, `embedding`, `first_author`, `journal`, `year`, `doi`, `collection_url`, `explorer_url`, `disease`, `dataset_id`, `dataset_version_id`, `filter_normal`, `h5ad_url`. These are the columns sc-nsforest-qc-nf uses, plus `dataset_id`.
+**Columns:** `reference`, `collection_name`, `dataset_title`, `author_cell_type`, `embedding`, `first_author`, `journal`, `year`, `doi`, `collection_url`, `explorer_url`, `disease`, `dataset_id`, `dataset_version_id`, `h5ad_url`. These are the columns sc-nsforest-qc-nf uses, plus `dataset_id`.
 
 - A dataset whose `filtered_cell_count` is 0 or empty is left out. The empty ones are listed in the log.
-- `filter_normal` is the `curation.filter_normal` value, written as the text `True` or `False`, or empty if it was never set. sc-nsforest-qc-nf applies its disease and age filters to the h5ad only when the text is exactly `True`. The log warns how many datasets have it empty.
+- There is no `filter_normal` column. The `sc-nsforest-qc-nf` command has `--filter-normal / --no-filter-normal` with the default on, and its workflow only ever passes `--filter-normal` or nothing, so the filter was always on and the column had no effect. It was removed on 2026-10-07.
 - `disease` is the `source_disease` labels joined with ` | `, the same text the Step 2 CSV held. sc-nsforest-qc-nf passes it on to `scsilhouette --disease` as one text. This is the only place a list is joined back into text.
 - `year` is an integer (`2023`). The earlier Step 4 output wrote `2023.0`, and that text ended up in sc-nsforest-qc-nf's published folder names.
+- `h5ad_url` is the `filtered_h5ad_url` of the JSON, the filtered file that sc-nsforest-qc-nf reads. A dataset without one gets the original CellxGene address and a warning in the log.
 - The CSV has no counts. Counts are in the JSON files.
 - Values can hold commas, so the file is quoted. Nextflow's `splitCsv` does not read quotes unless it is given `quote: '"'`. Without it, a row with a comma in a title is read with its columns shifted. sc-nsforest-qc-nf's `main.nf` needs `.splitCsv(header: true, sep: ',', quote: '"')`.
 
@@ -344,11 +370,12 @@ One file for each dataset, `{dataset_id}.filtered.json`. Keys are flat. Every `s
 |-----|---------|
 | `schema_version` | `"1.0"` |
 | `dataset` | Dataset and collection ids, titles, `first_author`, `journal`, `year` (integer), `doi`, URLs, `organism`, `is_preprint` (true or false), `visibility` |
-| `curation` | `reference`, `author_cell_type`, `embedding`, `filter_normal`. Set by hand after the first pass. A later run of Step 4 keeps the values already in the file. `filter_normal` has no default: it starts as `null` and is set to `true` or `false` by hand (it is never read from the CSV) |
+| `curation` | `reference`, `author_cell_type`, `embedding`. Set by hand after the first pass. A later run of Step 4 keeps the values already in the file |
 | `organ` | `name` and `uberon_id` of the one root term given to `resolve-uberon`, for example `respiratory system`. An organ has one root term: a resolve file with more than one is refused in Step 4. The respiratory system is resolved with the one query `respiratory system`; `nose` is not added to cover the CellxGene annotation error |
-| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease` and `hsapdv` (and after Step 5 `exclude_assay`, if used) the file, queries, root terms, term count and SHA-256 (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `census_version` |
+| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease` and `hsapdv` (and after Step 5 `assay`, if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
 | `source_cell_count`, `filtered_cell_count` | Cells before and after the filters. After Step 4 the source count is the CellxGene API total and the filtered count is `null` |
 | `source_donor_count`, `filtered_donor_count` | Donors before and after the filters (`null` until Step 5) |
+| `filtered_h5ad_url` | Where the filtered h5ad file is published (`null` until Step 5, and when no cell passes) |
 | `source_X`, `filtered_X` | Labels of facet X |
 | `source_X_ontology_id`, `filtered_X_ontology_id` | Ontology ids of facet X |
 | `source_X_ontology_id_summary`, `filtered_X_ontology_id_summary` | Ontology id to cell count |
@@ -368,7 +395,7 @@ Empty lists, empty summaries and `null` mean the dataset has not been counted ye
 cellxgene-harvester resolve-uberon kidney
 cellxgene-harvester resolve-disease normal
 cellxgene-harvester resolve-hsapdv --min-age 15
-cellxgene-harvester resolve-assay "spatial transcriptomics" MERFISH   # optional, a negative selection
+cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2" EFO:0009900   # optional: the assays you want
 
 # ── Steps 1–3: collect and enrich CellxGene metadata ──────────────────────
 cellxgene-harvester fetch-collections
@@ -383,20 +410,21 @@ cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
     --organism "Homo sapiens" \
     --output  2026-08-03-run/homo_sapiens_kidney_harvester
 
-# ── Step 5: count source and filtered cells via Census ────────────────────
+# ── Step 5: count source and filtered cells, write the filtered h5ad files ─
 cellxgene-harvester count-normal-cells 2026-08-03-run/homo_sapiens_kidney_harvester \
     --uberon  2026-08-03-run/uberon_kidney.json \
     --disease 2026-08-03-run/disease_normal.json \
     --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-    --exclude-assay 2026-08-03-run/assay_spatial_transcriptomics.json \
-    --census-version latest
+    --assay 2026-08-03-run/assay_published.json \
+    --h5ad-out 2026-08-03-run/homo_sapiens_kidney_harvester_h5ad \
+    --h5ad-url-prefix s3://my-public-bucket/prod/kidney   # placeholder until the public location is set
 
 # ── Step 6: delete the datasets with no cells after filtering ─────────────
 cellxgene-harvester final-cleanup 2026-08-03-run/homo_sapiens_kidney_harvester
 
 # ── Step 7: write the datasets CSV for sc-nsforest-qc-nf ──────────────────
 cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-    --output 2026-08-03-run/homo_sapiens_kidney_nsforest_datasets.csv
+    --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
 ```
 
 ---
@@ -416,13 +444,13 @@ cellxgene-harvester ships Nextflow process modules in `modules/harvester/` for d
 | `generate_metadata.nf` | `GENERATE_METADATA` | 2 | Flatten to datasets CSV |
 | `append_dataset_details.nf` | `APPEND_DATASET_DETAILS` | 3 | Enrich with URLs and counts |
 | `filter_datasets.nf` | `FILTER_DATASETS` | 4 | Ontology ID filtering, no scatter |
-| `count_normal_cells_single.nf` | `COUNT_NORMAL_CELLS_SINGLE` | 5 | **Scatter**: one Census query per dataset |
+| `count_normal_cells_single.nf` | `COUNT_NORMAL_CELLS_SINGLE` | 5 | **Scatter**: one h5ad file per dataset |
 
 > **Nextflow modules:** `FILTER_DATASETS` and `COUNT_NORMAL_CELLS_SINGLE` still describe the earlier CSV input and output of Steps 4 and 5 and are not updated. A Nextflow workflow for the current JSON steps belongs in a separate repository, `cellxgene-harvester-nf`, that runs the cellxgene-harvester container.
 
 ### Shared JSON files with sc-nsforest-qc-nf
 
-The same three JSON files produced by Steps 0a–0c are passed to the `FILTER_ADATA` and `COMPUTE_SCSILHOUETTE` modules in sc-nsforest-qc-nf for **cell-level** filtering inside `.h5ad` files. This ensures the dataset-level filter (Step 4), the Census cell-count filter (Step 5), and the h5ad cell filter applied by scsilhouette all use identical ontology scope — no drift between pipeline stages.
+The same three JSON files produced by Steps 0a–0c are passed to the `FILTER_ADATA` and `COMPUTE_SCSILHOUETTE` modules in sc-nsforest-qc-nf for **cell-level** filtering inside `.h5ad` files. This ensures the dataset-level filter (Step 4), the cell-count filter (Step 5), and the h5ad cell filter applied by scsilhouette all use identical ontology scope — no drift between pipeline stages.
 
 ```nextflow
 // cellxgene-harvester produces JSON files:
@@ -440,6 +468,8 @@ COMPUTE_SCSILHOUETTE(meta, filtered_h5ad, uberon_json, disease_json, hsapdv_json
 ## Docker Container
 
 The container is published to GHCR and is the runtime for all Nextflow modules.
+
+The image is built automatically on every commit to any branch and published as `ghcr.io/nih-nlm/cellxgene-harvester:<branch name>` and `:sha-<commit>`. A commit to `main` also gives `:latest` and `:1.0.0` (the version in `pyproject.toml`); a `v*` tag gives its version tag. To test a branch, use its branch tag.
 
 ```bash
 # Pull
@@ -492,7 +522,7 @@ pip install -e ".[test]"
 python -m pytest tests -v
 ```
 
-Each test states what it checks, the input, and what counts as a pass. The tests use made-up Census tables and do not need a network connection.
+Each test states what it checks, the input, and what counts as a pass. The tests use made-up tables and tiny h5ad files built in the test, and do not need a network connection. One test uses the mini kidney h5ad file (`nlm-ckn/data/test/kidney/h5ad/minilake.h5ad.tar.gz`, 3566 cells) and is skipped unless `HARVESTER_MINI_H5AD` is set to the unpacked file. No other h5ad file is downloaded for testing.
 
 ---
 
@@ -503,7 +533,7 @@ Each step is necessary and sufficient:
 - **Steps 0a–0c**: Define scope ontologically — run once, reuse for all downstream filtering
 - **Steps 1–3**: Collect and enrich CellxGene metadata — stable between Census releases, cache aggressively
 - **Step 4**: Fast pre-filter on ~2,000 datasets using ontology IDs — reduces to ~30–40 candidates
-- **Step 5**: Expensive Census queries only on filtered candidates — scatter across ~30–40 datasets
+- **Step 5**: Expensive h5ad reads only on filtered candidates, and only the cell metadata until the filtered cells are written — scatter across ~30–40 datasets
 - **Step 6**: Remove zero-count rows — clean final output for sc-nsforest-qc-nf
 
 No redundant API calls. No unnecessary data movement. No text matching where ontology IDs exist.

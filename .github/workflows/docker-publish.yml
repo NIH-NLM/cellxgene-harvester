@@ -1,9 +1,14 @@
 name: Build and Publish Docker image to GHCR
 
+# The image is built on every commit to any branch, and on a v* tag.
+#   every branch : ghcr.io/nih-nlm/cellxgene-harvester:<branch name> and :sha-<commit>
+#   main         : also :latest and :<version of pyproject.toml>, for example :1.0.0
+#   tag v1.0     : :1.0
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
     tags:    [ 'v*' ]
+  workflow_dispatch:      # also manual (Actions tab > Run workflow)
 
 jobs:
   build-and-push:
@@ -23,6 +28,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read the version
+        id: version
+        run: echo "value=$(grep -m1 '^version' pyproject.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -30,6 +39,8 @@ jobs:
           images: ghcr.io/nih-nlm/cellxgene-harvester
           tags: |
             type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=raw,value=${{ steps.version.outputs.value }},enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 

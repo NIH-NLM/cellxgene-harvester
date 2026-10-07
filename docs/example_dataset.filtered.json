@@ -21,8 +21,7 @@
   "curation": {
     "reference": "unk",
     "author_cell_type": "",
-    "embedding": "",
-    "filter_normal": null
+    "embedding": ""
   },
   "organ": {
     "name": "neocortex",
@@ -91,25 +90,76 @@
       "min_age": 15.0
     },
     "harvester_version": "1.0.0",
-    "run_date": "2026-10-05",
-    "exclude_assay": {
-      "file": "2026-08-03-run/assay_spatial_transcriptomics.json",
+    "run_date": "2026-10-07",
+    "assay": {
+      "file": "2026-08-03-run/assay_published.json",
       "queries": [
-        "spatial transcriptomics",
-        "MERFISH"
+        "10x 3' v3",
+        "10x 3' v2",
+        "10x 5' v1",
+        "10x 5' v2",
+        "10x 3' v1",
+        "CEL-seq2",
+        "10x 5' transcription profiling",
+        "Smart-seq2",
+        "Seq-Well S3",
+        "microwell-seq",
+        "BD Rhapsody Targeted mRNA",
+        "10x multiome"
       ],
-      "root_terms": [
+      "assays": [
         {
-          "obo_id": "EFO:0008994",
-          "label": "spatial transcriptomics"
+          "obo_id": "EFO:0009922",
+          "label": "10x 3' v3"
         },
         {
-          "obo_id": "EFO:0008992",
-          "label": "MERFISH"
+          "obo_id": "EFO:0009899",
+          "label": "10x 3' v2"
+        },
+        {
+          "obo_id": "EFO:0011025",
+          "label": "10x 5' v1"
+        },
+        {
+          "obo_id": "EFO:0009900",
+          "label": "10x 5' v2"
+        },
+        {
+          "obo_id": "EFO:0009901",
+          "label": "10x 3' v1"
+        },
+        {
+          "obo_id": "EFO:0010010",
+          "label": "CEL-seq2"
+        },
+        {
+          "obo_id": "EFO:0030004",
+          "label": "10x 5' transcription profiling"
+        },
+        {
+          "obo_id": "EFO:0008931",
+          "label": "Smart-seq2"
+        },
+        {
+          "obo_id": "EFO:0030019",
+          "label": "Seq-Well S3"
+        },
+        {
+          "obo_id": "EFO:0030002",
+          "label": "microwell-seq"
+        },
+        {
+          "obo_id": "EFO:0700004",
+          "label": "BD Rhapsody Targeted mRNA"
+        },
+        {
+          "obo_id": "EFO:0030059",
+          "label": "10x multiome"
         }
       ],
-      "term_count": 30,
-      "sha256": "504e6e7a37114c79bbd972805551110901d06e3c41a51fdcfda9561db5ea49ab"
+      "unresolved": [],
+      "term_count": 12,
+      "sha256": "6bef460de324ae2cd74c4be7e008dc7294395d5851c994f3e624ee45f3870dd0"
     },
     "census_version": "2025-11-17"
   },
