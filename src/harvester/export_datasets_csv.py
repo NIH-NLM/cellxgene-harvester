@@ -70,7 +70,8 @@ def to_row(record):
         "doi": text(dataset["doi"]),
         "collection_url": text(dataset["collection_url"]),
         "explorer_url": text(dataset["explorer_url"]),
-        "disease": DISEASE_JOIN.join(record["source_disease"]),
+        "disease": DISEASE_JOIN.join(sorted(
+            term["label"] for term in record["source_disease"] if term["label"])),
         "dataset_id": text(dataset["dataset_id"]),
         "dataset_version_id": text(dataset["dataset_version_id"]),
         "h5ad_url": text(record.get("filtered_h5ad_url") or dataset["h5ad_url"]),

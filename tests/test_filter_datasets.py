@@ -13,10 +13,12 @@ import re
 
 from typer.testing import CliRunner
 
+import pytest
+
 from harvester import filter_datasets
 from harvester.cli import app
 from harvester.records import split_cell, to_bool, to_int
-from helpers import kidney_files, make_row, write_csv
+from helpers import ids, kidney_files, make_row, write_csv
 
 
 def run_step_4(tmp_path, rows, **options):
@@ -77,8 +79,58 @@ def test_disease_filter_is_inclusive(tmp_path):
                      disease_ontology_term_id="MONDO:0004975 | PATO:0000461")]
     out, _ = run_step_4(tmp_path, rows)
     record = read(out, "mixed")
-    assert record["source_disease"] == ["Alzheimer disease", "normal"]
-    assert record["source_disease_ontology_id"] == ["MONDO:0004975", "PATO:0000461"]
+    assert ids(record, "source_disease") == ["MONDO:0004975", "PATO:0000461"]
+    # from the CSV only the ids are used; the label and the count come from the cells in step 5
+    assert record["source_disease"][0] == {
+        "ontology_id": "MONDO:0004975", "label": None, "source_count": None}
+
+
+def write_assay_file(path, ids=("EFO:0009922",)):
+    """A file shaped like the output of resolve-assay."""
+    assays = [{"query": i, "obo_id": i, "label": f"label {i}"} for i in ids]
+    with open(path, "w") as f:
+        json.dump({"queries": list(ids), "assays": assays, "unresolved": [],
+                   "obo_ids": list(ids), "total": len(ids)}, f)
+    return str(path)
+
+
+def test_assay_filter_is_inclusive_and_recorded(tmp_path):
+    """Input: three datasets, one with 10x only, one with 10x and Visium, one with
+    Visium only, and an assay file that lists 10x. Pass: the first two are kept; every
+    kept file records the assay choice, with its file, the resolved assay and its SHA-256."""
+    rows = [make_row(dataset_id="tenx", assay_ontology_term_id="EFO:0009922"),
+            make_row(dataset_id="both", assay_ontology_term_id="EFO:0009922 | EFO:0022857"),
+            make_row(dataset_id="visium", assay_ontology_term_id="EFO:0022857")]
+    assay = write_assay_file(tmp_path / "assay_published.json")
+    out, _ = run_step_4(tmp_path, rows, assay_json=assay)
+    assert written(out) == ["both.filtered.json", "tenx.filtered.json"]
+    choice = read(out, "tenx")["filter_choices"]["assay"]
+    assert choice["file"] == assay and choice["assays"] == [
+        {"obo_id": "EFO:0009922", "label": "label EFO:0009922"}]
+    assert choice["unresolved"] == [] and len(choice["sha256"]) == 64
+    assert "root_terms" not in choice
+    assert read(out, "both")["source_assay"] == [
+        {"ontology_id": "EFO:0009922", "label": None, "source_count": None},
+        {"ontology_id": "EFO:0022857", "label": None, "source_count": None}]
+
+
+def test_without_an_assay_file_no_assay_is_screened(tmp_path):
+    """Input: a Visium dataset and no assay file. Pass: it is kept and no assay choice
+    is recorded."""
+    out, _ = run_step_4(tmp_path, [make_row(dataset_id="visium", assay_ontology_term_id="EFO:0022857")])
+    assert written(out) == ["visium.filtered.json"]
+    assert "assay" not in read(out, "visium")["filter_choices"]
+
+
+def test_an_input_without_assay_ids_stops_with_a_clear_message(tmp_path):
+    """Input: a CSV written before Step 2 filled the assay ids (the column is empty) and
+    an assay file. Pass: ValueError that says to run Steps 2 and 3 again, and nothing is
+    written, so an old file is never read as 'no dataset has a wanted assay'."""
+    rows = [make_row(dataset_id="old", assay_ontology_term_id="")]
+    assay = write_assay_file(tmp_path / "assay_published.json")
+    with pytest.raises(ValueError, match="Step 2"):
+        run_step_4(tmp_path, rows, assay_json=assay)
+    assert not os.path.exists(tmp_path / "out") or written(str(tmp_path / "out")) == []
 
 
 def test_organism_and_preprint_filters(tmp_path):
@@ -146,9 +198,9 @@ def test_record_counts_start_empty_and_source_cells_come_from_the_api(tmp_path):
     assert record["source_cell_count"] == 23197
     assert record["filtered_cell_count"] is None
     assert record["source_donor_count"] is None and record["filtered_donor_count"] is None
-    assert record["filtered_tissue"] == [] and record["filtered_disease_ontology_id_summary"] == {}
-    for facet in ("assay", "cell_type", "development_stage", "sex"):
-        assert record[f"source_{facet}"] == [] and record[f"filtered_{facet}_ontology_id_summary"] == {}
+    assert record["filtered_tissue"] == [] and record["filtered_disease"] == []
+    for facet in ("cell_type", "development_stage", "sex"):
+        assert record[f"source_{facet}"] == [] and record[f"filtered_{facet}"] == []
 
 
 def test_missing_total_cell_count_is_null(tmp_path):
@@ -157,18 +209,17 @@ def test_missing_total_cell_count_is_null(tmp_path):
     assert read(out, "d1")["source_cell_count"] is None
 
 
-def test_source_tissue_labels_and_ids_are_lists(tmp_path):
+def test_source_tissue_ids_become_term_objects(tmp_path):
     """Input: three tissues joined with ' | ' (as in the brain file). Pass: three
-    labels and three ids in two lists."""
+    term objects with their ids, and no label or count until step 5."""
     rows = [make_row(
         tissue="Brodmann (1909) area 4 | cervical spinal cord white matter | kidney",
         tissue_ontology_term_id="UBERON:0006099 | UBERON:0014474 | UBERON:0002113")]
     out, _ = run_step_4(tmp_path, rows)
     record = read(out, "d1")
-    assert record["source_tissue"] == [
-        "Brodmann (1909) area 4", "cervical spinal cord white matter", "kidney"]
-    assert record["source_tissue_ontology_id"] == [
+    assert ids(record, "source_tissue") == [
         "UBERON:0006099", "UBERON:0014474", "UBERON:0002113"]
+    assert all(t["label"] is None and t["source_count"] is None for t in record["source_tissue"])
 
 
 def test_organ_is_the_root_term_given_to_resolve_uberon(tmp_path):

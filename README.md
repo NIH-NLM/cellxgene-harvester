@@ -28,11 +28,11 @@ Steps 0a–0d  (resolve — run once per scope, reuse across all datasets)
 Steps 1–3  (fetch + flatten + enrich CellxGene metadata)             │
          │                   │                   │                   │
          ▼                   ▼                   │                   │
-Step 4   filter-datasets    (uberon + disease JSON; hsapdv recorded) │
+Step 4   filter-datasets    (uberon + disease + assay JSON; hsapdv recorded)
          │   one {dataset_id}.filtered.json for each dataset kept    │
          ▼                                       ▼                   ▼
 Step 5   count-normal-cells (uberon + disease + hsapdv JSON;
-         │                   only the cells of the assays in the assay file are counted)
+         │                   the assay file is applied again, to the cells)
          │   fills source_ and filtered_ values in each JSON, reading the dataset's h5ad file
          │   writes {dataset_id}.filtered.h5ad (the cells that pass) and filtered_h5ad_url
          ▼
@@ -44,7 +44,7 @@ Step 7   export-datasets-csv ──► homo_sapiens_kidney_harvester_final.csv (
 
 The uberon, disease and hsapdv JSON files are also passed to sc-nsforest-qc-nf
 for cell-level h5ad filtering (filter_adata, compute_scsilhouette).
-The assay file is an allow-list: only the cells of the assays in it are counted.
+The assay file is an allow-list: Step 4 keeps the datasets that have one of its assays, and Step 5 counts only the cells of those assays.
 ```
 
 ---
@@ -246,16 +246,17 @@ Slow (~10–20 min for ~2,000 datasets) but stable between CellxGene releases. U
 
 ### Step 4 — filter-datasets
 
-**Input:** `all_datasets_complete.csv` + `uberon_{organ}.json` + `disease_{state}.json` (+ `hsapdv_adult_{N}.json`, recorded only)
+**Input:** `all_datasets_complete.csv` + `uberon_{organ}.json` + `disease_{state}.json` (+ `assay_published.json`, + `hsapdv_adult_{N}.json`, recorded only)
 **Output:** a folder `<run folder>/homo_sapiens_{organ}_harvester/` with one `{dataset_id}.filtered.json` for each dataset that is kept
 
-Filters using **exact ontology ID matching** on the `tissue_ontology_term_id` and `disease_ontology_term_id` columns populated in Step 2.
+Filters using **exact ontology ID matching** on the `tissue_ontology_term_id`, `disease_ontology_term_id` and `assay_ontology_term_id` columns populated in Step 2.
 
 ```bash
 cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
     --uberon  2026-08-03-run/uberon_kidney.json \
     --disease 2026-08-03-run/disease_normal.json \
     --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+    --assay   2026-08-03-run/assay_published.json \
     --organism "Homo sapiens" \
     --output  2026-08-03-run/homo_sapiens_kidney_harvester
 ```
@@ -266,14 +267,15 @@ cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
 |--------|-------|-------|
 | Tissue | Keep if **any** of dataset's `tissue_ontology_term_id` values ∈ `uberon_obo_ids` | Multi-tissue datasets retained if they include the target |
 | Disease | Keep if **any** of dataset's `disease_ontology_term_id` values ∈ `disease_obo_ids` | `[normal, COVID-19]` retained — contains normal cells |
+| Assay | With `--assay`: keep if **any** of dataset's `assay_ontology_term_id` values ∈ `assay_obo_ids` | The same file is given to Step 5, which applies it to the cells. A dataset with two techniques is kept if one is wanted. The ids come from the CellxGene API through Step 2: a Step 2 file written before 2026-10-09 has none, and Step 4 then stops with a message to run Steps 2 and 3 again |
 | Organism | Label match on `organism` column | Only with `--organism`; if it is left out, no organism filter is applied. Step 5 reads human data only |
 | Optional | `--no-preprints` | Excludes preprints |
 
-There are no cancer or spatial text filters. The disease file decides which disease states count: a dataset with `[cancer, normal]` is kept, and Step 5 counts only its normal cells. A technique is selected by its assay ontology id: only the assays in the file given to `--assay` in Step 5 are counted. Text matching on these words was removed on 2026-10-05 (see [Step 0d](#step-0d--resolve-assay)).
+There are no cancer or spatial text filters. The disease file decides which disease states count: a dataset with `[cancer, normal]` is kept, and Step 5 counts only its normal cells. A technique is selected by its assay ontology id: the file given to `--assay` is applied to the datasets in Step 4 and to the cells in Step 5. Text matching on these words was removed on 2026-10-05 (see [Step 0d](#step-0d--resolve-assay)).
 
 **HsapDv age is NOT applied here.** `development_stage_ontology_term_id` is absent at the dataset level; it is only available at the cell level via Census in Step 5. The `--hsapdv` file is only recorded, so the age choice is on file from this step on.
 
-Each JSON file holds the dataset, the choices made here, the organ, and the source values for tissue and disease. The `filtered_` values are empty until Step 5. See [Output JSON](#output-json) below and the example in `docs/example_dataset.filtered.json`.
+Each JSON file holds the dataset, the choices made here (organism, preprints, and the uberon, disease, assay and hsapdv files), the organ, and the source ids for tissue, assay and disease (term objects with no label or count yet). The `filtered_` values are empty until Step 5. See [Output JSON](#output-json) below and the example in `docs/example_dataset.filtered.json`.
 
 The Step 2 CSV keeps its `" | "` joined cells. Step 4 is the one place they are read: each is split once into a list.
 
@@ -312,7 +314,7 @@ filtered_*  the cells that pass all three filters, each an .isin(obo_ids) check:
   development_stage_ontology_term_id in the hsapdv ids
 ```
 
-**Selecting the assays.** `--assay FILE` (a file from [Step 0d](#step-0d--resolve-assay)) counts, on the filtered side, only the cells whose assay ontology id is in the file. The cells of the other assays stay in the source counts, so the file shows what was left out. The file is recorded under `filter_choices.assay` (path, queries, the resolved assays, the unresolved labels, term count, SHA-256). Without the option no assay is left out.
+**Selecting the assays.** `--assay FILE` (the same file as in [Step 4](#step-4--filter-datasets), from [Step 0d](#step-0d--resolve-assay)) counts, on the filtered side, only the cells whose assay ontology id is in the file. The cells of the other assays stay in the source counts, so the file shows what was left out. The file is recorded under `filter_choices.assay` (path, queries, the resolved assays, the unresolved labels, term count, SHA-256). Without the option no assay is left out.
 
 **Census release (`--source census` only).** `--census-version` chooses the release and defaults to `latest`. The release that was read is recorded in each file as `filter_choices.census_version`. With the h5ad source the file read is recorded instead, as `filter_choices.h5ad.file`, and there is no `census_version`. A release holds the datasets that existed when it was built: the release of 2025-11-17 holds 1852 of the 2210 dataset versions in the collections file of 2026-08-03, so the other 358 have no cells in it and finish with a `source_cell_count` of 0 from Census and a `filtered_cell_count` of 0, and Step 6 deletes them. That release also holds no cell, human or mouse, with any of 30 spatial technique ids (the terms under `spatial transcriptomics` and `MERFISH` in EFO, resolved on 2026-10-05), so the spatial datasets already have 0 cells in Census. Check the release before a run.
 
@@ -376,15 +378,35 @@ One file for each dataset, `{dataset_id}.filtered.json`. Keys are flat. Every `s
 | `dataset` | Dataset and collection ids, titles, `first_author`, `journal`, `year` (integer), `doi`, URLs, `organism`, `is_preprint` (true or false), `visibility` |
 | `curation` | `reference`, `author_cell_type`, `embedding`. Set by hand after the first pass. A later run of Step 4 keeps the values already in the file |
 | `organ` | `name` and `uberon_id` of the one root term given to `resolve-uberon`, for example `respiratory system`. An organ has one root term: a resolve file with more than one is refused in Step 4. The respiratory system is resolved with the one query `respiratory system`; `nose` is not added to cover the CellxGene annotation error |
-| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease` and `hsapdv` (and after Step 5 `assay`, if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
+| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease`, `hsapdv` and `assay` (if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
 | `source_cell_count`, `filtered_cell_count` | Cells before and after the filters. After Step 4 the source count is the CellxGene API total and the filtered count is `null` |
 | `source_donor_count`, `filtered_donor_count` | Donors before and after the filters (`null` until Step 5) |
 | `filtered_h5ad_url` | Where the filtered h5ad file is published (`null` until Step 5, and when no cell passes) |
-| `source_X`, `filtered_X` | Labels of facet X |
-| `source_X_ontology_id`, `filtered_X_ontology_id` | Ontology ids of facet X |
-| `source_X_ontology_id_summary`, `filtered_X_ontology_id_summary` | Ontology id to cell count |
+| `source_X`, `filtered_X` | Facet X as a list of term objects, one for each ontology term that occurs in the dataset: `{"ontology_id": ..., "label": ..., "source_count": n}` in `source_X`, `{"ontology_id": ..., "label": ..., "filtered_count": n}` in `filtered_X`. Each count is named for its side, like `source_cell_count` and `filtered_cell_count` |
 
 X is one of `tissue`, `assay`, `cell_type`, `disease`, `development_stage`, `sex`.
+
+A facet reads, for example (the mini kidney file: 3566 cells, 3514 after the filters; the filters remove the 52 cells aged 14, which lowers renal medulla from 500 to 448):
+
+```json
+"source_tissue": [
+  { "ontology_id": "UBERON:0001225", "label": "cortex of kidney", "source_count": 1672 },
+  { "ontology_id": "UBERON:0001228", "label": "renal papilla",    "source_count": 721 },
+  { "ontology_id": "UBERON:0002113", "label": "kidney",           "source_count": 673 },
+  { "ontology_id": "UBERON:0000362", "label": "renal medulla",    "source_count": 500 }
+],
+"filtered_tissue": [
+  { "ontology_id": "UBERON:0001225", "label": "cortex of kidney", "filtered_count": 1672 },
+  { "ontology_id": "UBERON:0001228", "label": "renal papilla",    "filtered_count": 721 },
+  { "ontology_id": "UBERON:0002113", "label": "kidney",           "filtered_count": 673 },
+  { "ontology_id": "UBERON:0000362", "label": "renal medulla",    "filtered_count": 448 }
+]
+```
+
+- The terms are ordered by cell count, largest first, then by id. The `filtered_X` list has the same terms in the same order. A term whose cells were all removed by the filters stays, with `"filtered_count": 0`; a term passes the filters when its `filtered_count` is above 0.
+- The counts of a list add up to `source_cell_count` (source) or `filtered_cell_count` (filtered).
+- After Step 4 the terms have only the `ontology_id` (from the API, for tissue, assay and disease) and `label` and the count are `null`: the CSV labels are not listed in the order of its ids. Step 5 fills every facet from the cells.
+- Every value is named: no facet is a bare list of text or an `{id: count}` map. `write_json` refuses any other form.
 
 Empty lists, empty summaries and `null` mean the dataset has not been counted yet.
 
@@ -411,6 +433,7 @@ cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
     --uberon  2026-08-03-run/uberon_kidney.json \
     --disease 2026-08-03-run/disease_normal.json \
     --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
+    --assay   2026-08-03-run/assay_published.json \
     --organism "Homo sapiens" \
     --output  2026-08-03-run/homo_sapiens_kidney_harvester
 

@@ -8,8 +8,9 @@ fills in both sides of every pair:
 
   source_X   : all cells of the dataset
   filtered_X : the cells whose tissue id is in the uberon file, whose disease
-               id is in the disease file, and whose development stage id is in
-               the hsapdv file
+               id is in the disease file, whose development stage id is in
+               the hsapdv file and, when an assay file is given, whose assay id
+               is in it (the same choices recorded in Step 4)
 
 The cells come from the dataset's h5ad file (--source h5ad, the default): the
 address in the dataset's h5ad_url, a local path or an http(s) address. Only the
@@ -24,10 +25,12 @@ With --source census the counts are read from the CellxGene Census instead.
 Nothing is written then and filtered_h5ad_url stays null.
 
 for the cell count, the donor count, and the six facets tissue, assay,
-cell_type, disease, development_stage and sex. Each facet has labels, ontology
-ids, and a summary of ids and cell counts. Only values that occur in the cells
-are counted. A filtered_ summary has the same ids as the source_ summary, with
-0 for an id whose cells were all removed by the filter.
+cell_type, disease, development_stage and sex. Each facet is a list of term
+objects {"ontology_id", "label", "source_count"} (and "filtered_count" on the
+filtered side). Only values that occur in the cells are counted. The terms are
+ordered by cell count, largest first, then by id. A filtered_ list has the same
+terms in the same order as the source_ list, with 0 for a term whose cells were
+all removed by the filters.
 
 NOTE (2026-10-05): is_primary_data == True is NOT used as a filter. It is an
 unreliable filter at this time, so it is not read from Census and does not
@@ -72,10 +75,12 @@ import sys
 import tempfile
 import traceback
 
+import pandas as pd
+
 from harvester import ontology_files
 from harvester.h5ad_source import (fetch_h5ad, id_column, obs_columns, open_h5ad,
                                    read_obs as read_h5ad_obs, write_filtered)
-from harvester.io_utils import FACETS, load_json, write_json
+from harvester.io_utils import FACETS, load_json, terms_from, write_json
 from harvester.logger import setup_logger, log_command, log_finish
 
 CENSUS_VERSION = "latest"
@@ -95,25 +100,28 @@ def read_obs(census, dataset_id):
     return table.concat().to_pandas()
 
 
-def count_facet(obs, facet):
-    """Return (labels, ids, summary) for one facet over the cells in obs.
+def count_terms(obs, facet):
+    """Return {ontology id: (label, cell count)} for one facet over the cells in obs.
 
-    Labels and ids are sorted lists of the values that occur. The summary
-    maps each id to its number of cells, largest first. A value that does not
-    occur is not listed.
+    The terms are ordered by cell count, largest first, then by id. A label is
+    the one most cells of that id carry. A value that does not occur is not listed.
     """
-    ids = obs[id_column(facet)].dropna().astype(str)
-    counts = sorted(ids.value_counts().items(), key=lambda pair: (-pair[1], pair[0]))
-    labels = sorted(obs[facet].dropna().astype(str).unique())
-    return labels, sorted(name for name, _ in counts), {name: int(n) for name, n in counts}
+    frame = pd.DataFrame({"id": obs[id_column(facet)].astype("object"),
+                          "label": obs[facet].astype("object")}).dropna(subset=["id"])
+    frame["id"] = frame["id"].astype(str)
+    counts = frame.groupby("id").size()
+    labelled = frame.dropna(subset=["label"])
+    label_of = labelled.groupby("id")["label"].agg(lambda s: str(s.value_counts().index[0]))
+    ordered = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))
+    return {name: (label_of.get(name), int(n)) for name, n in ordered}
 
 
 def describe_cells(obs):
-    """Count the cells, the donors and the six facets of the cells in obs."""
+    """Count the cells, the donors and the terms of the six facets of the cells in obs."""
     return {
         "cell_count": len(obs),
         "donor_count": int(obs["donor_id"].nunique()),
-        "facets": {facet: count_facet(obs, facet) for facet in FACETS},
+        "facets": {facet: count_terms(obs, facet) for facet in FACETS},
     }
 
 
@@ -140,8 +148,8 @@ def keep_matching(obs, uberon_ids, disease_ids, hsapdv_ids, assay_ids=frozenset(
 def api_values(record):
     """The source_ values that Step 4 took from the CellxGene API."""
     return {
-        "tissue ids": sorted(record["source_tissue_ontology_id"]),
-        "disease ids": sorted(record["source_disease_ontology_id"]),
+        "tissue ids": sorted(term["ontology_id"] for term in record["source_tissue"]),
+        "disease ids": sorted(term["ontology_id"] for term in record["source_disease"]),
         "cell count": record["source_cell_count"],
     }
 
@@ -163,15 +171,14 @@ def fill_record(record, obs, uberon_ids, disease_ids, hsapdv_ids, assay_ids=froz
     record["filtered_donor_count"] = kept["donor_count"]
 
     for facet in FACETS:
-        labels, ids, summary = source["facets"][facet]
-        kept_labels, kept_ids, kept_summary = kept["facets"][facet]
-        record[f"source_{facet}"] = labels
-        record[f"filtered_{facet}"] = kept_labels
-        record[f"source_{facet}_ontology_id"] = ids
-        record[f"filtered_{facet}_ontology_id"] = kept_ids
-        record[f"source_{facet}_ontology_id_summary"] = summary
-        record[f"filtered_{facet}_ontology_id_summary"] = {
-            name: kept_summary.get(name, 0) for name in summary}
+        source_terms = source["facets"][facet]
+        kept_counts = kept["facets"][facet]
+        # the filtered list has the same terms in the same order, with 0 for a term
+        # whose cells were all removed by the filters
+        record[f"source_{facet}"] = terms_from("source", source_terms)
+        record[f"filtered_{facet}"] = terms_from(
+            "filtered", {name: (label, kept_counts.get(name, (None, 0))[1])
+                         for name, (label, _) in source_terms.items()})
 
     after = api_values(record)
     return [f"Counted {name} {after[name]} differ from the Step 4 (API) value {before[name]}"
@@ -184,9 +191,11 @@ def record_filter_files(record, paths, census_label=None):
     only when the cells are read from the Census."""
     messages = []
     choices = record["filter_choices"]
-    choices.pop("assay", None)
     for name in FILTER_FILES:
         if not paths.get(name):
+            if choices.get(name):
+                messages.append(f"{name} file {choices[name]['file']} was chosen in Step 4 "
+                                f"but no {name} file is given here")
             continue
         current = ontology_files.describe(paths[name])
         recorded = choices.get(name)

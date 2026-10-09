@@ -186,6 +186,7 @@ def get_latest_dataset_versions(datasets):
                 "organism":                 safe_label(ds.get("organism")),
                 "tissue":                   safe_label(ds.get("tissue")),
                 "tissue_ontology_term_id":  safe_ontology_ids(ds.get("tissue")),
+                "assay_ontology_term_id":   safe_ontology_ids(ds.get("assay")),
                 "disease":                  safe_label(ds.get("disease")),
                 "disease_ontology_term_id": safe_ontology_ids(ds.get("disease")),
                 "revised_at":               revised_at,
@@ -266,6 +267,7 @@ def generate_csv():
                 "explorer_url": "",  # Will be filled in step 3
                 "tissue":                   ds["tissue"],
                 "tissue_ontology_term_id":  ds["tissue_ontology_term_id"],
+                "assay_ontology_term_id":   ds["assay_ontology_term_id"],
                 "disease":                  ds["disease"],
                 "disease_ontology_term_id": ds["disease_ontology_term_id"],
                 # Technical IDs and metadata

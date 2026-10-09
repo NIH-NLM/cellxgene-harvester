@@ -33,10 +33,10 @@ def good_record():
         "curation": {"reference": "unk"},
         "source_cell_count": 23197,
         "filtered_cell_count": 11464,
-        "source_tissue": ["prefrontal cortex"],
-        "filtered_tissue": ["prefrontal cortex"],
-        "source_tissue_ontology_id_summary": {"UBERON:0000451": 23197},
-        "filtered_tissue_ontology_id_summary": {"UBERON:0000451": 11464},
+        "source_tissue": [
+            {"ontology_id": "UBERON:0000451", "label": "prefrontal cortex", "source_count": 23197}],
+        "filtered_tissue": [
+            {"ontology_id": "UBERON:0000451", "label": "prefrontal cortex", "filtered_count": 11464}],
     }
 
 
@@ -78,8 +78,24 @@ def test_unknown_type_is_refused():
     {"filtered_cell_count": "5"},                   # count as text
     {"filtered_cell_count": 5.0},                   # count as a float
     {"filtered_cell_count": True},                  # count as a bool
-    {"x_summary": {"UBERON:1": "5"}},               # summary count as text
-    {"x_summary": {"UBERON:1": 5.5}},               # summary count as a float
+    {"source_tissue": ["kidney"], "filtered_tissue": []},  # bare text, not a term object
+    {"source_tissue": {"UBERON:1": 5}, "filtered_tissue": []},  # the old {id: count} form
+    {"source_tissue": [{"ontology_id": "U:1", "label": "a", "count": 5}],
+     "filtered_tissue": []},                               # count not named for its side
+    {"source_tissue": [{"ontology_id": "U:1", "label": "a", "filtered_count": 5}],
+     "filtered_tissue": []},                               # the other side's count name
+    {"source_tissue": [{"ontology_id": "U:1", "source_count": 5}],
+     "filtered_tissue": []},                               # no label
+    {"source_tissue": [{"ontology_id": "U:1", "label": "a", "source_count": "5"}],
+     "filtered_tissue": []},                               # count as text
+    {"source_tissue": [{"ontology_id": "U:1", "label": "a", "source_count": 5.5}],
+     "filtered_tissue": []},                               # count as a float
+    {"source_tissue": [{"ontology_id": 7, "label": "a", "source_count": 5}],
+     "filtered_tissue": []},                               # id not text
+    {"source_tissue": [{"ontology_id": "11,464", "label": "a", "source_count": 5}],
+     "filtered_tissue": []},                               # thousands comma in the id
+    {"source_tissue": [{"ontology_id": "U:1", "label": "a | b", "source_count": 5}],
+     "filtered_tissue": []},                               # label joined with a pipe
     {"source_x": 1},                                # no partner at the end
     {"source_x": 1, "other": 2, "filtered_x": 1},   # partner not next
     {"source_x": 1, "filtered_y": 1},               # wrong partner
@@ -95,7 +111,11 @@ def test_bad_records_are_refused(bad):
     {"year": 2022, "doi": "10.1016/j.neuron.2022.06.021"},
     {"filtered_cell_count": 0},                     # zero is a valid count
     {"filtered_cell_count": None},                  # not yet counted
-    {"x_summary": {}},                              # empty summary
+    {"source_tissue": [], "filtered_tissue": []},   # nothing counted yet
+    {"source_tissue": [{"ontology_id": "U:1", "label": None, "source_count": None}],
+     "filtered_tissue": []},                        # step 4: no label or count yet
+    {"source_tissue": [], "filtered_tissue": [
+        {"ontology_id": "U:1", "label": "a", "filtered_count": 0}]},  # a zero count is valid
     {"source_x": 1, "filtered_x": 2},
 ])
 def test_good_records_are_accepted(fine):
@@ -196,13 +216,10 @@ def test_merge_curation_without_earlier_file_changes_nothing(tmp_path):
 # ---- facet_keys -----------------------------------------------------------
 
 def test_facet_keys_pair_source_then_filtered():
-    """Input: every facet. Pass: six keys each, and each source_ key is followed
+    """Input: every facet. Pass: two keys each, and the source_ key is followed
     at once by its filtered_ key."""
     for facet in FACETS:
-        keys = facet_keys(facet)
-        assert len(keys) == 6
-        for i in range(0, 6, 2):
-            assert keys[i].replace("source_", "filtered_", 1) == keys[i + 1]
+        assert facet_keys(facet) == [f"source_{facet}", f"filtered_{facet}"]
 
 
 def test_facet_keys_make_a_valid_record():
@@ -211,7 +228,7 @@ def test_facet_keys_make_a_valid_record():
     record = {}
     for facet in FACETS:
         for key in facet_keys(facet):
-            record[key] = {} if key.endswith("_summary") else []
+            record[key] = []
     validate_record(record)
 
 
