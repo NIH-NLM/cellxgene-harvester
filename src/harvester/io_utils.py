@@ -180,6 +180,25 @@ def write_json(path, record):
     return path
 
 
+def write_json_list(path, records):
+    """Check every record and write them to path as one JSON array. Return path.
+
+    Written like write_json: to path + ".tmp" first, then moved into place.
+    The order of the records is kept.
+    """
+    clean = [to_jsonable(record) for record in records]
+    for record in clean:
+        validate_record(record)
+
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(clean, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, path)
+    return path
+
+
 def load_json(path):
     """Return the contents of a JSON file, or None if the file is missing."""
     if not os.path.exists(path):

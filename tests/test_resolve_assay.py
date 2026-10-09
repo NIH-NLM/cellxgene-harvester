@@ -163,12 +163,13 @@ def test_the_file_is_read_by_the_same_helpers_as_the_other_resolve_files(tmp_pat
 
 def test_the_default_file_name_is_in_the_run_folder(tmp_path, monkeypatch):
     """Input: no output prefix and the run folder set. Pass: the files are
-    <run folder>/assay_<first query>.json, .csv and .log."""
+    <run folder>/assay_published.json, .csv and .log, named for the set of assays
+    and not for its first label."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("HARVESTER_RUN_DIR", "2026-08-03-run")
     step0d.run_resolve_assay(["Smart-seq2"])
     for ext in (".json", ".csv", ".log"):
-        assert os.path.exists(f"2026-08-03-run/assay_smart_seq2{ext}")
+        assert os.path.exists(f"2026-08-03-run/assay_published{ext}")
 
 
 def test_the_command_runs(tmp_path):

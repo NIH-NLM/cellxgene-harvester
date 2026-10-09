@@ -24,8 +24,9 @@ python -m harvester.resolve_assay "10x 3' v3" "Smart-seq2" EFO:0009900
 cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2" EFO:0009900 --output-prefix 2026-08-03-run/assay_published
 
 Output:
-    <run folder>/assay_10x_3_v3.json   - the resolved assays and the unresolved labels
-    <run folder>/assay_10x_3_v3.csv    - flat table: obo_id, label, query
+    <run folder>/assay_published.json   - the resolved assays and the unresolved labels
+    <run folder>/assay_published.csv    - flat table: obo_id, label, query
+    (the name is for the set of assays; --output-prefix gives another name)
 """
 
 import os
@@ -39,6 +40,7 @@ from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
+DEFAULT_NAME = "assay_published"
 
 
 def search_assay(label: str, logger) -> list:
@@ -153,11 +155,10 @@ def run_resolve_assay(queries: list, output_prefix: str = None):
     """Main entry point called by CLI"""
     os.makedirs(run_dir(), exist_ok=True)
 
-    if output_prefix:
-        out_prefix = output_prefix
-    else:
-        slug = re.sub(r"[^a-z0-9]+", "_", queries[0].lower()).strip("_")
-        out_prefix = os.path.join(run_dir(), f"assay_{slug}")
+    # The file is named for the set of assays, not for its first label: a set
+    # of 12 assays would otherwise be named after one of them. Another set gets
+    # another name through --output-prefix.
+    out_prefix = output_prefix or os.path.join(run_dir(), DEFAULT_NAME)
 
     log_file = f"{out_prefix}.log"
     logger = setup_logger("0d_resolve_assay", output_csv=log_file)
