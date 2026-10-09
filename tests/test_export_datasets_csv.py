@@ -30,6 +30,9 @@ USED_BY_NSFOREST = [
 def write_file(folder, dataset_id, count, **row):
     """Write a step 5 style file with the given filtered_cell_count."""
     record = new_record(make_row(dataset_id=dataset_id, **row), None, {})
+    # step 5 fills the labels; here each disease label is one term
+    record["source_disease"] = [{"ontology_id": f"X:{i}", "label": label, "source_count": 1}
+                                for i, label in enumerate(row.get("disease", "normal").split(" | "))]
     record["filtered_cell_count"] = count
     write_json(str(folder / f"{dataset_id}.filtered.json"), record)
 

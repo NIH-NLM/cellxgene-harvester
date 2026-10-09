@@ -12,7 +12,7 @@ Usage:
     cellxgene-harvester fetch-collections
     cellxgene-harvester generate-metadata
     cellxgene-harvester append-details
-    cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv --output FOLDER --uberon ... --disease ... --hsapdv ...
+    cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv --output FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...]
     cellxgene-harvester count-normal-cells FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...] [--h5ad-out ... --h5ad-url-prefix ...] [--source census --census-version ...]
     cellxgene-harvester final-cleanup FOLDER
     cellxgene-harvester export-datasets-csv FOLDER --output datasets.csv
@@ -124,6 +124,7 @@ def filter_datasets_command(
     uberon: Optional[Path] = typer.Option(None, help="UBERON JSON from resolve-uberon"),
     disease: Optional[Path] = typer.Option(None, help="Disease JSON from resolve-disease"),
     hsapdv: Optional[Path] = typer.Option(None, help="HsapDv JSON from resolve-hsapdv (recorded only; age is filtered in step 5)"),
+    assay: Optional[Path] = typer.Option(None, "--assay", help="Assay JSON from resolve-assay: keep the datasets with at least one of these assays (the same file is given to step 5)"),
     organism: Optional[str] = typer.Option(None, help="Filter by organism label"),
     no_preprints: bool = typer.Option(False, help="Exclude preprints"),
 ):
@@ -134,6 +135,7 @@ def filter_datasets_command(
         uberon_json=str(uberon) if uberon else None,
         disease_json=str(disease) if disease else None,
         hsapdv_json=str(hsapdv) if hsapdv else None,
+        assay_json=str(assay) if assay else None,
         organism=organism,
         no_preprints=no_preprints,
     )

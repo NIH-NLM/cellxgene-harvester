@@ -38,6 +38,8 @@ def test_a_run_writes_rows_without_those_columns(tmp_path, monkeypatch):
             "organism": [{"label": "Homo sapiens"}],
             "tissue": [{"label": "kidney", "ontology_term_id": "UBERON:0002113"},
                        {"label": "cortex of kidney", "ontology_term_id": "UBERON:0001225"}],
+            "assay": [{"label": "10x 3' v3", "ontology_term_id": "EFO:0009922"},
+                      {"label": "Visium Spatial Gene Expression", "ontology_term_id": "EFO:0010961"}],
             "disease": [{"label": "normal", "ontology_term_id": "PATO:0000461"}]}],
     }
     (tmp_path / "collections_metadata.json").write_text(json.dumps([collection]))
@@ -47,4 +49,6 @@ def test_a_run_writes_rows_without_those_columns(tmp_path, monkeypatch):
     assert list(rows[0]) == generate_metadata.CSV_HEADER
     assert rows[0]["tissue"] == "kidney | cortex of kidney"
     assert rows[0]["tissue_ontology_term_id"] == "UBERON:0002113 | UBERON:0001225"
+    # the assay ids are carried so that step 4 can apply the assay choice
+    assert rows[0]["assay_ontology_term_id"] == "EFO:0009922 | EFO:0010961"
     assert rows[0]["reference"] == "unk" and rows[0]["year"] == "2022"

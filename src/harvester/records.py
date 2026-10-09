@@ -62,7 +62,7 @@ def curation_block(row):
 def empty_facet(facet):
     """The six keys of one facet with nothing counted yet."""
     keys = facet_keys(facet)
-    return {key: {} if key.endswith("_summary") else [] for key in keys}
+    return {key: [] for key in keys}
 
 
 def new_record(row, organ, filter_choices):
@@ -87,8 +87,12 @@ def new_record(row, organ, filter_choices):
     for facet in FACETS:
         record.update(empty_facet(facet))
 
-    record["source_tissue"] = split_cell(row["tissue"])
-    record["source_tissue_ontology_id"] = split_cell(row["tissue_ontology_term_id"])
-    record["source_disease"] = split_cell(row["disease"])
-    record["source_disease_ontology_id"] = split_cell(row["disease_ontology_term_id"])
+    # From the CSV only the ids can be used: its labels are not listed in the order of
+    # its ids. A label and a count are filled in Step 5, from the cells.
+    for facet, column in (("tissue", "tissue_ontology_term_id"),
+                          ("assay", "assay_ontology_term_id"),
+                          ("disease", "disease_ontology_term_id")):
+        record[f"source_{facet}"] = [
+            {"ontology_id": name, "label": None, "source_count": None}
+            for name in split_cell(row.get(column, ""))]
     return record

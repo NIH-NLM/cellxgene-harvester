@@ -23,7 +23,7 @@ import pytest
 from harvester import count_normal_cells as step5
 from harvester.io_utils import FACETS, load_json, write_json
 from harvester.records import new_record
-from helpers import kidney_files, make_row, write_resolve_file
+from helpers import counts, ids, kidney_files, labels, make_row, write_resolve_file
 
 KIDNEY = {"UBERON:0002113", "UBERON:0001225"}
 NORMAL = {"PATO:0000461"}
@@ -65,33 +65,32 @@ def step4_record(**row):
 
 # ---- counting -------------------------------------------------------------
 
-def test_count_facet_sorted_and_largest_first():
-    """Input: ids B, A, A, C, A. Pass: ids sorted A, B, C; summary lists A (3)
-    first, then B and C (1 each, in id order); labels sorted and unique."""
+def test_count_terms_sorted_and_largest_first():
+    """Input: ids B, A, A, C, A. Pass: A (3 cells) first, then B and C (1 each, in
+    id order), each with its own label."""
     obs = make_obs([{"sex_ontology_term_id": i, "sex": f"label {i}"} for i in "BAACA"])
-    labels, ids, summary = step5.count_facet(obs, "sex")
-    assert ids == ["A", "B", "C"]
-    assert list(summary.items()) == [("A", 3), ("B", 1), ("C", 1)]
-    assert labels == ["label A", "label B", "label C"]
+    terms = step5.count_terms(obs, "sex")
+    assert list(terms.items()) == [("A", ("label A", 3)), ("B", ("label B", 1)),
+                                   ("C", ("label C", 1))]
 
 
 def test_unused_categories_are_not_counted():
     """Input: columns of the categorical type that list 150 stages while only one
     occurs (the cause of the zero-count stages in the old summary). Pass: the
-    summary has only the stage that occurs, and no zeros."""
+    list has only the stage that occurs, and no zeros."""
     obs = make_obs([{}, {}])
     stages = ["HsapDv:0000258"] + [f"HsapDv:{i:07d}" for i in range(150)]
     obs["development_stage_ontology_term_id"] = pd.Categorical(
         obs["development_stage_ontology_term_id"], categories=stages)
-    _, ids, summary = step5.count_facet(obs, "development_stage")
-    assert ids == ["HsapDv:0000258"] and summary == {"HsapDv:0000258": 2}
+    terms = step5.count_terms(obs, "development_stage")
+    assert terms == {"HsapDv:0000258": ("adult stage", 2)}
 
 
 def test_counts_are_plain_integers():
-    """Input: a small table. Pass: every count in the summary is an int, not a
-    numpy integer, so it can be written to JSON."""
-    _, _, summary = step5.count_facet(make_obs([{}, {}]), "tissue")
-    assert all(type(n) is int for n in summary.values())
+    """Input: a small table. Pass: every count is an int, not a numpy integer, so
+    it can be written to JSON."""
+    terms = step5.count_terms(make_obs([{}, {}]), "tissue")
+    assert all(type(n) is int for _, n in terms.values())
 
 
 def test_describe_empty_table():
@@ -100,7 +99,7 @@ def test_describe_empty_table():
     result = step5.describe_cells(make_obs([{}]).iloc[0:0])
     assert result["cell_count"] == 0 and result["donor_count"] == 0
     for facet in FACETS:
-        assert result["facets"][facet] == ([], [], {})
+        assert result["facets"][facet] == {}
 
 
 def test_describe_counts_donors():
@@ -126,9 +125,13 @@ def test_fill_record_both_sides_of_every_pair():
     step5.fill_record(record, mixed_obs(), KIDNEY, NORMAL, ADULT)
     assert (record["source_cell_count"], record["filtered_cell_count"]) == (6, 3)
     assert (record["source_donor_count"], record["filtered_donor_count"]) == (4, 2)
-    assert record["filtered_sex_ontology_id_summary"] == {"PATO:0000383": 1, "PATO:0000384": 2}
-    assert record["source_sex_ontology_id_summary"] == {"PATO:0000383": 4, "PATO:0000384": 2}
-    assert record["filtered_sex"] == ["female", "male"]
+    assert counts(record, "filtered_sex") == {"PATO:0000383": 1, "PATO:0000384": 2}
+    assert counts(record, "source_sex") == {"PATO:0000383": 4, "PATO:0000384": 2}
+    # each side names its own count, and the term keeps its id and label
+    assert record["filtered_sex"][0] == {
+        "ontology_id": "PATO:0000383", "label": "female", "filtered_count": 1}
+    assert record["source_sex"][0] == {
+        "ontology_id": "PATO:0000383", "label": "female", "source_count": 4}
 
 
 def test_fill_record_source_keeps_what_the_filters_remove():
@@ -137,10 +140,10 @@ def test_fill_record_source_keeps_what_the_filters_remove():
     does not."""
     record = step4_record()
     step5.fill_record(record, mixed_obs(), KIDNEY, NORMAL, ADULT)
-    assert record["source_disease"] == ["Alzheimer disease", "normal"]
-    assert record["filtered_disease"] == ["normal"]
-    assert "UBERON:0002107" in record["source_tissue_ontology_id"]
-    assert "UBERON:0002107" not in record["filtered_tissue_ontology_id"]
+    assert sorted(labels(record, "source_disease")) == ["Alzheimer disease", "normal"]
+    assert counts(record, "filtered_disease") == {"MONDO:0004975": 0, "PATO:0000461": 3}
+    assert "UBERON:0002107" in ids(record, "source_tissue")
+    assert counts(record, "filtered_tissue")["UBERON:0002107"] == 0
 
 
 def test_filtered_summary_lists_removed_ids_with_zero():
@@ -149,9 +152,8 @@ def test_filtered_summary_lists_removed_ids_with_zero():
     filtered id lists leave both out."""
     record = step4_record()
     step5.fill_record(record, mixed_obs(), KIDNEY, NORMAL, ADULT)
-    assert record["filtered_tissue_ontology_id_summary"]["UBERON:0002107"] == 0
-    assert record["filtered_development_stage_ontology_id_summary"]["HsapDv:0000081"] == 0
-    assert "HsapDv:0000081" not in record["filtered_development_stage_ontology_id"]
+    assert counts(record, "filtered_tissue")["UBERON:0002107"] == 0
+    assert counts(record, "filtered_development_stage")["HsapDv:0000081"] == 0
 
 
 def test_filtered_summary_never_lists_an_id_absent_from_source():
@@ -161,8 +163,8 @@ def test_filtered_summary_never_lists_an_id_absent_from_source():
     record = step4_record()
     step5.fill_record(record, mixed_obs(), KIDNEY, NORMAL, ADULT)
     for facet in FACETS:
-        source = record[f"source_{facet}_ontology_id_summary"]
-        assert list(record[f"filtered_{facet}_ontology_id_summary"]) == list(source)
+        source = counts(record, f"source_{facet}")
+        assert list(counts(record, f"filtered_{facet}")) == list(source)
         assert all(n > 0 for n in source.values())
 
 
@@ -173,7 +175,8 @@ def test_fill_record_with_no_passing_cells():
     record = step4_record()
     step5.fill_record(record, obs, KIDNEY, NORMAL, ADULT)
     assert record["filtered_cell_count"] == 0 and record["source_cell_count"] == 2
-    assert record["filtered_tissue"] == [] and record["filtered_donor_count"] == 0
+    assert counts(record, "filtered_tissue") == {"UBERON:0002113": 0}
+    assert record["filtered_donor_count"] == 0
 
 
 def test_filled_record_passes_the_output_rules(tmp_path):
@@ -411,8 +414,8 @@ def test_only_the_wanted_assays_are_counted_on_the_filtered_side():
     record = step4_record()
     step5.fill_record(record, obs_with_two_assays(), KIDNEY, NORMAL, ADULT, TENX)
     assert (record["source_cell_count"], record["filtered_cell_count"]) == (4, 2)
-    assert record["source_assay_ontology_id_summary"] == {"EFO:0009922": 2, "EFO:0022857": 2}
-    assert record["filtered_assay_ontology_id_summary"] == {"EFO:0009922": 2, "EFO:0022857": 0}
+    assert counts(record, "source_assay") == {"EFO:0009922": 2, "EFO:0022857": 2}
+    assert counts(record, "filtered_assay") == {"EFO:0009922": 2, "EFO:0022857": 0}
 
 
 def test_without_an_assay_file_every_assay_is_counted():
@@ -445,8 +448,10 @@ def test_the_assay_file_is_recorded_and_dropped_when_not_given(tmp_path):
     assert entry["assays"] == [{"obo_id": "EFO:0009922", "label": "label EFO:0009922"}]
     assert "root_terms" not in entry
     files["assay"] = None
-    step5.record_filter_files(record, files, "rel")
-    assert "assay" not in record["filter_choices"]
+    messages = step5.record_filter_files(record, files, "rel")
+    # the choice made in Step 4 stays on file, and the missing file is reported
+    assert "assay" in record["filter_choices"]
+    assert any("assay" in m and "no assay file" in m for m in messages)
 
 
 def test_process_folder_counts_only_the_assays_of_the_file_it_is_given(tmp_path, monkeypatch):

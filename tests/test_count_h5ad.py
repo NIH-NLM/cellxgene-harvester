@@ -69,7 +69,7 @@ def test_counts_match_the_census_route(tmp_path):
                       KIDNEY, NORMAL, ADULT)
     assert ok
     assert record["source_cell_count"] == 6 and record["filtered_cell_count"] == 3
-    for key in ("filtered_cell_count", "filtered_donor_count", "filtered_sex_ontology_id_summary"):
+    for key in ("filtered_cell_count", "filtered_donor_count", "filtered_sex", "source_sex"):
         assert record[key] == expected[key]
 
 

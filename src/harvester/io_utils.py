@@ -29,22 +29,20 @@ SCHEMA_VERSION = "1.0"
 
 # Each facet has a source_ and a filtered_ version of every key below.
 FACETS = ("tissue", "assay", "cell_type", "disease", "development_stage", "sex")
-FACET_SUFFIXES = ("", "_ontology_id", "_ontology_id_summary")
+
+# Each facet has two keys, source_X and filtered_X. Each is a list of term
+# objects, for example
+#   "source_tissue":   [{"ontology_id": "UBERON:0001225", "label": "cortex of kidney", "source_count": 1672}]
+#   "filtered_tissue": [{"ontology_id": "UBERON:0001225", "label": "cortex of kidney", "filtered_count": 1672}]
+TERM_KEYS = frozenset(f"{side}_{facet}" for facet in FACETS for side in ("source", "filtered"))
 
 _THOUSANDS = re.compile(r"^\d{1,3}(,\d{3})+$")
 _PIPE = " | "
 
 
 def facet_keys(facet):
-    """Return the keys of one facet in output order.
-
-    For example, facet_keys("sex") starts with source_sex, filtered_sex,
-    source_sex_ontology_id, filtered_sex_ontology_id.
-    """
-    keys = []
-    for suffix in FACET_SUFFIXES:
-        keys += [f"source_{facet}{suffix}", f"filtered_{facet}{suffix}"]
-    return keys
+    """Return the two keys of one facet in output order: source_X, filtered_X."""
+    return [f"source_{facet}", f"filtered_{facet}"]
 
 
 def to_jsonable(obj):
@@ -74,6 +72,40 @@ def to_jsonable(obj):
     raise TypeError(f"Cannot write {type(obj).__name__} to JSON: {obj!r}")
 
 
+def terms_from(side, counts_by_id):
+    """Build the list of term objects for one side from
+    {ontology id: (label, count)}. The order is kept."""
+    return [{"ontology_id": name, "label": label, f"{side}_count": count}
+            for name, (label, count) in counts_by_id.items()]
+
+
+def term_counts(terms, side):
+    """The reverse of terms_from: {ontology id: count} from a list of term objects."""
+    return {term["ontology_id"]: term[f"{side}_count"] for term in terms}
+
+
+def _validate_terms(key, value, where):
+    """Raise ValueError unless value is a list of
+    {"ontology_id": text, "label": text or null, "<side>_count": integer or null}."""
+    side = key.split("_", 1)[0]
+    count_key = f"{side}_count"
+    if not isinstance(value, list):
+        raise ValueError(f"{where}: must be a list of term objects, got {value!r}")
+    for i, term in enumerate(value):
+        here = f"{where}[{i}]"
+        if not isinstance(term, dict) or list(term) != ["ontology_id", "label", count_key]:
+            raise ValueError(f"{here}: must have the properties "
+                             f"ontology_id, label and {count_key}, got {term!r}")
+        if not isinstance(term["ontology_id"], str):
+            raise ValueError(f"{here}.ontology_id: must be text, got {term['ontology_id']!r}")
+        if term["label"] is not None and not isinstance(term["label"], str):
+            raise ValueError(f"{here}.label: must be text or null, got {term['label']!r}")
+        if term[count_key] is not None and not _is_int(term[count_key]):
+            raise ValueError(f"{here}.{count_key}: count must be an integer, got {term[count_key]!r}")
+        validate_record(term["ontology_id"], f"{here}.ontology_id")
+        validate_record(term["label"], f"{here}.label")
+
+
 def validate_record(record, path=""):
     """Raise ValueError if the record breaks a rule.
 
@@ -81,8 +113,9 @@ def validate_record(record, path=""):
       - no string is a number with a thousands comma, such as "11,464"
       - no string contains " | "
       - every key ending in "_count" holds an integer
-      - every value inside a dictionary under a key ending in "_summary"
-        is an integer
+      - every facet key (source_tissue, filtered_tissue, and so on) holds a list of
+        term objects {"ontology_id", "label", "<source or filtered>_count"}; the
+        count is an integer
       - every source_X key is followed at once by filtered_X
     """
     if isinstance(record, dict):
@@ -99,10 +132,9 @@ def validate_record(record, path=""):
             if key.endswith("_count") and value is not None and not _is_int(value):
                 raise ValueError(f"{where}: count must be an integer, got {value!r}")
 
-            if key.endswith("_summary") and isinstance(value, dict):
-                for name, count in value.items():
-                    if not _is_int(count):
-                        raise ValueError(f"{where}.{name}: count must be an integer, got {count!r}")
+            if key in TERM_KEYS:
+                _validate_terms(key, value, where)
+                continue
 
             validate_record(value, where)
     elif isinstance(record, list):
