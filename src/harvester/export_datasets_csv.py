@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """
-Step 7: Export the datasets CSV that sc-nsforest-qc-nf reads
+Step 7: Export the final CSV and the final JSON
 
-Reads the folder of <dataset_id>.filtered.json files (after Step 6) and writes
-one CSV with a row for each dataset that has cells after filtering. The CSV
-holds only the fields that sc-nsforest-qc-nf uses. The JSON files stay the full
-record, for the consumers that read JSON.
+Reads the folder of <dataset_id>.filtered.json files (after Step 6) and writes,
+side by side, with the same name apart from the ending:
+
+  homo_sapiens_kidney_harvester_final.csv   one row for each dataset that has
+        cells after filtering; only the fields that sc-nsforest-qc-nf uses
+  homo_sapiens_kidney_harvester_final.json  one JSON array with the full record
+        of the same datasets, in the same order, for the consumers that read JSON
 
 Datasets whose filtered_cell_count is 0 or empty are left out, and the empty
 ones are listed in the log.
+
+The JSON file is named like the CSV, with .json in place of .csv, unless
+--output-json gives another path.
 
 Usage:
 1. Python module execution:
@@ -23,7 +29,7 @@ cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harve
 import glob
 import os
 
-from harvester.io_utils import load_json, write_csv
+from harvester.io_utils import load_json, write_csv, write_json_list
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 
 # sc-nsforest-qc-nf reads these columns by name.
@@ -89,22 +95,30 @@ def select_records(paths, logger):
     return kept
 
 
-def export_folder(folder, output_csv, logger):
-    """Write the CSV. Return the number of datasets written."""
+def json_path_for(output_csv):
+    """The final JSON path that goes with a CSV path: the same name, .json at the end."""
+    stem, _ = os.path.splitext(output_csv)
+    return stem + ".json"
+
+
+def export_folder(folder, output_csv, logger, output_json=None):
+    """Write the CSV and the JSON. Return the number of datasets written."""
     paths = list_files(folder)
     records = select_records(paths, logger)
     log_counts(logger, "datasets with filtered cells", before=len(paths), after=len(records))
     write_csv(output_csv, COLUMNS, [to_row(r) for r in records])
+    write_json_list(output_json or json_path_for(output_csv), records)
     return len(records)
 
 
 # =============================================================================
 # run_export_datasets_csv
 # =============================================================================
-def run_export_datasets_csv(folder: str, output_csv: str):
+def run_export_datasets_csv(folder: str, output_csv: str, output_json: str = None):
     """Main entry point called by CLI"""
     folder = folder.rstrip("/")
+    os.makedirs(os.path.dirname(os.path.abspath(output_csv)), exist_ok=True)
     logger = setup_logger("7_export_datasets_csv", output_csv=output_csv)
     log_command(logger)
-    export_folder(folder, output_csv, logger)
+    export_folder(folder, output_csv, logger, output_json)
     log_finish(logger, output_csv)

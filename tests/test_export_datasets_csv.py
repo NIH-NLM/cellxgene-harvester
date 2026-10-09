@@ -8,6 +8,7 @@ Each test states what it checks, the input, and what counts as a pass.
 """
 
 import csv
+import json
 import re
 
 from typer.testing import CliRunner
@@ -150,3 +151,73 @@ def test_there_is_no_filter_normal_column(tmp_path):
     write_file(tmp_path, "d1", 5)
     assert "filter_normal" not in export(tmp_path)[0]
     assert "filter_normal" not in step7.COLUMNS
+
+
+# ---- the final JSON, side by side with the CSV ------------------------------
+
+def export_both(tmp_path, folder=None):
+    out = tmp_path / "homo_sapiens_kidney_harvester_final.csv"
+    step7.run_export_datasets_csv(str(folder or tmp_path), str(out))
+    rows = list(csv.DictReader(open(out, newline="", encoding="utf-8")))
+    records = json.load(open(tmp_path / "homo_sapiens_kidney_harvester_final.json", encoding="utf-8"))
+    return rows, records
+
+
+def test_final_json_is_named_like_the_csv_in_the_same_folder(tmp_path):
+    """Input: one counted dataset and the CSV path .../homo_sapiens_kidney_harvester_final.csv.
+    Pass: .../homo_sapiens_kidney_harvester_final.json is next to it."""
+    out = tmp_path / "run" / "homo_sapiens_kidney_harvester_final.csv"
+    folder = tmp_path / "records"
+    folder.mkdir()
+    write_file(folder, "d1", 5)
+    step7.run_export_datasets_csv(str(folder), str(out))
+    assert (out.parent / "homo_sapiens_kidney_harvester_final.json").exists()
+    assert step7.json_path_for("a/b_final.csv") == "a/b_final.json"
+
+
+def test_final_json_holds_the_same_datasets_as_the_csv_in_the_same_order(tmp_path):
+    """Input: three datasets, one with 0 cells and one not counted. Pass: the JSON array and
+    the CSV both hold the two datasets with cells, in the same order, and each JSON entry is
+    the full record."""
+    folder = tmp_path / "records"
+    folder.mkdir()
+    write_file(folder, "d2", 7)
+    write_file(folder, "d1", 5)
+    write_file(folder, "d0", 0)
+    rows, records = export_both(tmp_path, folder)
+    assert [r["dataset_id"] for r in rows] == ["d1", "d2"]
+    assert [r["dataset"]["dataset_id"] for r in records] == ["d1", "d2"]
+    assert records[0]["filtered_cell_count"] == 5 and "filter_choices" in records[0]
+
+
+def test_final_json_has_no_thousands_comma_and_empty_folder_gives_an_empty_array(tmp_path):
+    """Input: a count of 11464, then an empty folder. Pass: the text has 11464 and no
+    11,464; the empty folder gives []."""
+    folder = tmp_path / "records"
+    folder.mkdir()
+    write_file(folder, "d1", 11464)
+    out = tmp_path / "x_final.csv"
+    step7.run_export_datasets_csv(str(folder), str(out))
+    text = (tmp_path / "x_final.json").read_text(encoding="utf-8")
+    assert "11464" in text and "11,464" not in text
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    step7.run_export_datasets_csv(str(empty), str(tmp_path / "y_final.csv"))
+    assert json.load(open(tmp_path / "y_final.json")) == []
+
+
+def test_command_line_writes_both_files_and_output_json_overrides(tmp_path):
+    """Input: the export-datasets-csv command with and without --output-json. Pass: exit
+    code 0, the JSON next to the CSV by default, and at the given path when --output-json is given."""
+    folder = tmp_path / "out"
+    folder.mkdir()
+    write_file(folder, "d1", 5)
+    out = tmp_path / "datasets_final.csv"
+    result = CliRunner().invoke(app, ["export-datasets-csv", str(folder), "--output", str(out)])
+    assert result.exit_code == 0, result.output
+    assert len(json.load(open(tmp_path / "datasets_final.json"))) == 1
+    other = tmp_path / "elsewhere" / "records.json"
+    result = CliRunner().invoke(app, ["export-datasets-csv", str(folder), "--output", str(out),
+                                      "--output-json", str(other)])
+    assert result.exit_code == 0, result.output
+    assert len(json.load(open(other))) == 1

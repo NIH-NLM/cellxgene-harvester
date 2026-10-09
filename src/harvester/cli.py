@@ -177,9 +177,12 @@ def final_cleanup_command(
 def export_datasets_csv_command(
     input:  Path = typer.Argument(..., help="Folder of JSON files from final-cleanup"),
     output: Path = typer.Option(..., help="CSV file for sc-nsforest-qc-nf (--datasets_csv)"),
+    output_json: Optional[Path] = typer.Option(None, "--output-json", help="Final JSON file (default: the CSV path with .json at the end)"),
 ):
-    """Step 7: Write the datasets CSV that sc-nsforest-qc-nf reads"""
-    export_datasets_csv.run_export_datasets_csv(folder=str(input), output_csv=str(output))
+    """Step 7: Write the final CSV (for sc-nsforest-qc-nf) and the final JSON, side by side"""
+    export_datasets_csv.run_export_datasets_csv(
+        folder=str(input), output_csv=str(output),
+        output_json=str(output_json) if output_json else None)
 
 
 def main():

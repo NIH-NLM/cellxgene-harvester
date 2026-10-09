@@ -22,7 +22,7 @@ Steps 0a–0d  (resolve — run once per scope, reuse across all datasets)
 │ kidney          │ │ normal          │ │ --min-age 15    │ │ (optional)      │
 └────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
          │                   │                   │                   │
-  uberon_kidney.json  disease_normal.json  hsapdv_adult_15.json  assay_<name>.json
+  uberon_kidney.json  disease_normal.json  hsapdv_adult_15.json  assay_published.json
          │                   │                   │                   │
          ▼                   ▼                   │                   │
 Steps 1–3  (fetch + flatten + enrich CellxGene metadata)             │
@@ -39,7 +39,8 @@ Step 5   count-normal-cells (uberon + disease + hsapdv JSON;
 Step 6   final-cleanup ──► 2026-08-03-run/homo_sapiens_kidney_harvester/  (JSON files)
          │
          ▼
-Step 7   export-datasets-csv ──► CSV for sc-nsforest-qc-nf
+Step 7   export-datasets-csv ──► homo_sapiens_kidney_harvester_final.csv (for sc-nsforest-qc-nf)
+                                 and homo_sapiens_kidney_harvester_final.json (all records), side by side
 
 The uberon, disease and hsapdv JSON files are also passed to sc-nsforest-qc-nf
 for cell-level h5ad filtering (filter_adata, compute_scsilhouette).
@@ -151,7 +152,7 @@ cellxgene-harvester resolve-hsapdv --min-age 15 --output-prefix 2026-08-03-run/h
 ### Step 0d — resolve-assay
 
 **Input:** The assay (technique) labels or EFO IDs you want
-**Output:** `<run folder>/assay_{name}.json` + `.csv`
+**Output:** `<run folder>/assay_published.json` + `.csv` (the name is for the set of assays, not for its first label; another set gets another `--output-prefix`)
 
 You give the assays you **want**. Each one is resolved on its own: there is no root term and no descendants. Every assay that resolves is written to the file and used in the filter step. A label that does not resolve is listed under `unresolved` in the JSON and in the log, and is skipped. Nothing is asked and nothing is chosen for you: a label must match one EFO term exactly (ignoring case), or be an EFO ID.
 
@@ -341,14 +342,17 @@ cellxgene-harvester final-cleanup 2026-08-03-run/homo_sapiens_kidney_harvester
 ### Step 7 — export-datasets-csv
 
 **Input:** the Step 6 folder
-**Output:** one CSV for [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) (`--datasets_csv`)
+**Output:** two files side by side, with the same name apart from the ending: `homo_sapiens_kidney_harvester_final.csv`, for [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) (`--datasets_csv`), and `homo_sapiens_kidney_harvester_final.json`, one JSON array with the full record of the same datasets in the same order
 
 sc-nsforest-qc-nf reads its datasets from a CSV. This step writes that CSV from the JSON files, with one row for each dataset that has cells after filtering. The JSON files stay the full record for the consumers that read JSON.
 
 ```bash
 cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
     --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
+# also writes 2026-08-03-run/homo_sapiens_kidney_harvester_final.json (--output-json gives another path)
 ```
+
+The per-dataset folder (`homo_sapiens_kidney_harvester/`) is the working folder for Steps 4 to 6. The two final files are what is published.
 
 **Columns:** `reference`, `collection_name`, `dataset_title`, `author_cell_type`, `embedding`, `first_author`, `journal`, `year`, `doi`, `collection_url`, `explorer_url`, `disease`, `dataset_id`, `dataset_version_id`, `h5ad_url`. These are the columns sc-nsforest-qc-nf uses, plus `dataset_id`.
 
@@ -357,7 +361,7 @@ cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harve
 - `disease` is the `source_disease` labels joined with ` | `, the same text the Step 2 CSV held. sc-nsforest-qc-nf passes it on to `scsilhouette --disease` as one text. This is the only place a list is joined back into text.
 - `year` is an integer (`2023`). The earlier Step 4 output wrote `2023.0`, and that text ended up in sc-nsforest-qc-nf's published folder names.
 - `h5ad_url` is the `filtered_h5ad_url` of the JSON, the filtered file that sc-nsforest-qc-nf reads. A dataset without one gets the original CellxGene address and a warning in the log.
-- The CSV has no counts. Counts are in the JSON files.
+- The CSV has no counts. Counts are in the final JSON and in the per-dataset files.
 - Values can hold commas, so the file is quoted. Nextflow's `splitCsv` does not read quotes unless it is given `quote: '"'`. Without it, a row with a comma in a title is read with its columns shifted. sc-nsforest-qc-nf's `main.nf` needs `.splitCsv(header: true, sep: ',', quote: '"')`.
 
 ---
@@ -422,7 +426,7 @@ cellxgene-harvester count-normal-cells 2026-08-03-run/homo_sapiens_kidney_harves
 # ── Step 6: delete the datasets with no cells after filtering ─────────────
 cellxgene-harvester final-cleanup 2026-08-03-run/homo_sapiens_kidney_harvester
 
-# ── Step 7: write the datasets CSV for sc-nsforest-qc-nf ──────────────────
+# ── Step 7: write the final CSV (for sc-nsforest-qc-nf) and the final JSON ─
 cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
     --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
 ```
