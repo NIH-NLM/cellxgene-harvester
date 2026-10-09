@@ -51,4 +51,4 @@ def test_a_run_writes_rows_without_those_columns(tmp_path, monkeypatch):
     assert rows[0]["tissue_ontology_term_id"] == "UBERON:0002113 | UBERON:0001225"
     # the assay ids are carried so that step 4 can apply the assay choice
     assert rows[0]["assay_ontology_term_id"] == "EFO:0009922 | EFO:0010961"
-    assert rows[0]["reference"] == "unk" and rows[0]["year"] == "2022"
+    assert rows[0]["reference"] == "no" and rows[0]["year"] == "2022"

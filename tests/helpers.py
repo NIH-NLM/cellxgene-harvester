@@ -20,7 +20,7 @@ def make_row(**overrides):
     """One CSV row as text, like all_datasets_complete.csv. Defaults describe a
     kidney dataset with normal cells."""
     row = {
-        "reference": "unk", "collection_name": "A collection", "dataset_title": "A dataset",
+        "reference": "no", "collection_name": "A collection", "dataset_title": "A dataset",
         "total_cell_count": "23197", "author_cell_type": "", "embedding": "",
         "first_author": "Otero-Garcia", "journal": "Neuron", "year": "2022.0",
         "doi": "10.1016/j.neuron.2022.06.021", "collection_url": "https://example.org/c",

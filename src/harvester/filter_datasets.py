@@ -27,6 +27,12 @@ dataset level and is only available after the Census query in Step 5. The
 optional --hsapdv file is only recorded, so the age choice is on file from
 this step on.
 
+--author-cell-type and --embedding set curation.author_cell_type and curation.embedding
+(the obs column of the author's cell types and the obsm key of the embedding) in every
+file written. They win over the CSV and over a value set by hand in an earlier file. They
+suit one dataset, such as a test; for many datasets give the values for each dataset in
+the CSV instead.
+
 Each JSON file records the choices made here (filter_choices), the organ (the
 root term given to resolve-uberon), and the source_ values for tissue and
 disease. The filtered_ values stay empty until Step 5.
@@ -161,20 +167,27 @@ def make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_pre
     return choices
 
 
-def write_records(df, output_dir, organ, filter_choices):
-    """Write one <dataset_id>.filtered.json for each row. Return the paths."""
+def write_records(df, output_dir, organ, filter_choices, curation=None):
+    """Write one <dataset_id>.filtered.json for each row. Return the paths.
+
+    curation holds values given on the command line (author_cell_type, embedding).
+    They are set in every file written and win over the CSV and over a value set by
+    hand in an earlier file.
+    """
     paths = []
     for _, row in df.iterrows():
         path = os.path.join(output_dir, f"{row['dataset_id']}.filtered.json")
-        record = new_record(row, organ, filter_choices)
-        write_json(path, merge_curation(record, path))
+        record = merge_curation(new_record(row, organ, filter_choices), path)
+        record["curation"].update(curation or {})
+        write_json(path, record)
         paths.append(path)
     return paths
 
 
 def filter_datasets(input_csv, output_dir, logger,
                     uberon_json=None, disease_json=None, hsapdv_json=None,
-                    organism=None, no_preprints=False, assay_json=None):
+                    organism=None, no_preprints=False, assay_json=None,
+                    author_cell_type=None, embedding=None):
 
     logger.info(f"Input : {input_csv}")
     df = read_rows(input_csv)
@@ -194,7 +207,11 @@ def filter_datasets(input_csv, output_dir, logger,
     organ = ontology_files.organ_from(uberon_json) if uberon_json else None
     choices = make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_preprints,
                                   assay_json)
-    paths = write_records(df, output_dir, organ, choices)
+    curation = {name: value for name, value in
+                (("author_cell_type", author_cell_type), ("embedding", embedding)) if value}
+    if curation:
+        logger.info(f"Curation given for every dataset: {curation}")
+    paths = write_records(df, output_dir, organ, choices, curation)
     logger.info(f"Wrote {len(paths)} JSON files to {output_dir}")
 
 
@@ -209,7 +226,9 @@ def run_filter_datasets(
         hsapdv_json=None,
         organism=None,
         no_preprints=False,
-        assay_json=None):
+        assay_json=None,
+        author_cell_type=None,
+        embedding=None):
 
     """Main entry point called by CLI"""
     output_dir = output_dir.rstrip("/")
@@ -227,6 +246,8 @@ def run_filter_datasets(
         organism=organism,
         no_preprints=no_preprints,
         assay_json=assay_json,
+        author_cell_type=author_cell_type,
+        embedding=embedding,
     )
 
     log_finish(logger, output_dir)

@@ -127,8 +127,10 @@ def filter_datasets_command(
     assay: Optional[Path] = typer.Option(None, "--assay", help="Assay JSON from resolve-assay: keep the datasets with at least one of these assays (the same file is given to step 5)"),
     organism: Optional[str] = typer.Option(None, help="Filter by organism label"),
     no_preprints: bool = typer.Option(False, help="Exclude preprints"),
+    author_cell_type: Optional[str] = typer.Option(None, "--author-cell-type", help="Set curation.author_cell_type (the obs column of the author's cell types) in every file written; wins over the CSV"),
+    embedding: Optional[str] = typer.Option(None, "--embedding", help="Set curation.embedding (the obsm key of the embedding, for example X_umap) in every file written; wins over the CSV"),
 ):
-    """Step 4: Filter datasets using UBERON and disease ontology IDs"""
+    """Step 4: Filter datasets using UBERON, disease and assay ontology IDs"""
     filter_datasets.run_filter_datasets(
         input_csv=str(input),
         output_dir=str(output),
@@ -138,6 +140,8 @@ def filter_datasets_command(
         assay_json=str(assay) if assay else None,
         organism=organism,
         no_preprints=no_preprints,
+        author_cell_type=author_cell_type,
+        embedding=embedding,
     )
 
 
