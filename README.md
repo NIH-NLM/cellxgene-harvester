@@ -270,6 +270,7 @@ cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
 | Assay | With `--assay`: keep if **any** of dataset's `assay_ontology_term_id` values ∈ `assay_obo_ids` | The same file is given to Step 5, which applies it to the cells. A dataset with two techniques is kept if one is wanted. The ids come from the CellxGene API through Step 2: a Step 2 file written before 2026-10-09 has none, and Step 4 then stops with a message to run Steps 2 and 3 again |
 | Organism | Label match on `organism` column | Only with `--organism`; if it is left out, no organism filter is applied. Step 5 reads human data only |
 | Optional | `--no-preprints` | Excludes preprints |
+| Optional | `--author-cell-type`, `--embedding` | Set `curation.author_cell_type` (the obs column of the author's cell types) and `curation.embedding` (the obsm key, for example `X_umap`) in **every** file written. They win over the CSV and over a value set by hand in an earlier file. They suit one dataset, such as the mini kidney test; for many datasets give the values for each dataset in the CSV |
 
 There are no cancer or spatial text filters. The disease file decides which disease states count: a dataset with `[cancer, normal]` is kept, and Step 5 counts only its normal cells. A technique is selected by its assay ontology id: the file given to `--assay` is applied to the datasets in Step 4 and to the cells in Step 5. Text matching on these words was removed on 2026-10-05 (see [Step 0d](#step-0d--resolve-assay)).
 
@@ -356,7 +357,7 @@ cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harve
 
 The per-dataset folder (`homo_sapiens_kidney_harvester/`) is the working folder for Steps 4 to 6. The two final files are what is published.
 
-**Columns:** `reference`, `collection_name`, `dataset_title`, `author_cell_type`, `embedding`, `first_author`, `journal`, `year`, `doi`, `collection_url`, `explorer_url`, `disease`, `dataset_id`, `dataset_version_id`, `h5ad_url`. These are the columns sc-nsforest-qc-nf uses, plus `dataset_id`.
+**Columns:** `reference`, `collection_name`, `dataset_title`, `author_cell_type`, `embedding`, `first_author`, `journal`, `year`, `doi`, `collection_url`, `explorer_url`, `disease`, `dataset_id`, `dataset_version_id`, `h5ad_url`, `organ`, `organ_uberon_id`. These are the columns sc-nsforest-qc-nf uses, plus `dataset_id` and the organ block of the JSON. `organ` and `organ_uberon_id` say which organ the rows of a table belong to, so tables of several organs can be put together and joined on `(dataset_version_id, organ)` without reading the organ from the file name (issue 14). sc-nsforest-qc-nf reads its columns by name, so the two extra columns do not disturb it.
 
 - A dataset whose `filtered_cell_count` is 0 or empty is left out. The empty ones are listed in the log.
 - There is no `filter_normal` column. The `sc-nsforest-qc-nf` command has `--filter-normal / --no-filter-normal` with the default on, and its workflow only ever passes `--filter-normal` or nothing, so the filter was always on and the column had no effect. It was removed on 2026-10-07.
@@ -376,7 +377,7 @@ One file for each dataset, `{dataset_id}.filtered.json`. Keys are flat. Every `s
 |-----|---------|
 | `schema_version` | `"1.0"` |
 | `dataset` | Dataset and collection ids, titles, `first_author`, `journal`, `year` (integer), `doi`, URLs, `organism`, `is_preprint` (true or false), `visibility` |
-| `curation` | `reference`, `author_cell_type`, `embedding`. Set by hand after the first pass. A later run of Step 4 keeps the values already in the file |
+| `curation` | `reference`, `author_cell_type`, `embedding`. `reference` is `no` when Step 2 writes it; set it to `yes` by hand for the reference dataset of an organ (for the kidney, the Lake 2023 dataset). Set by hand after the first pass. A later run of Step 4 keeps the values already in the file |
 | `organ` | `name` and `uberon_id` of the one root term given to `resolve-uberon`, for example `respiratory system`. An organ has one root term: a resolve file with more than one is refused in Step 4. The respiratory system is resolved with the one query `respiratory system`; `nose` is not added to cover the CellxGene annotation error |
 | `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease`, `hsapdv` and `assay` (if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
 | `source_cell_count`, `filtered_cell_count` | Cells before and after the filters. After Step 4 the source count is the CellxGene API total and the filtered count is `null` |

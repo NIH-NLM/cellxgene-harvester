@@ -253,7 +253,7 @@ def generate_csv():
         for ds in latest_datasets.values():
             row = {
                 # Human-readable fields (will be filled in subsequent steps)
-                "reference": "unk",
+                "reference": "no",  # "yes" is set by hand for the reference dataset of an organ
                 "collection_name": collection_name,
                 "dataset_title": "",  # Will be filled in step 3
                 "total_cell_count": "",  # Will be filled in step 3

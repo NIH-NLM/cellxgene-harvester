@@ -6,7 +6,9 @@ Reads the folder of <dataset_id>.filtered.json files (after Step 6) and writes,
 side by side, with the same name apart from the ending:
 
   homo_sapiens_kidney_harvester_final.csv   one row for each dataset that has
-        cells after filtering; only the fields that sc-nsforest-qc-nf uses
+        cells after filtering; the fields that sc-nsforest-qc-nf uses, and the organ
+        block of the JSON (organ, organ_uberon_id) so a table says which organ its
+        rows belong to
   homo_sapiens_kidney_harvester_final.json  one JSON array with the full record
         of the same datasets, in the same order, for the consumers that read JSON
 
@@ -37,6 +39,7 @@ COLUMNS = [
     "reference", "collection_name", "dataset_title", "author_cell_type", "embedding",
     "first_author", "journal", "year", "doi", "collection_url", "explorer_url",
     "disease", "dataset_id", "dataset_version_id", "h5ad_url",
+    "organ", "organ_uberon_id",
 ]
 
 # sc-nsforest-qc-nf passes the disease column to scsilhouette as one text, as
@@ -58,6 +61,7 @@ def to_row(record):
     """The CSV row of one dataset record."""
     dataset = record["dataset"]
     curation = record["curation"]
+    organ = record.get("organ") or {}
     return {
         "reference": text(curation["reference"]),
         "collection_name": text(dataset["collection_name"]),
@@ -75,6 +79,9 @@ def to_row(record):
         "dataset_id": text(dataset["dataset_id"]),
         "dataset_version_id": text(dataset["dataset_version_id"]),
         "h5ad_url": text(record.get("filtered_h5ad_url") or dataset["h5ad_url"]),
+        # the organ block of the JSON, so a table says which organ its rows belong to
+        "organ": text(organ.get("name")),
+        "organ_uberon_id": text(organ.get("uberon_id")),
     }
 
 

@@ -316,3 +316,44 @@ def test_curation_holds_only_the_three_hand_set_values(tmp_path):
     filter_datasets.run_filter_datasets(csv_path, out, uberon_json=files["uberon"],
                                         disease_json=files["disease"], hsapdv_json=files["hsapdv"])
     assert list(read(out, "d1")["curation"]) == ["reference", "author_cell_type", "embedding"]
+
+
+# ---- author_cell_type and embedding given on the command line --------------
+
+def test_author_cell_type_and_embedding_can_be_given(tmp_path):
+    """Input: a CSV with no author_cell_type or embedding, and the two options. Pass:
+    every file written has them in its curation block; reference is not touched."""
+    rows = [make_row(dataset_id="d1", reference="yes"), make_row(dataset_id="d2")]
+    out, _ = run_step_4(tmp_path, rows, author_cell_type="subclass.full", embedding="X_umap")
+    for name in ("d1", "d2"):
+        curation = read(out, name)["curation"]
+        assert curation["author_cell_type"] == "subclass.full"
+        assert curation["embedding"] == "X_umap"
+    assert read(out, "d1")["curation"]["reference"] == "yes"
+
+
+def test_the_options_win_over_the_csv_and_an_earlier_file_but_only_when_given(tmp_path):
+    """Input: a CSV that already has author_cell_type 'csv_type' and embedding 'csv_emb', a
+    run with the options, then a run without. Pass: the first run holds the option values;
+    the second keeps them (a value already in the file wins over the CSV, as before)."""
+    rows = [make_row(dataset_id="d1", author_cell_type="csv_type", embedding="csv_emb")]
+    out, _ = run_step_4(tmp_path, rows)
+    assert read(out, "d1")["curation"]["author_cell_type"] == "csv_type"
+    run_step_4(tmp_path, rows, author_cell_type="from_option", embedding="X_umap")
+    assert read(out, "d1")["curation"]["author_cell_type"] == "from_option"
+    run_step_4(tmp_path, rows)
+    assert read(out, "d1")["curation"]["author_cell_type"] == "from_option"
+
+
+def test_command_line_takes_the_curation_options(tmp_path):
+    """Input: the filter-datasets command with --author-cell-type and --embedding. Pass:
+    exit code 0 and both values in the file."""
+    files = kidney_files(tmp_path)
+    out = tmp_path / "out"
+    result = CliRunner().invoke(app, [
+        "filter-datasets", write_csv(tmp_path / "in.csv", [make_row(dataset_id="d1")]),
+        "--output", str(out), "--uberon", files["uberon"], "--disease", files["disease"],
+        "--author-cell-type", "subclass.full", "--embedding", "X_umap"])
+    assert result.exit_code == 0, result.output
+    curation = read(str(out), "d1")["curation"]
+    assert (curation["author_cell_type"], curation["embedding"]) == ("subclass.full", "X_umap")

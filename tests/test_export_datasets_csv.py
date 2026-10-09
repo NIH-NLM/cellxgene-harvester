@@ -29,7 +29,8 @@ USED_BY_NSFOREST = [
 
 def write_file(folder, dataset_id, count, **row):
     """Write a step 5 style file with the given filtered_cell_count."""
-    record = new_record(make_row(dataset_id=dataset_id, **row), None, {})
+    record = new_record(make_row(dataset_id=dataset_id, **row),
+                        {"name": "kidney", "uberon_id": "UBERON:0002113"}, {})
     # step 5 fills the labels; here each disease label is one term
     record["source_disease"] = [{"ontology_id": f"X:{i}", "label": label, "source_count": 1}
                                 for i, label in enumerate(row.get("disease", "normal").split(" | "))]
@@ -224,3 +225,25 @@ def test_command_line_writes_both_files_and_output_json_overrides(tmp_path):
                                       "--output-json", str(other)])
     assert result.exit_code == 0, result.output
     assert len(json.load(open(other))) == 1
+
+
+# ---- the organ block in the CSV -----------------------------------------------
+
+def test_the_organ_block_is_in_every_row(tmp_path):
+    """Input: two datasets of the kidney. Pass: every row has organ 'kidney' and organ_uberon_id
+    UBERON:0002113, the organ block of the JSON, so a table says which organ its rows belong to."""
+    write_file(tmp_path, "d1", 5)
+    write_file(tmp_path, "d2", 7)
+    rows = export(tmp_path)
+    assert [(r["organ"], r["organ_uberon_id"]) for r in rows] == [("kidney", "UBERON:0002113")] * 2
+
+
+def test_a_file_without_an_organ_gives_empty_organ_columns(tmp_path):
+    """Input: a record whose organ is null (a test file made without a resolve file). Pass: the
+    row is written with empty organ columns, not 'None'."""
+    record = new_record(make_row(dataset_id="d1"), None, {})
+    record["filtered_cell_count"] = 3
+    record["source_disease"] = []
+    write_json(str(tmp_path / "d1.filtered.json"), record)
+    row = export(tmp_path)[0]
+    assert row["organ"] == "" and row["organ_uberon_id"] == ""
