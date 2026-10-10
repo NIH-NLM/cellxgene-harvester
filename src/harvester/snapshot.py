@@ -77,10 +77,15 @@ def read(folder):
 
 
 def write(folder, info):
+    """Write the provenance file. The file is replaced, not written through: in a workflow the
+    file may be a link to the output of an earlier task, which must stay as it was."""
     os.makedirs(folder, exist_ok=True)
-    with open(os.path.join(folder, PROVENANCE), "w", encoding="utf-8") as f:
+    path = os.path.join(folder, PROVENANCE)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(info, f, indent=2)
         f.write("\n")
+    os.replace(tmp, path)
 
 
 def start(folder, version="unknown"):
