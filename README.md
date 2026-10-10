@@ -460,45 +460,17 @@ cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harve
 
 ---
 
-## Nextflow Module Readiness
+## Nextflow
 
-cellxgene-harvester ships Nextflow process modules in `modules/harvester/` for direct inclusion in [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf) or any other Nextflow workflow. All modules use the published container `ghcr.io/nih-nlm/cellxgene-harvester:latest`.
+This repository has no Nextflow code. The workflow that runs the steps, from the resolve steps to the publish step, is in a separate repository, [cellxgene-harvester-nf](https://github.com/NIH-NLM/cellxgene-harvester-nf), which runs the container built from this repository. Every choice there is a parameter, and each organ has a params file in `nlm-ckn/data/prod/<organ>/cellxgene-harvester-nf/`.
 
-### Module inventory
-
-| Module file | Process name | Step | Notes |
-|------------|-------------|------|-------|
-| `resolve_uberon.nf` | `RESOLVE_UBERON` | 0a | OLS4 API, produces UBERON JSON |
-| `resolve_disease.nf` | `RESOLVE_DISEASE` | 0b | OLS4 API, produces disease JSON |
-| `resolve_hsapdv.nf` | `RESOLVE_HSAPDV` | 0c | OLS4 API, produces HsapDv JSON |
-| `fetch_collections.nf` | `FETCH_COLLECTIONS` | 1 | CellxGene Curation API |
-| `generate_metadata.nf` | `GENERATE_METADATA` | 2 | Flatten to datasets CSV |
-| `append_dataset_details.nf` | `APPEND_DATASET_DETAILS` | 3 | Enrich with URLs and counts |
-| `filter_datasets.nf` | `FILTER_DATASETS` | 4 | Ontology ID filtering, no scatter |
-| `count_normal_cells_single.nf` | `COUNT_NORMAL_CELLS_SINGLE` | 5 | **Scatter**: one h5ad file per dataset |
-
-> **Nextflow modules:** `FILTER_DATASETS` and `COUNT_NORMAL_CELLS_SINGLE` still describe the earlier CSV input and output of Steps 4 and 5 and are not updated. A Nextflow workflow for the current JSON steps belongs in a separate repository, `cellxgene-harvester-nf`, that runs the cellxgene-harvester container.
-
-### Shared JSON files with sc-nsforest-qc-nf
-
-The same three JSON files produced by Steps 0a–0c are passed to the `FILTER_ADATA` and `COMPUTE_SCSILHOUETTE` modules in sc-nsforest-qc-nf for **cell-level** filtering inside `.h5ad` files. This ensures the dataset-level filter (Step 4), the cell-count filter (Step 5), and the h5ad cell filter applied by scsilhouette all use identical ontology scope — no drift between pipeline stages.
-
-```nextflow
-// cellxgene-harvester produces JSON files:
-RESOLVE_UBERON(params.organ)       // → uberon_kidney.json
-RESOLVE_DISEASE(params.disease)    // → disease_normal.json
-RESOLVE_HSAPDV(params.min_age)     // → hsapdv_adult_15.json
-
-// sc-nsforest-qc-nf consumes the same files:
-FILTER_ADATA(meta, h5ad, uberon_json, disease_json, hsapdv_json)
-COMPUTE_SCSILHOUETTE(meta, filtered_h5ad, uberon_json, disease_json, hsapdv_json)
-```
+The resolve files of Steps 0a to 0d are also read by [sc-nsforest-qc-nf](https://github.com/NIH-NLM/sc-nsforest-qc-nf), so the dataset filter (Step 4), the cell filter (Step 5) and the cell filter in sc-nsforest-qc-nf use identical ontology scope, with no drift between the stages.
 
 ---
 
 ## Docker Container
 
-The container is published to GHCR and is the runtime for all Nextflow modules.
+The container is published to GHCR and is the runtime of [cellxgene-harvester-nf](https://github.com/NIH-NLM/cellxgene-harvester-nf).
 
 The image is built automatically on every commit to any branch and published as `ghcr.io/nih-nlm/cellxgene-harvester:<branch name>` and `:sha-<commit>`. A commit to `main` also gives `:latest` and `:1.0.0` (the version in `pyproject.toml`); a `v*` tag gives its version tag. To test a branch, use its branch tag.
 
@@ -568,18 +540,6 @@ Each step is necessary and sufficient:
 - **Step 6**: Remove zero-count rows — clean final output for sc-nsforest-qc-nf
 
 No redundant API calls. No unnecessary data movement. No text matching where ontology IDs exist.
-
----
-
-## Profiles
-
-| Profile | Description |
-|---------|-------------|
-| `local` | Local conda environment, no container |
-| `docker` | Docker container from GHCR (`linux/amd64`) |
-| `singularity` | Singularity image for HPC |
-| `lifebit` | CloudOS on AWS |
-| `test` | CI/CD regression testing |
 
 ---
 
