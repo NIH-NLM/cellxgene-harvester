@@ -165,3 +165,20 @@ def test_the_real_step4_writes_the_snapshot_date_into_every_dataset_file(tmp_pat
     assert choices["snapshot"]["date"] == "2026-08-03"
     assert choices["snapshot"]["files"]["all_datasets_complete.csv"] == \
         snapshot.read(str(folder))["files"]["all_datasets_complete.csv"]["sha256"]
+
+
+def test_recording_a_file_does_not_change_the_file_a_link_points_to(tmp_path):
+    """In a workflow the provenance file of a step is a link to the output of the step before.
+    Pass: the step's change shows in its own folder, and the earlier file is as it was."""
+    earlier = tmp_path / "earlier"
+    earlier.mkdir()
+    snapshot.start(str(earlier))
+    before = (earlier / snapshot.PROVENANCE).read_text()
+    step = tmp_path / "step"
+    step.mkdir()
+    os.symlink(earlier / snapshot.PROVENANCE, step / snapshot.PROVENANCE)
+    (step / "all_datasets.csv").write_text("a\n1\n")
+    snapshot.record(str(step), "all_datasets.csv")
+    assert (earlier / snapshot.PROVENANCE).read_text() == before
+    assert "all_datasets.csv" in snapshot.read(str(step))["files"]
+    assert not os.path.islink(step / snapshot.PROVENANCE)
