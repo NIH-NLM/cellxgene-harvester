@@ -83,21 +83,35 @@ def overlaps(cell, ids):
     return bool(set(split_cell(cell)) & ids)
 
 
+def keep_matching_ids(df, column, ids):
+    """Keep the rows whose cell in column has at least one id in ids.
+
+    The mask is made a boolean on purpose: apply() on an empty table gives an empty table of
+    objects, and df[that] would select no columns at all instead of no rows.
+    """
+    return df[df[column].apply(lambda cell: overlaps(cell, ids)).astype(bool)]
+
+
 def keep_tissue(df, uberon_ids):
-    return df[df["tissue_ontology_term_id"].apply(lambda cell: overlaps(cell, uberon_ids))]
+    return keep_matching_ids(df, "tissue_ontology_term_id", uberon_ids)
 
 
 def keep_disease(df, disease_ids):
-    return df[df["disease_ontology_term_id"].apply(lambda cell: overlaps(cell, disease_ids))]
+    return keep_matching_ids(df, "disease_ontology_term_id", disease_ids)
 
 
-def keep_assay(df, assay_ids):
-    """Keep the datasets with at least one assay in the assay file. Raise ValueError
-    if no dataset has any assay id, so an old Step 2 file is not read as "nothing wanted"."""
+def check_assay_ids(df):
+    """Raise ValueError if no dataset of the INPUT table has any assay id, so an old Step 2
+    file is not read as "no dataset has a wanted assay". The check is made on the whole
+    input, before any filter, so a table emptied by the tissue filter is not mistaken for one."""
     if "assay_ontology_term_id" not in df or not df["assay_ontology_term_id"].str.strip().any():
         raise ValueError("the input CSV has no assay ontology ids: run Step 2 (generate-metadata) "
                          "and Step 3 (append-details) again, or leave out --assay")
-    return df[df["assay_ontology_term_id"].apply(lambda cell: overlaps(cell, assay_ids))]
+
+
+def keep_assay(df, assay_ids):
+    """Keep the datasets with at least one assay in the assay file."""
+    return keep_matching_ids(df, "assay_ontology_term_id", assay_ids)
 
 
 def keep_organism(df, organism):
@@ -191,6 +205,8 @@ def filter_datasets(input_csv, output_dir, logger,
 
     logger.info(f"Input : {input_csv}")
     df = read_rows(input_csv)
+    if assay_json:
+        check_assay_ids(df)
     initial_count = len(df)
     logger.info(f"Loaded {initial_count} datasets\n")
 

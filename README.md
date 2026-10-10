@@ -96,7 +96,10 @@ Queries the OLS4 API for the root term and all hierarchical descendants.
 ```bash
 cellxgene-harvester resolve-uberon kidney
 cellxgene-harvester resolve-uberon kidney --output-prefix 2026-08-03-run/uberon_kidney
+cellxgene-harvester resolve-uberon "respiratory system" --also-relation "contributes to morphology of"
 ```
+
+**`--also-relation LABEL`** adds the terms that have that relation to the root, each with its descendants. The label must be exactly the label of one relation of the ontology (matching is by exact label, ignoring case; nothing is guessed). The nose is not below the respiratory system in the ontology, but it contributes to its morphology, so for the respiratory system the relation `contributes to morphology of` adds the nose, pleura, larynx, paranasal sinus, lung, trachea and respiratory tract epithelium and everything below them (541 terms become 661 on 2026-10-10). The organ stays **one root term**. The file lists the relation under `relations` and the added terms, with the relation, under `related_terms`; both are recorded in `filter_choices.uberon`. The option can be given more than once. Without it only the descendants are used.
 
 **JSON structure** (identical across all three resolve steps):
 ```json

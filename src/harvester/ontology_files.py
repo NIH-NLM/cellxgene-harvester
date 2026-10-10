@@ -53,7 +53,9 @@ def read_min_age(data):
 def describe(path):
     """Return what a filter_choices entry records about one resolve file:
     path, queries, root terms (or, for an assay file, the resolved assays and
-    the unresolved labels), number of terms, SHA-256, and min_age if any.
+    the unresolved labels), the relations and the related terms added by them
+    (an organ file made with --also-relation), number of terms, SHA-256, and
+    min_age if any.
     """
     data = load(path)
     info = {"file": path, "queries": data["queries"]}
@@ -63,6 +65,11 @@ def describe(path):
         # an assay file has no root terms: it lists the assays that were resolved
         info["assays"] = [{"obo_id": a["obo_id"], "label": a["label"]} for a in data["assays"]]
         info["unresolved"] = data.get("unresolved", [])
+    if "relations" in data:
+        # terms added by relation to the root, with the relation: the choice is on record
+        info["relations"] = data["relations"]
+        info["related_terms"] = [{"obo_id": t["obo_id"], "label": t["label"], "relation": t["relation"]}
+                                 for t in data.get("related_terms", [])]
     info["term_count"] = len(data["obo_ids"])
     info["sha256"] = sha256_of(path)
     min_age = read_min_age(data)
