@@ -429,9 +429,9 @@ A resolved ontology file, or the gene table of a GENCODE release, is made once a
 - `--refresh` ignores the store and builds the file again. A file that is not in the store is built as usual. A store address that cannot be read is an error, not an empty store.
 - Pin a web address to a tag or a commit, never to `main`, so the same address always gives the same file. An `s3://` address is read over https, so the bucket must be public.
 
-## The dated snapshot of the CellxGene API
+## The snapshot of the CellxGene API
 
-Steps 1 to 3 ask the CellxGene API for every collection and dataset. The API has no release number: it is live, and its answer changes from day to day. The three files they write are therefore one **snapshot**, named by the date of the fetch:
+Steps 1 to 3 ask the CellxGene API for every collection and dataset. The API has no release number: it is live, and its answer changes. The three files they write are therefore one **snapshot**:
 
 | File | Step |
 |---|---|
@@ -439,14 +439,14 @@ Steps 1 to 3 ask the CellxGene API for every collection and dataset. The API has
 | `all_datasets.csv` | 2 `generate-metadata` |
 | `all_datasets_complete.csv` | 3 `append-details` (adds the title, cell count, h5ad address and `cellxgene_schema_version`) |
 
-`api_snapshot.provenance.json` in the run folder holds the date, the API address, the harvester version, and for each file its SHA-256 and the time it was made. Step 4 copies the date and the checksums into every dataset file as `filter_choices.snapshot`, so the date travels with the data to the ETL.
+`api_snapshot.provenance.json` holds the date of the fetch, the API address, the harvester version, and for each file its SHA-256 and the time it was made. **The date is in this file and in no path:** a store holds the current files, and git keeps the older ones. Step 4 copies the date and the checksums into every dataset file as `filter_choices.snapshot`, so the date travels with the data to the ETL.
 
-To use a snapshot again, give the same `--snapshot DATE` and `--store` to the three steps. They take their files from the folder `api_snapshot_<DATE>` of the store, check each against the SHA-256 in its provenance file, and do not ask the API. A snapshot, or a file, that is not in the store is an error, and so is a file that does not match its checksum: a date that was asked for by name is never replaced by another snapshot. `--snapshot` and `--store` go together. Without them the steps ask the API, and the snapshot is the date of that day.
+**Do not run Step 3 again when nothing has changed.** Step 1 always asks the API (one call, a few seconds). Steps 2 and 3 take `--store`, a folder or web address that holds the current files and their provenance file. If the collections file that Step 1 just fetched has the same SHA-256 as the one the stored provenance file lists, nothing in the API has changed: the stored file is used and the step is not run (Step 3 asks the API once for each dataset and takes about ten minutes). Otherwise the step is run, as without a store. A stored file whose SHA-256 is not the one in its provenance file is an error, not a silent rebuild.
 
 ```bash
-cellxgene-harvester fetch-collections       --snapshot 2026-08-03 --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/api_snapshots
-cellxgene-harvester generate-metadata       --snapshot 2026-08-03 --store <same store>
-cellxgene-harvester append-details          --snapshot 2026-08-03 --store <same store>
+cellxgene-harvester fetch-collections
+cellxgene-harvester generate-metadata --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/cellxgene-datasets
+cellxgene-harvester append-details    --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/cellxgene-datasets
 ```
 
 ## Gene names: the GENCODE release

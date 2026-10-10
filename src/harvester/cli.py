@@ -111,40 +111,26 @@ def resolve_assay_command(
     resolve_assay.run_resolve_assay(queries, output_prefix, store, refresh)
 
 
-def check_snapshot(snapshot, store):
-    """--snapshot and --store go together: a named snapshot is read from a store."""
-    if bool(snapshot) != bool(store):
-        raise typer.BadParameter("give --snapshot DATE and --store together (or neither, to ask the API)")
-
-
 @app.command(name="fetch-collections")
-def fetch_collections_command(
-    snapshot: Optional[str] = typer.Option(None, "--snapshot", help="Use the snapshot of this date (YYYY-MM-DD) from --store instead of asking the CellxGene API. Needs --store"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the folder api_snapshot_<date>"),
-):
+def fetch_collections_command():
     """Step 1: Fetch all collections from CellxGene API"""
-    check_snapshot(snapshot, store)
-    fetch_collections.run_fetch_collections(snapshot, store)
+    fetch_collections.run_fetch_collections()
 
 
 @app.command(name="generate-metadata")
 def generate_metadata_command(
-    snapshot: Optional[str] = typer.Option(None, "--snapshot", help="Use the snapshot of this date (YYYY-MM-DD) from --store instead of asking the CellxGene API. Needs --store"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the folder api_snapshot_<date>"),
+    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the current files of steps 2 and 3 and api_snapshot.provenance.json. A file in it is used if the API has not changed since it was made"),
 ):
     """Step 2: Generate metadata CSV from collections JSON"""
-    check_snapshot(snapshot, store)
-    generate_metadata.run_generate_metadata(snapshot, store)
+    generate_metadata.run_generate_metadata(store)
 
 
 @app.command(name="append-details")
 def append_details_command(
-    snapshot: Optional[str] = typer.Option(None, "--snapshot", help="Use the snapshot of this date (YYYY-MM-DD) from --store instead of asking the CellxGene API. Needs --store"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the folder api_snapshot_<date>"),
+    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the current files of steps 2 and 3 and api_snapshot.provenance.json. A file in it is used if the API has not changed since it was made"),
 ):
     """Step 3: Append dataset details (titles, cell counts, URLs)"""
-    check_snapshot(snapshot, store)
-    append_dataset_details.run_append_details(snapshot, store)
+    append_dataset_details.run_append_details(store)
 
 
 @app.command(name="filter-datasets")

@@ -76,16 +76,10 @@ def fetch_collections():
 # =============================================================================
 # run_fetch_collections
 # =============================================================================
-def run_fetch_collections(snapshot_date=None, store=None):
-    """Main entry point called by CLI.
-
-    With a snapshot date and a store, the file of that snapshot is used and the API is not asked.
-    """
+def run_fetch_collections():
+    """Main entry point called by CLI. The API is always asked: one call, a few seconds."""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 1: Fetch Collections")
     print("=" * 70)
-    if snapshot_date:
-        snapshot.reuse(store, snapshot_date, "collections_metadata.json", run_dir(), snapshot.PrintLogger)
-    else:
-        fetch_collections()
+    fetch_collections()
     print("\nNext step: cellxgene-harvester generate-metadata")

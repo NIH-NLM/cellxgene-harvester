@@ -294,13 +294,13 @@ def generate_csv():
     print(f"\nOutput saved to: {output_csv}")
     print(f"\nNote: If any datasets had multiple versions, only the latest was included.")
 
-def run_generate_metadata(snapshot_date=None, store=None):
-    """Main entry point called by CLI. With a snapshot date and a store, the CSV of that snapshot is used."""
+def run_generate_metadata(store=None):
+    """Main entry point called by CLI. With a store, the stored CSV is used if the API has not changed."""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 2: Generate Metadata CSV")
     print("=" * 70)
-    if snapshot_date:
-        snapshot.reuse(store, snapshot_date, "all_datasets.csv", run_dir(), snapshot.PrintLogger)
+    if store and snapshot.reuse_if_current(store, "all_datasets.csv", run_dir(), snapshot.PrintLogger):
+        pass
     else:
         generate_csv()
         snapshot.record(run_dir(), "all_datasets.csv")
