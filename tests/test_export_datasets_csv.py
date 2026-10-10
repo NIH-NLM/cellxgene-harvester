@@ -247,3 +247,18 @@ def test_a_file_without_an_organ_gives_empty_organ_columns(tmp_path):
     write_json(str(tmp_path / "d1.filtered.json"), record)
     row = export(tmp_path)[0]
     assert row["organ"] == "" and row["organ_uberon_id"] == ""
+
+
+def test_the_final_json_keeps_the_schema_version_and_gencode_release_for_the_etl(tmp_path):
+    """Input: a counted dataset whose record has the gene_annotation block of step 5.
+    Pass: the final JSON array holds the same block, so the ETL can read the version."""
+    write_file(tmp_path, "d1", 5, cellxgene_schema_version="7.1.0")
+    path = tmp_path / "d1.filtered.json"
+    record = json.loads(path.read_text())
+    record["gene_annotation"]["h5ad_schema_version"] = "7.1.0"
+    path.write_text(json.dumps(record))
+    export(tmp_path)
+    final = json.loads((tmp_path / "datasets.json").read_text())
+    assert final[0]["gene_annotation"] == {
+        "cellxgene_schema_version": "7.1.0", "h5ad_schema_version": "7.1.0",
+        "gencode_release": 48, "required_gencode_release": 48}

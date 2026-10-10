@@ -8,7 +8,8 @@ Usage:
     record = new_record(row, organ, filter_choices)
 """
 
-from harvester.io_utils import FACETS, SCHEMA_VERSION, facet_keys
+from harvester.io_utils import (FACETS, REQUIRED_GENCODE_RELEASE, SCHEMA_VERSION, facet_keys,
+                                gencode_release)
 
 # The only place a " | " joined cell from the CSV is read.
 PIPE = " | "
@@ -59,6 +60,51 @@ def curation_block(row):
     }
 
 
+def gene_annotation_block(row):
+    """The CellxGene schema version of the dataset and the GENCODE release of its genes.
+
+    cellxgene_schema_version comes from the CellxGene API (Step 3). Step 5 reads the
+    schema version from the h5ad file itself (h5ad_schema_version); the release is then
+    taken from the file, which is what the gene ids actually are.
+    """
+    api_version = (row.get("cellxgene_schema_version") or "").strip() or None
+    return {
+        "cellxgene_schema_version": api_version,
+        "h5ad_schema_version": None,
+        "gencode_release": gencode_release(api_version),
+        "required_gencode_release": REQUIRED_GENCODE_RELEASE,
+    }
+
+
+def set_h5ad_schema(record, h5ad_schema_version):
+    """Record the schema version found in the h5ad file and the GENCODE release it implies.
+
+    Return messages about anything the study should know: a version that differs from the
+    API's, one that is not in GENCODE_BY_SCHEMA, and a release other than the required one.
+    """
+    # a record written before this block existed gets it now
+    block = record.setdefault("gene_annotation", gene_annotation_block({}))
+    version = str(h5ad_schema_version).strip() if h5ad_schema_version else None
+    block["h5ad_schema_version"] = version
+    block["gencode_release"] = gencode_release(version)
+
+    messages = []
+    api_version = block["cellxgene_schema_version"]
+    if version is None:
+        messages.append("the h5ad file has no uns['schema_version']; the GENCODE release is unknown")
+    elif block["gencode_release"] is None:
+        messages.append(f"CellxGene schema version {version} is not in GENCODE_BY_SCHEMA; "
+                        f"the GENCODE release is unknown")
+    if version and api_version and version != api_version:
+        messages.append(f"the h5ad file has schema version {version} but the CellxGene API "
+                        f"says {api_version}; the file is the one that is used")
+    release = block["gencode_release"]
+    if release is not None and release != block["required_gencode_release"]:
+        messages.append(f"the genes are GENCODE v{release}, not the required "
+                        f"v{block['required_gencode_release']}")
+    return messages
+
+
 def empty_facet(facet):
     """The six keys of one facet with nothing counted yet."""
     keys = facet_keys(facet)
@@ -75,6 +121,7 @@ def new_record(row, organ, filter_choices):
     record = {
         "schema_version": SCHEMA_VERSION,
         "dataset": dataset_block(row),
+        "gene_annotation": gene_annotation_block(row),
         "curation": curation_block(row),
         "organ": organ,
         "filter_choices": filter_choices,

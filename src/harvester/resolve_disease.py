@@ -33,6 +33,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
+from harvester.ontology_files import reuse_from_store
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
 
@@ -239,7 +240,8 @@ def resolve_disease(queries: list, output_prefix: str, logger):
 # run_resolve_disease
 # =============================================================================
 
-def run_resolve_disease(queries: list, output_prefix: str = None):
+def run_resolve_disease(queries: list, output_prefix: str = None,
+                        store: str = None, refresh: bool = False):
     """Main entry point called by CLI."""
     os.makedirs(run_dir(), exist_ok=True)
 
@@ -252,6 +254,10 @@ def run_resolve_disease(queries: list, output_prefix: str = None):
     log_file = f"{out_prefix}.log"
     logger   = setup_logger("0c_resolve_disease", output_csv=log_file)
     log_command(logger)
+
+    if reuse_from_store(store, out_prefix, lambda data: data.get("queries") == list(queries), logger, refresh):
+        log_finish(logger, out_prefix + ".csv")
+        return
 
     resolve_disease(queries, out_prefix, logger)
     log_finish(logger, out_prefix + ".csv")

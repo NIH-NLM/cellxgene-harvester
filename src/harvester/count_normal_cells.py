@@ -82,6 +82,7 @@ from harvester.h5ad_source import (fetch_h5ad, id_column, obs_columns, open_h5ad
                                    read_obs as read_h5ad_obs, write_filtered)
 from harvester.io_utils import FACETS, load_json, terms_from, write_json
 from harvester.logger import setup_logger, log_command, log_finish
+from harvester.records import set_h5ad_schema
 
 CENSUS_VERSION = "latest"
 FILTER_FILES = ("uberon", "disease", "hsapdv", "assay")
@@ -250,6 +251,7 @@ def count_one_h5ad(path, ids, paths, logger, workdir, out_dir, url_prefix=None, 
         logger.info(f"    Reading {location}")
         local, downloaded = fetch_h5ad(location, workdir)
         adata = open_h5ad(local)
+        messages += set_h5ad_schema(record, adata.uns.get("schema_version"))
         obs = read_h5ad_obs(adata)
         logger.info(f"    The file has {len(obs)} cells")
         messages += fill_record(record, obs, ids["uberon"], ids["disease"], ids["hsapdv"],

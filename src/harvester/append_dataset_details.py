@@ -26,6 +26,7 @@ import time
 import requests
 from typing import Tuple
 
+from harvester import snapshot
 from harvester.io_utils import write_csv
 from harvester.run_dir import run_dir
 
@@ -37,7 +38,7 @@ API_TEMPLATE = (
 REQUEST_DELAY = 0.2  # seconds between requests
 
 
-def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str, str, str]:
+def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str, str, str, str]:
     """
     Fetch dataset details from CellxGene API.
     
@@ -46,7 +47,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         dataset_id: Dataset UUID
         
     Returns:
-        Tuple of (dataset_title, total_cell_count, h5ad_url, explorer_url)
+        Tuple of (dataset_title, total_cell_count, h5ad_url, explorer_url, cellxgene_schema_version)
     """
     url = API_TEMPLATE.format(
         collection_id=collection_id,
@@ -58,7 +59,7 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         
         if response.status_code != 200:
             print(f"  ⚠ Warning: HTTP {response.status_code} for {dataset_id}", file=sys.stderr)
-            return "", "", "", ""
+            return "", "", "", "", ""
         
         data = response.json()
         
@@ -78,17 +79,20 @@ def fetch_dataset_details(collection_id: str, dataset_id: str) -> Tuple[str, str
         # Extract explorer URL
         explorer_url = data.get("explorer_url", "")
         
-        return dataset_title, total_cell_count, h5ad_url, explorer_url
+        # The CellxGene schema version fixes the GENCODE release of the gene ids and names
+        schema_version = str(data.get("schema_version", ""))
+
+        return dataset_title, total_cell_count, h5ad_url, explorer_url, schema_version
         
     except requests.exceptions.Timeout:
         print(f"  ⚠ Warning: Timeout for {dataset_id}", file=sys.stderr)
-        return "", "", "", ""
+        return "", "", "", "", ""
     except requests.exceptions.RequestException as e:
         print(f"  ⚠ Warning: Request failed for {dataset_id}: {e}", file=sys.stderr)
-        return "", "", "", ""
+        return "", "", "", "", ""
     except Exception as e:
         print(f"  ⚠ Warning: Unexpected error for {dataset_id}: {e}", file=sys.stderr)
-        return "", "", "", ""
+        return "", "", "", "", ""
 
 
 def append_details():
@@ -113,6 +117,8 @@ def append_details():
     # Fieldnames should already be correct from step 2
     # Just use them as-is to preserve column order
     fieldnames = original_fieldnames.copy()
+    if "cellxgene_schema_version" not in fieldnames:
+        fieldnames.append("cellxgene_schema_version")
     
     # Process each dataset
     print(f"\nFetching dataset details from CellxGene API...")
@@ -135,17 +141,19 @@ def append_details():
             row["total_cell_count"] = ""
             row["h5ad_url"] = ""
             row["explorer_url"] = ""
+            row["cellxgene_schema_version"] = ""
             failed += 1
             continue
         
         # Fetch details
-        dataset_title, total_cell_count, h5ad_url, explorer_url = fetch_dataset_details(collection_id, dataset_id)
+        dataset_title, total_cell_count, h5ad_url, explorer_url, schema_version = fetch_dataset_details(collection_id, dataset_id)
         
         # Update row
         row["dataset_title"] = dataset_title
         row["total_cell_count"] = total_cell_count
         row["h5ad_url"] = h5ad_url
         row["explorer_url"] = explorer_url
+        row["cellxgene_schema_version"] = schema_version
         
         if h5ad_url:
             successful += 1
@@ -167,10 +175,14 @@ def append_details():
 # =============================================================================
 # run_append_dataset_details
 # =============================================================================
-def run_append_details():
-    """Main entry point called by CLI"""
+def run_append_details(snapshot_date=None, store=None):
+    """Main entry point called by CLI. With a snapshot date and a store, the CSV of that snapshot is used."""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 3: Append Dataset Details")
     print("=" * 70)
-    append_details()
+    if snapshot_date:
+        snapshot.reuse(store, snapshot_date, "all_datasets_complete.csv", run_dir(), snapshot.PrintLogger)
+    else:
+        append_details()
+        snapshot.record(run_dir(), "all_datasets_complete.csv")
     print("\nNext step: cellxgene-harvester filter-datasets")

@@ -27,6 +27,35 @@ import pandas as pd
 
 SCHEMA_VERSION = "1.0"
 
+# The CellxGene schema version of a dataset fixes the GENCODE release of its human gene ids
+# and names. Source: the "Genes" tables and the change log of each schema document,
+# https://github.com/chanzuckerberg/single-cell-curation/tree/main/schema/<version>/schema.md
+GENCODE_BY_SCHEMA = {
+    "3.0.0": 38, "3.1.0": 38, "4.0.0": 38,
+    "5.0.0": 44, "5.1.0": 44, "5.2.0": 44, "5.3.0": 44, "6.0.0": 44,
+    "7.0.0": 48, "7.1.0": 48,
+}
+
+def schema_key(version):
+    """'7.1.0' gives (7, 1, 0), so schema versions are ordered as numbers, not as text."""
+    return tuple(int(part) for part in version.split("."))
+
+
+def required_release(table):
+    """The GENCODE release of the newest schema in a table like GENCODE_BY_SCHEMA."""
+    return table[max(table, key=schema_key)]
+
+
+# The release the gene symbol lookup is built for: the GENCODE release of the newest CellxGene
+# schema in the table above. Add a row for a newer schema and this follows; nothing else changes.
+REQUIRED_GENCODE_RELEASE = required_release(GENCODE_BY_SCHEMA)
+
+
+def gencode_release(schema_version):
+    """The GENCODE release (a number) of a CellxGene schema version, or None if the
+    version is empty or not in GENCODE_BY_SCHEMA."""
+    return GENCODE_BY_SCHEMA.get(str(schema_version).strip()) if schema_version else None
+
 # Each facet has a source_ and a filtered_ version of every key below.
 FACETS = ("tissue", "assay", "cell_type", "disease", "development_stage", "sex")
 

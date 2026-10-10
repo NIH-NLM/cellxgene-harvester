@@ -94,3 +94,36 @@ def organ_from(path):
         raise ValueError(f"{path} has {len(roots)} root terms {[t['label'] for t in roots]}. "
                          f"An organ has one root term: resolve it with one query.")
     return {"name": roots[0]["label"], "uberon_id": roots[0]["obo_id"]}
+
+
+def reuse_from_store(store, out_prefix, matches, logger, refresh=False):
+    """Use a resolve file that is already in the store, if it is the one asked for.
+
+    store is a folder or a web address (see store.py). out_prefix is where the new file
+    would be written, for example 2026-10-10-run/uberon_kidney. matches(data) is True when
+    the stored file answers the same question: the same queries, the same minimum age.
+    Return True if the file (and its .csv, if the store has it) was copied to out_prefix.
+    """
+    if not store or refresh:
+        return False
+    import os
+    import tempfile
+    from harvester import store as store_module
+    name = os.path.basename(out_prefix)
+    with tempfile.TemporaryDirectory() as tmp:
+        found = store_module.fetch(store, f"{name}.json", tmp)
+        if found is None:
+            logger.info(f"Not in the store {store}: {name}.json is built")
+            return False
+        data = load(found)
+        if not matches(data):
+            logger.warning(f"{name}.json in the store {store} answers another question "
+                           f"(queries {data.get('queries')}); it is not used and a new one is built")
+            return False
+        os.makedirs(os.path.dirname(os.path.abspath(out_prefix)), exist_ok=True)
+        os.replace(found, f"{out_prefix}.json")
+        table = store_module.fetch(store, f"{name}.csv", tmp)
+        if table:
+            os.replace(table, f"{out_prefix}.csv")
+    logger.info(f"Reused {name}.json from the store {store} (sha256 {sha256_of(out_prefix + '.json')})")
+    return True

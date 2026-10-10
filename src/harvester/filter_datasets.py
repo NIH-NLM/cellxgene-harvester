@@ -67,7 +67,7 @@ from datetime import date
 
 import pandas as pd
 
-from harvester import __version__, ontology_files
+from harvester import __version__, ontology_files, snapshot
 from harvester.io_utils import merge_curation, write_json
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
 from harvester.records import new_record, split_cell
@@ -166,7 +166,7 @@ def filter_rows(df, logger, uberon_json, disease_json, organism, no_preprints, a
 
 
 def make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_preprints,
-                        assay_json=None):
+                        assay_json=None, input_csv=None):
     """Everything the user chose in this step, to be written in each file."""
     choices = {
         "organism": organism,
@@ -176,6 +176,10 @@ def make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_pre
                        ("hsapdv", hsapdv_json), ("assay", assay_json)):
         if path:
             choices[name] = ontology_files.describe(path)
+    # the dated API snapshot the input CSV came from, if its provenance file is next to it
+    entry = snapshot.filter_choices_entry(os.path.dirname(os.path.abspath(input_csv))) if input_csv else None
+    if entry:
+        choices["snapshot"] = entry
     choices["harvester_version"] = __version__
     choices["run_date"] = date.today().isoformat()
     return choices
@@ -222,7 +226,7 @@ def filter_datasets(input_csv, output_dir, logger,
 
     organ = ontology_files.organ_from(uberon_json) if uberon_json else None
     choices = make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_preprints,
-                                  assay_json)
+                                  assay_json, input_csv)
     curation = {name: value for name, value in
                 (("author_cell_type", author_cell_type), ("embedding", embedding)) if value}
     if curation:
