@@ -21,6 +21,7 @@ import requests
 import json
 import sys
 
+from harvester import __version__, snapshot
 from harvester.run_dir import run_dir
 
 # API endpoint (no visibility filter - retrieves all public collections)
@@ -53,6 +54,9 @@ def fetch_collections():
         json.dump(collections, f, indent=2)
     
     print(f"Saved collections metadata to: {output_file}")
+    snapshot.start(run_dir(), __version__)
+    snapshot.record(run_dir(), "collections_metadata.json")
+    print(f"This is the snapshot of {snapshot.read(run_dir())['date']}")
     
     # Print summary statistics
     public_count = sum(1 for c in collections if c.get("visibility") == "PUBLIC")
@@ -72,10 +76,16 @@ def fetch_collections():
 # =============================================================================
 # run_fetch_collections
 # =============================================================================
-def run_fetch_collections():
-    """Main entry point called by CLI"""
+def run_fetch_collections(snapshot_date=None, store=None):
+    """Main entry point called by CLI.
+
+    With a snapshot date and a store, the file of that snapshot is used and the API is not asked.
+    """
     print("=" * 70)
     print("CellxGene Data Harvester - Step 1: Fetch Collections")
     print("=" * 70)
-    fetch_collections()
+    if snapshot_date:
+        snapshot.reuse(store, snapshot_date, "collections_metadata.json", run_dir(), snapshot.PrintLogger)
+    else:
+        fetch_collections()
     print("\nNext step: cellxgene-harvester generate-metadata")

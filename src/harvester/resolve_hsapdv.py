@@ -32,6 +32,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
+from harvester.ontology_files import read_min_age, reuse_from_store
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
 
@@ -199,7 +200,7 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
 # =============================================================================
 
 def run_resolve_hsapdv(min_age: float, output_prefix: str = None,
-                       obo_url: str = None):
+                       obo_url: str = None, store: str = None, refresh: bool = False):
     """Main entry point called by CLI."""
     os.makedirs(run_dir(), exist_ok=True)
 
@@ -214,6 +215,10 @@ def run_resolve_hsapdv(min_age: float, output_prefix: str = None,
     log_command(logger)
     logger.info(f"Min age : {min_age}")
     logger.info(f"Output  : {out_prefix}\n")
+
+    if reuse_from_store(store, out_prefix, lambda data: read_min_age(data) == float(min_age), logger, refresh):
+        log_finish(logger, out_prefix + ".csv")
+        return
 
     resolve_hsapdv(min_age, out_prefix, logger)
     log_finish(logger, out_prefix + ".csv")

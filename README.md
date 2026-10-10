@@ -380,9 +380,10 @@ One file for each dataset, `{dataset_id}.filtered.json`. Keys are flat. Every `s
 |-----|---------|
 | `schema_version` | `"1.0"` |
 | `dataset` | Dataset and collection ids, titles, `first_author`, `journal`, `year` (integer), `doi`, URLs, `organism`, `is_preprint` (true or false), `visibility` |
+| `gene_annotation` | `cellxgene_schema_version` (from the CellxGene API, Step 3), `h5ad_schema_version` (read from the h5ad file in Step 5, which wins over the API), `gencode_release` (the GENCODE release of the gene ids and names, from the version in the file) and `required_gencode_release`. See [Gene names](#gene-names-the-gencode-release) |
 | `curation` | `reference`, `author_cell_type`, `embedding`. `reference` is `no` when Step 2 writes it; set it to `yes` by hand for the reference dataset of an organ (for the kidney, the Lake 2023 dataset). Set by hand after the first pass. A later run of Step 4 keeps the values already in the file |
 | `organ` | `name` and `uberon_id` of the one root term given to `resolve-uberon`, for example `respiratory system`. An organ has one root term: a resolve file with more than one is refused in Step 4. The respiratory system is resolved with the one query `respiratory system`; `nose` is not added to cover the CellxGene annotation error |
-| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease`, `hsapdv` and `assay` (if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
+| `filter_choices` | `organism`, `no_preprints`; for `uberon`, `disease`, `hsapdv` and `assay` (if used) the file, queries, root terms, term count and SHA-256; an assay file has the resolved `assays` and the `unresolved` labels instead of root terms (hsapdv also `min_age`); `snapshot` (the kind `api`, the date and the SHA-256 of the three files of the snapshot, when the input CSV has its provenance file next to it), `harvester_version`, `run_date`, and after Step 5 `h5ad` (the file read) or, with `--source census`, `census_version` |
 | `source_cell_count`, `filtered_cell_count` | Cells before and after the filters. After Step 4 the source count is the CellxGene API total and the filtered count is `null` |
 | `source_donor_count`, `filtered_donor_count` | Donors before and after the filters (`null` until Step 5) |
 | `filtered_h5ad_url` | Where the filtered h5ad file is published (`null` until Step 5, and when no cell passes) |
@@ -417,6 +418,51 @@ Empty lists, empty summaries and `null` mean the dataset has not been counted ye
 **Numbers have no thousands comma.** A count is written as `11464`, never `11,464`, in the JSON files, the CSV files and the logs. The old CSV held counts inside text (`UBERON:0002113: 12,345`) because the code formatted them that way; pandas itself does not add a comma when it writes a number. Every CSV is written through one function in `io_utils.py` that refuses a value such as `11,464`, and a test fails if any source file asks for a thousands format.
 
 ---
+
+## Reusing files that were built before (`--store`)
+
+A resolved ontology file, or the gene table of a GENCODE release, is made once and then used again. `resolve-uberon`, `resolve-disease`, `resolve-hsapdv`, `resolve-assay` and `build-gene-mapping` take `--store`: a folder, a web address, or a public `s3://` address that holds files made before. The command looks there first.
+
+- A resolve file in the store is used if its `queries` (for the age file, its `min_age`) are the same as the ones asked for. Otherwise a warning says so, and the file is built. A file made with `--also-relation` is always built.
+- A gene table in the store is used if its provenance file names the same release and holds the SHA-256 of the table that is stored. Otherwise it is built.
+- The log says `Reused <file> from the store`, with the SHA-256. The file is then in the run folder like any other, so the SHA-256 recorded in the dataset files is the same.
+- `--refresh` ignores the store and builds the file again. A file that is not in the store is built as usual. A store address that cannot be read is an error, not an empty store.
+- Pin a web address to a tag or a commit, never to `main`, so the same address always gives the same file. An `s3://` address is read over https, so the bucket must be public.
+
+## The dated snapshot of the CellxGene API
+
+Steps 1 to 3 ask the CellxGene API for every collection and dataset. The API has no release number: it is live, and its answer changes from day to day. The three files they write are therefore one **snapshot**, named by the date of the fetch:
+
+| File | Step |
+|---|---|
+| `collections_metadata.json` | 1 `fetch-collections` |
+| `all_datasets.csv` | 2 `generate-metadata` |
+| `all_datasets_complete.csv` | 3 `append-details` (adds the title, cell count, h5ad address and `cellxgene_schema_version`) |
+
+`api_snapshot.provenance.json` in the run folder holds the date, the API address, the harvester version, and for each file its SHA-256 and the time it was made. Step 4 copies the date and the checksums into every dataset file as `filter_choices.snapshot`, so the date travels with the data to the ETL.
+
+To use a snapshot again, give the same `--snapshot DATE` and `--store` to the three steps. They take their files from the folder `api_snapshot_<DATE>` of the store, check each against the SHA-256 in its provenance file, and do not ask the API. A snapshot, or a file, that is not in the store is an error, and so is a file that does not match its checksum: a date that was asked for by name is never replaced by another snapshot. `--snapshot` and `--store` go together. Without them the steps ask the API, and the snapshot is the date of that day.
+
+```bash
+cellxgene-harvester fetch-collections       --snapshot 2026-08-03 --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/api_snapshots
+cellxgene-harvester generate-metadata       --snapshot 2026-08-03 --store <same store>
+cellxgene-harvester append-details          --snapshot 2026-08-03 --store <same store>
+```
+
+## Gene names: the GENCODE release
+
+The gene ids and names of a CellxGene dataset follow the GENCODE release that its schema version names (`GENCODE_BY_SCHEMA` in `io_utils.py`, from the schema documents of CellxGene): schema 3.0 to 4.0 use v38, 5.0 to 6.0 use v44, and 7.0 and 7.1 use v48. Step 3 records each dataset's schema version from the CellxGene API, and Step 5 records the version found in the h5ad file, in the `gene_annotation` block of the record. The file wins over the API, and a warning says when they differ, when the version is unknown, or when the release is not the required one.
+
+The required release is the release of the newest schema in that table (today v48). `build-gene-mapping` builds the gene id to gene name table of one release from the GENCODE annotation file, checks its MD5 against the one GENCODE publishes, and writes `gene_mapping_gencode_v48.csv` and `gene_mapping_gencode_v48.provenance.json` (source, checksums, date, counts). The table has no date inside it, so the same release always gives the same bytes. A file that is published is never overwritten: a new release is a new file.
+
+```bash
+cellxgene-harvester build-gene-mapping                       # the release of the newest CellxGene schema
+cellxgene-harvester build-gene-mapping --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/gencode
+```
+
+## The CellxGene Census release is out of date
+
+The harvester takes its list of datasets and their h5ad files from the live CellxGene API, not from a Census release. The Census is only an option (`--source census`). Its newest dated release is `2025-11-17` (checked on 2026-10-10), about eleven months old, and the list of releases shows nothing newer. It holds 1852 of the 2210 dataset versions in the collections file of 2026-08-03, and its files are schema 7.0.0 where the API now reports 7.1.0 for the same datasets (five of its files were checked; both schemas use GENCODE v48). Do not assume that `latest` is recent: check its date in the release list before a Census run.
 
 ## Full Pipeline Example
 
