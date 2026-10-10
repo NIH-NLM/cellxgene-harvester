@@ -62,10 +62,11 @@ def options(
 def resolve_uberon_command(
     queries: List[str] = typer.Argument(..., help="Tissue label(s) or UBERON ID(s)"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
-    multi: bool = typer.Option(False, help="Combine multiple queries into single file")
+    multi: bool = typer.Option(False, help="Combine multiple queries into single file"),
+    also_relation: Optional[List[str]] = typer.Option(None, "--also-relation", help="Exact label of a relation, for example \"contributes to morphology of\": also add the terms that have it to the root, with their descendants. Can be given more than once"),
 ):
     """Step 0a: Resolve UBERON tissue terms via OLS4 API"""
-    resolve_uberon.run_resolve_uberon(queries, output_prefix, multi)
+    resolve_uberon.run_resolve_uberon(queries, output_prefix, multi, also_relation or None)
 
 
 @app.command(name="resolve-disease")

@@ -357,3 +357,13 @@ def test_command_line_takes_the_curation_options(tmp_path):
     assert result.exit_code == 0, result.output
     curation = read(str(out), "d1")["curation"]
     assert (curation["author_cell_type"], curation["embedding"]) == ("subclass.full", "X_umap")
+
+
+def test_an_empty_table_after_the_tissue_filter_is_not_mistaken_for_an_old_input(tmp_path):
+    """Input: a CSV that has assay ids, a tissue filter that no dataset passes, and an assay file.
+    Pass: no error; no file is written. (The check for missing assay ids is made on the input
+    before the filters, so a table emptied by the tissue filter is not read as an old one.)"""
+    rows = [make_row(dataset_id="d1", tissue_ontology_term_id="UBERON:0002107")]   # liver, not kidney
+    assay = write_assay_file(tmp_path / "assay_published.json")
+    out, _ = run_step_4(tmp_path, rows, assay_json=assay)
+    assert written(out) == []
