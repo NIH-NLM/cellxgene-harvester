@@ -3,7 +3,7 @@ name: Build and Publish Docker image to GHCR
 # The image is built on every commit to any branch, and on a v* tag.
 #   every branch : ghcr.io/nih-nlm/cellxgene-harvester:<branch name> and :sha-<commit>
 #   main         : also :latest and :<version of pyproject.toml>, for example :1.0.0
-#   tag v1.0     : :1.0
+#   tag v1.0     : :v1.0 (the name of the tag), and :1.0.0 if the tag is a full version such as v1.0.0
 on:
   push:
     branches: [ '**' ]
@@ -39,6 +39,7 @@ jobs:
           images: ghcr.io/nih-nlm/cellxgene-harvester
           tags: |
             type=semver,pattern={{version}}
+            type=ref,event=tag
             type=ref,event=branch
             type=raw,value=${{ steps.version.outputs.value }},enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-
