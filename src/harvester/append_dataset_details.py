@@ -175,13 +175,13 @@ def append_details():
 # =============================================================================
 # run_append_dataset_details
 # =============================================================================
-def run_append_details(snapshot_date=None, store=None):
-    """Main entry point called by CLI. With a snapshot date and a store, the CSV of that snapshot is used."""
+def run_append_details(store=None):
+    """Main entry point called by CLI. With a store, the stored CSV is used if the API has not changed."""
     print("=" * 70)
     print("CellxGene Data Harvester - Step 3: Append Dataset Details")
     print("=" * 70)
-    if snapshot_date:
-        snapshot.reuse(store, snapshot_date, "all_datasets_complete.csv", run_dir(), snapshot.PrintLogger)
+    if store and snapshot.reuse_if_current(store, "all_datasets_complete.csv", run_dir(), snapshot.PrintLogger):
+        pass
     else:
         append_details()
         snapshot.record(run_dir(), "all_datasets_complete.csv")

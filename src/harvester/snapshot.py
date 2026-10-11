@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 """
-The dated snapshot of the CellxGene API.
+The snapshot of the CellxGene API.
 
 Steps 1 to 3 ask the CellxGene API for every collection and every dataset. The API has no
-release number: it is live, and the answer changes from day to day. A snapshot gives the
-answer of one day a name, so it can be kept, used again, and cited.
-
-A snapshot is three files, all made from the same fetch:
+release number: it is live, and its answer changes. The three files the steps write are
+one snapshot, made from the same fetch:
 
   collections_metadata.json   Step 1   the collections and their datasets
   all_datasets.csv            Step 2   one row for each dataset
   all_datasets_complete.csv   Step 3   the rows with title, cell count, h5ad address, schema version
 
-and one provenance file, api_snapshot.provenance.json, that holds the date of the fetch, the
-API address, the harvester version, and for each file its SHA-256 and the time it was made.
+api_snapshot.provenance.json holds the date of the fetch, the API address, the harvester
+version, and for each file its SHA-256 and the time it was made. The date is in this file and
+nowhere in a path: a store holds the current files, and git keeps the older ones.
 
-In a store, a snapshot is the folder api_snapshot_<YYYY-MM-DD>. A step given --snapshot DATE
-and --store takes its file from there, after checking its SHA-256 against the provenance file,
-and does not ask the API again. Without --snapshot the step asks the API, and the snapshot
-is the date of today.
+Step 1 always asks the API (one call, a few seconds). Steps 2 and 3 take --store, a folder or
+web address that holds the current files. If the collections file just fetched has the same
+SHA-256 as the one the stored provenance file lists, nothing in the API has changed: the stored
+file is used and the step is not run again (Step 3 asks the API once for each dataset and takes
+about ten minutes). If it differs, or the store has no such file, the step is run.
 
 Every dataset file written by Step 4 records the snapshot it came from in
 filter_choices.snapshot, so the date travels with the data.
 
 Usage:
-    snapshot.start(run_dir())                       # Step 1, after a fresh fetch
-    snapshot.record(run_dir(), "all_datasets.csv")  # Steps 2 and 3, after a fresh build
-    snapshot.reuse(store, "2026-08-03", "all_datasets.csv", run_dir(), logger)
+    snapshot.start(run_dir())                       # Step 1, after a fetch
+    snapshot.record(run_dir(), "all_datasets.csv")  # Steps 2 and 3, after a build
+    snapshot.reuse_if_current(store, "all_datasets.csv", run_dir(), logger)
     snapshot.filter_choices_entry(run_dir())        # Step 4
 """
 
@@ -48,11 +48,6 @@ class PrintLogger:
     """The steps 1 to 3 print their messages; this lets reuse() write in the same way."""
     info = staticmethod(print)
     warning = staticmethod(print)
-
-
-def folder_name(date):
-    """The folder of a snapshot in a store."""
-    return f"api_snapshot_{date}"
 
 
 def now():
@@ -103,33 +98,37 @@ def record(folder, name):
     write(folder, info)
 
 
-def reuse(store, date, name, folder, logger):
-    """Take the file called name of the snapshot of this date from the store.
+def reuse_if_current(store, name, folder, logger):
+    """Take the file called name from the store if the API has not changed since it was made.
 
-    Return True if it was copied into folder. A snapshot or a file that is not in the store
-    is an error: the date was asked for by name, so building another one would give the user
-    a different snapshot from the one they asked for. So is a file whose SHA-256 is not the one
-    in the provenance file.
+    The API has not changed when the collections file in folder (just fetched by Step 1) has the
+    SHA-256 that the stored provenance file lists for collections_metadata.json. The stored file
+    must also be intact: its SHA-256 must be the one the provenance file lists for it.
+    Return True if the file was copied into folder together with the stored provenance file, so
+    the snapshot keeps the date of the fetch that made it. Return False if the step has to run:
+    the store has no such file, or the API has changed.
     """
-    where = folder_name(date)
+    fresh = os.path.join(folder, "collections_metadata.json")
+    if not os.path.exists(fresh):
+        raise FileNotFoundError(f"{fresh}: run Step 1 first")
     with tempfile.TemporaryDirectory() as tmp:
-        prov_file = store_module.fetch(store, f"{where}/{PROVENANCE}", tmp)
-        if prov_file is None:
-            raise FileNotFoundError(f"the store {store} has no snapshot {where}")
+        prov_file = store_module.fetch(store, PROVENANCE, tmp)
+        found = store_module.fetch(store, name, tmp)
+        if prov_file is None or found is None:
+            logger.info(f"The store {store} has no {name} with its provenance file: {name} is built")
+            return False
         info = json.load(open(prov_file, encoding="utf-8"))
-        expected = info.get("files", {}).get(name, {}).get("sha256")
-        if not expected:
-            raise ValueError(f"the provenance file of {where} has no entry for {name}")
-        found = store_module.fetch(store, f"{where}/{name}", tmp)
-        if found is None:
-            raise FileNotFoundError(f"the store {store} has no {name} in {where}")
-        if sha256_of(found) != expected:
-            raise ValueError(f"{where}/{name}: its SHA-256 is not the one in the provenance file; "
-                             f"the file is not used")
-        os.makedirs(folder, exist_ok=True)
+        files = info.get("files", {})
+        if files.get("collections_metadata.json", {}).get("sha256") != sha256_of(fresh):
+            logger.info(f"The API has changed since the files in the store {store} were made: {name} is built")
+            return False
+        expected = files.get(name, {}).get("sha256")
+        if not expected or sha256_of(found) != expected:
+            raise ValueError(f"{name} in the store {store}: its SHA-256 is not the one in the provenance "
+                             f"file; the file is not used")
         shutil.copyfile(found, os.path.join(folder, name))
         shutil.copyfile(prov_file, os.path.join(folder, PROVENANCE))
-    logger.info(f"Reused {name} of the snapshot {date} from the store {store} (sha256 {expected})")
+    logger.info(f"The API has not changed since {info['date']}: reused {name} from the store {store} (sha256 {expected})")
     return True
 
 
