@@ -16,7 +16,7 @@ Usage:
     cellxgene-harvester count-normal-cells FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...] [--h5ad-out ... --h5ad-url-prefix ...] [--source census --census-version ...]
     cellxgene-harvester final-cleanup FOLDER
     cellxgene-harvester export-datasets-csv FOLDER --output datasets.csv
-    cellxgene-harvester build-gene-mapping [--gencode-release N] [--output-dir DIR] [--gtf FILE]
+    cellxgene-harvester build-gene-mapping [--gencode-release N] [--output-dir DIR] [--gtf FILE --entrez FILE]
 """
 
 import os
@@ -209,8 +209,9 @@ if __name__ == "__main__":
 def build_gene_mapping_command(
     gencode_release: int = typer.Option(REQUIRED_GENCODE_RELEASE, help="GENCODE release of the human genes (default: the release of the newest CellxGene schema)"),
     output_dir: Optional[Path] = typer.Option(None, help="Folder for the table and its provenance file (default: gene_mapping)"),
-    gtf: Optional[Path] = typer.Option(None, help="A local gencode.vNN.primary_assembly.annotation.gtf.gz to use instead of downloading it (its MD5 is then not checked)"),
+    gtf: Optional[Path] = typer.Option(None, help="A local gencode.vNN.primary_assembly.annotation.gtf.gz to use instead of downloading it (its MD5 is then not checked; give --entrez too)"),
+    entrez: Optional[Path] = typer.Option(None, help="A local gencode.vNN.metadata.EntrezGene.gz to use instead of downloading it"),
 ):
     """Build the gene id to gene name table of one GENCODE release, with its provenance file"""
     build_gene_mapping.run_build_gene_mapping(
-        gencode_release, str(output_dir) if output_dir else None, str(gtf) if gtf else None)
+        gencode_release, str(output_dir) if output_dir else None, str(gtf) if gtf else None, str(entrez) if entrez else None)

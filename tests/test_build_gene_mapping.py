@@ -47,6 +47,24 @@ def write_gtf(path, lines=None):
     return str(path)
 
 
+ENTREZ = [
+    "ENST00000456328.2\t100287102",
+    "ENST00000000001.1\t7105",
+    "ENST00000000002.1\t105373209",       # a second ID for the same gene
+    "ENST00000000003.1\t101927787",
+    "ENST00000999999.1\t55555",           # a transcript that is not in the annotation
+]
+GENES.insert(2, gtf_line("transcript", 'gene_id "ENSG00000000003.16"; transcript_id "ENST00000000001.1";'))
+GENES.insert(3, gtf_line("transcript", 'gene_id "ENSG00000000003.16"; transcript_id "ENST00000000002.1";'))
+GENES.insert(4, gtf_line("transcript", 'gene_id "ENSG00000254180.1"; transcript_id "ENST00000000003.1";'))
+
+
+def write_entrez(path, lines=None):
+    with gzip.open(path, "wt", encoding="utf-8") as f:
+        f.write("\n".join(ENTREZ if lines is None else lines) + "\n")
+    return str(path)
+
+
 def read_table(path):
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
@@ -66,7 +84,7 @@ def test_only_gene_lines_are_read():
 
 def test_the_table_has_one_sorted_row_for_each_gene_and_marks_genes_without_a_name(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz")
-    csv_path, _ = step.build(48, str(tmp_path / "out"), gtf)
+    csv_path, _ = step.build(48, str(tmp_path / "out"), gtf, entrez=write_entrez(tmp_path / "e.gz"))
     rows = read_table(csv_path)
     assert [r["ensembl_gene_id"] for r in rows] == sorted(r["ensembl_gene_id"] for r in rows)
     by_id = {r["ensembl_gene_id"]: r for r in rows}
@@ -74,34 +92,41 @@ def test_the_table_has_one_sorted_row_for_each_gene_and_marks_genes_without_a_na
     assert by_id["ENSG00000223972"] == {
         "ensembl_gene_id": "ENSG00000223972", "gene_name": "DDX11L1",
         "gene_type": "transcribed_unprocessed_pseudogene", "hgnc_id": "HGNC:37102",
-        "has_symbol": "True", "gencode_release": "48"}
+        "entrezgene_id": "100287102", "has_symbol": "True", "gencode_release": "48"}
     assert by_id["ENSG00000254180"]["has_symbol"] == "False"      # the name is the id
     assert by_id["ENSG00000290825"]["gene_name"] == "ENSG00000290825"   # no gene_name at all
     assert by_id["ENSG00000290825"]["has_symbol"] == "False" and by_id["ENSG00000290825"]["hgnc_id"] == ""
     assert "ENSG00000182378_PAR_Y" in by_id
+    assert by_id["ENSG00000000003"]["entrezgene_id"] == "7105;105373209"      # two IDs, joined, lowest first
+    assert by_id["ENSG00000254180"]["entrezgene_id"] == "101927787"
+    assert by_id["ENSG00000290825"]["entrezgene_id"] == ""                    # GENCODE gives none
+    assert "55555" not in open(csv_path).read()                              # transcript not in the annotation
 
 
 def test_the_same_input_gives_the_same_bytes(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz")
-    first, _ = step.build(48, str(tmp_path / "one"), gtf)
-    second, _ = step.build(48, str(tmp_path / "two"), gtf)
+    first, _ = step.build(48, str(tmp_path / "one"), gtf, entrez=write_entrez(tmp_path / "e.gz"))
+    second, _ = step.build(48, str(tmp_path / "two"), gtf, entrez=write_entrez(tmp_path / "e.gz"))
     assert open(first, "rb").read() == open(second, "rb").read()
 
 
 def test_the_row_order_does_not_depend_on_the_order_of_the_annotation(tmp_path):
     forward = write_gtf(tmp_path / "f.gtf.gz")
     backward = write_gtf(tmp_path / "b.gtf.gz", list(reversed(GENES)))
-    a, _ = step.build(48, str(tmp_path / "one"), forward)
-    b, _ = step.build(48, str(tmp_path / "two"), backward)
+    a, _ = step.build(48, str(tmp_path / "one"), forward, entrez=write_entrez(tmp_path / "e.gz"))
+    b, _ = step.build(48, str(tmp_path / "two"), backward, entrez=write_entrez(tmp_path / "e.gz"))
     assert open(a, "rb").read() == open(b, "rb").read()
 
 
 def test_the_provenance_file_says_where_the_table_came_from(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz")
-    csv_path, prov_path = step.build(48, str(tmp_path / "out"), gtf)
+    csv_path, prov_path = step.build(48, str(tmp_path / "out"), gtf, entrez=write_entrez(tmp_path / "e.gz"))
     info = json.load(open(prov_path))
     assert info["gencode_release"] == 48 and info["genes"] == 5
     assert info["genes_with_symbol"] == 3 and info["genes_without_symbol"] == 2
+    assert info["genes_with_entrezgene_id"] == 3 and info["genes_with_several_entrezgene_ids"] == 1
+    assert info["entrezgene_source"]["sha256"] == hashlib.sha256(open(tmp_path / "e.gz", "rb").read()).hexdigest()
+    assert info["entrezgene_source"]["md5_verified"] is False
     assert info["description"].endswith("version 48 (Ensembl 114)")
     assert info["source_sha256"] == hashlib.sha256(open(gtf, "rb").read()).hexdigest()
     assert info["table_sha256"] == hashlib.sha256(open(csv_path, "rb").read()).hexdigest()
@@ -113,38 +138,60 @@ def test_the_provenance_file_says_where_the_table_came_from(tmp_path):
 def test_a_download_is_checked_against_the_published_md5_and_deleted(tmp_path, monkeypatch):
     source = write_gtf(tmp_path / "source.gtf.gz")
     md5 = hashlib.md5(open(source, "rb").read()).hexdigest()
-    monkeypatch.setattr(step, "download", lambda url, path: open(path, "wb").write(open(source, "rb").read()))
-    monkeypatch.setattr(step, "published_md5", lambda release, name: md5)
+    entrez = write_entrez(tmp_path / "entrez.gz")
+    sources = {"gtf.gz": source, "EntrezGene.gz": entrez}
+    monkeypatch.setattr(step, "download", lambda url, path: open(path, "wb").write(
+        open(next(v for k, v in sources.items() if url.endswith(k)), "rb").read()))
+    monkeypatch.setattr(step, "published_md5", lambda release, name: hashlib.md5(open(
+        next(v for k, v in sources.items() if name.endswith(k)), "rb").read()).hexdigest())
     out = tmp_path / "out"
     _, prov_path = step.build(48, str(out))
     info = json.load(open(prov_path))
-    assert info["source_md5_verified"] is True
+    assert info["source_md5_verified"] is True and info["entrezgene_source"]["md5_verified"] is True
+    assert info["entrezgene_source"]["url"].endswith("release_48/gencode.v48.metadata.EntrezGene.gz")
+    assert not list(out.glob("*.gz"))
     assert info["source_url"].endswith("release_48/gencode.v48.primary_assembly.annotation.gtf.gz")
     assert not (out / "gencode.v48.primary_assembly.annotation.gtf.gz").exists()
 
 
 def test_a_download_with_the_wrong_md5_is_refused_and_no_table_is_written(tmp_path, monkeypatch):
     source = write_gtf(tmp_path / "source.gtf.gz")
-    monkeypatch.setattr(step, "download", lambda url, path: open(path, "wb").write(open(source, "rb").read()))
+    monkeypatch.setattr(step, "download", lambda url, path: open(path, "wb").write(
+        open(source if url.endswith("gtf.gz") else write_entrez(tmp_path / "x.gz"), "rb").read()))
     monkeypatch.setattr(step, "published_md5", lambda release, name: "0" * 32)
     out = tmp_path / "out"
     with pytest.raises(ValueError, match="does not match"):
         step.build(48, str(out))
     assert not list(out.glob("gene_mapping_*"))
-    assert not list(out.glob("*.gtf.gz"))
+    assert not list(out.glob("*.gz"))
 
 
 def test_an_annotation_without_genes_is_refused(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz", [GENES[1]])
     with pytest.raises(ValueError, match="no gene lines"):
-        step.build(48, str(tmp_path / "out"), gtf)
+        step.build(48, str(tmp_path / "out"), gtf, entrez=write_entrez(tmp_path / "e.gz"))
 
 
 def test_the_command_builds_the_files_from_a_local_annotation(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz")
     out = tmp_path / "out"
     result = CliRunner().invoke(app, ["build-gene-mapping", "--gencode-release", "48",
-                                      "--output-dir", str(out), "--gtf", gtf])
+                                      "--output-dir", str(out), "--gtf", gtf,
+                                      "--entrez", write_entrez(tmp_path / "e.gz")])
     assert result.exit_code == 0, result.output
     assert (out / "gene_mapping_gencode_v48.csv").exists()
     assert (out / "gene_mapping_gencode_v48.provenance.json").exists()
+
+
+def test_one_local_file_without_the_other_is_refused(tmp_path):
+    with pytest.raises(ValueError, match="both"):
+        step.build(48, str(tmp_path / "out"), write_gtf(tmp_path / "a.gtf.gz"))
+
+
+def test_a_table_made_before_the_ncbi_gene_id_was_added_is_not_taken_as_intact(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "gene_mapping_gencode_v48.csv").write_text("ensembl_gene_id,gene_name,gene_type,hgnc_id,has_symbol,gencode_release\n")
+    sha = hashlib.sha256((out / "gene_mapping_gencode_v48.csv").read_bytes()).hexdigest()
+    (out / "gene_mapping_gencode_v48.provenance.json").write_text(json.dumps({"gencode_release": 48, "table_sha256": sha}))
+    assert step.intact_table(48, str(out)) is None

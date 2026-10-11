@@ -15,7 +15,7 @@ from harvester import build_gene_mapping as gene_step
 from harvester import ontology_files, resolve_assay, resolve_disease, resolve_hsapdv, resolve_uberon
 from harvester.io_utils import GENCODE_BY_SCHEMA, REQUIRED_GENCODE_RELEASE, required_release, schema_key
 from helpers import write_resolve_file
-from test_build_gene_mapping import write_gtf
+from test_build_gene_mapping import write_entrez, write_gtf
 
 
 def log():
@@ -88,7 +88,7 @@ def test_a_file_made_with_relations_is_always_made(tmp_path, monkeypatch):
 def build_once(tmp_path):
     gtf = write_gtf(tmp_path / "a.gtf.gz")
     folder = tmp_path / "out"
-    gene_step.build(48, str(folder), gtf)
+    gene_step.build(48, str(folder), gtf, entrez=write_entrez(tmp_path / "e.gz"))
     return str(folder)
 
 
@@ -111,7 +111,7 @@ def test_the_table_of_another_release_is_made(tmp_path, monkeypatch):
 def test_a_table_that_does_not_match_its_provenance_file_is_made_again(tmp_path, monkeypatch):
     folder = build_once(tmp_path)
     with open(os.path.join(folder, "gene_mapping_gencode_v48.csv"), "a") as f:
-        f.write("ENSG00000999999,FAKE,lncRNA,,True,48\n")
+        f.write("ENSG00000999999,FAKE,lncRNA,,,,True,48\n")
     monkeypatch.setattr(gene_step, "download", explode)
     with pytest.raises(AssertionError, match="was made"):
         gene_step.build(48, folder)
