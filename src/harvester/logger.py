@@ -11,7 +11,7 @@ Provides consistent logging across all pipeline steps:
 Usage:
     from harvester_logger import setup_logger, log_command, log_counts
 
-    logger = setup_logger("step_4_filter", output_csv="2026-08-03-run/filtered.csv")
+    logger = setup_logger("step_4_filter", output_csv="filtered.csv")
     log_command(logger)
     log_counts(logger, "organism filter", before=1000, after=800)
 """
@@ -30,12 +30,12 @@ def setup_logger(step_name: str, output_csv: str = None, log_dir: str = None) ->
 
     Log file location:
     - If output_csv is provided: alongside the CSV as <output_csv>.log
-    - Otherwise: <run folder>/logs/<step_name>_<timestamp>.log
+    - Otherwise: logs/<step_name>_<timestamp>.log
 
     Args:
         step_name:  Short name for the step, e.g. "step_4_filter"
         output_csv: Path to the output CSV for this step (optional)
-        log_dir:    Fallback directory for log files (default: <run folder>/logs)
+        log_dir:    Fallback directory for log files (default: logs)
 
     Returns:
         Configured logger

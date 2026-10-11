@@ -13,10 +13,10 @@ Every deleted dataset id is written to the log.
 
 Usage:
 1. Python module execution:
-python -m harvester.final_cleanup 2026-08-03-run/homo_sapiens_kidney_harvester
+python -m harvester.final_cleanup homo_sapiens_kidney_harvester
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester final-cleanup 2026-08-03-run/homo_sapiens_kidney_harvester
+cellxgene-harvester final-cleanup homo_sapiens_kidney_harvester
 """
 
 import glob

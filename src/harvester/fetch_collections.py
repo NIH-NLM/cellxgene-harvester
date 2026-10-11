@@ -54,9 +54,7 @@ def fetch_collections():
         json.dump(collections, f, indent=2)
     
     print(f"Saved collections metadata to: {output_file}")
-    snapshot.start(run_dir(), __version__)
-    snapshot.record(run_dir(), "collections_metadata.json")
-    print(f"This is the snapshot of {snapshot.read(run_dir())['date']}")
+    snapshot.fetched(run_dir(), __version__)
     
     # Print summary statistics
     public_count = sum(1 for c in collections if c.get("visibility") == "PUBLIC")

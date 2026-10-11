@@ -12,16 +12,14 @@ resolving 'normal' to PATO:0000461 for filtering CellxGene data.
 
 Usage:
 1. Python module execution:
-python -m harvester.resolve_disease normal \
-        --output-prefix 2026-08-03-run/disease_normal
+python -m harvester.resolve_disease normal
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-disease normal
-cellxgene-harvester resolve-disease normal --output-prefix 2026-08-03-run/disease_normal
 
 Output:
-    <run folder>/disease_normal.json   - full term list with metadata
-    <run folder>/disease_normal.csv    - flat table: obo_id, label, level
+    disease_normal.json   - full term list with metadata
+    disease_normal.csv    - flat table: obo_id, label, level
 """
 
 import os
@@ -33,7 +31,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
-from harvester.ontology_files import reuse_from_store
+from harvester.ontology_files import already_there
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
 
@@ -240,8 +238,7 @@ def resolve_disease(queries: list, output_prefix: str, logger):
 # run_resolve_disease
 # =============================================================================
 
-def run_resolve_disease(queries: list, output_prefix: str = None,
-                        store: str = None, refresh: bool = False):
+def run_resolve_disease(queries: list, output_prefix: str = None):
     """Main entry point called by CLI."""
     os.makedirs(run_dir(), exist_ok=True)
 
@@ -255,7 +252,7 @@ def run_resolve_disease(queries: list, output_prefix: str = None,
     logger   = setup_logger("0c_resolve_disease", output_csv=log_file)
     log_command(logger)
 
-    if reuse_from_store(store, out_prefix, lambda data: data.get("queries") == list(queries), logger, refresh):
+    if already_there(out_prefix, lambda data: data.get("queries") == list(queries), logger):
         log_finish(logger, out_prefix + ".csv")
         return
 

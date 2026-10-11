@@ -8,9 +8,9 @@ All three files have the same layout:
 The hsapdv file also holds "min_age".
 
 Usage:
-    ids   = load_obo_ids("2026-08-03-run/uberon_kidney.json")
-    info  = describe("2026-08-03-run/uberon_kidney.json")   # for filter_choices
-    organ = organ_from("2026-08-03-run/uberon_kidney.json")
+    ids   = load_obo_ids("uberon_kidney.json")
+    info  = describe("uberon_kidney.json")   # for filter_choices
+    organ = organ_from("uberon_kidney.json")
 """
 
 import hashlib
@@ -96,34 +96,20 @@ def organ_from(path):
     return {"name": roots[0]["label"], "uberon_id": roots[0]["obo_id"]}
 
 
-def reuse_from_store(store, out_prefix, matches, logger, refresh=False):
-    """Use a resolve file that is already in the store, if it is the one asked for.
+def already_there(out_prefix, matches, logger):
+    """True if the resolve file is already where it would be written and answers the same question.
 
-    store is a folder or a web address (see store.py). out_prefix is where the new file
-    would be written, for example 2026-10-10-run/uberon_kidney. matches(data) is True when
-    the stored file answers the same question: the same queries, the same minimum age.
-    Return True if the file (and its .csv, if the store has it) was copied to out_prefix.
+    out_prefix is where the file is written, for example uberon_kidney. matches(data) is True when
+    the file in place has the same queries (for the age file, the same minimum age). If the file is
+    there but answers another question, a warning says so and it is made again.
     """
-    if not store or refresh:
-        return False
     import os
-    import tempfile
-    from harvester import store as store_module
-    name = os.path.basename(out_prefix)
-    with tempfile.TemporaryDirectory() as tmp:
-        found = store_module.fetch(store, f"{name}.json", tmp)
-        if found is None:
-            logger.info(f"Not in the store {store}: {name}.json is built")
-            return False
-        data = load(found)
-        if not matches(data):
-            logger.warning(f"{name}.json in the store {store} answers another question "
-                           f"(queries {data.get('queries')}); it is not used and a new one is built")
-            return False
-        os.makedirs(os.path.dirname(os.path.abspath(out_prefix)), exist_ok=True)
-        os.replace(found, f"{out_prefix}.json")
-        table = store_module.fetch(store, f"{name}.csv", tmp)
-        if table:
-            os.replace(table, f"{out_prefix}.csv")
-    logger.info(f"Reused {name}.json from the store {store} (sha256 {sha256_of(out_prefix + '.json')})")
+    path = f"{out_prefix}.json"
+    if not os.path.exists(path):
+        return False
+    data = load(path)
+    if not matches(data):
+        logger.warning(f"{path} answers another question (queries {data.get('queries')}); it is made again")
+        return False
+    logger.info(f"{path} is already there (sha256 {sha256_of(path)}); it is not made again")
     return True

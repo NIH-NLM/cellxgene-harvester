@@ -17,11 +17,10 @@ python -m harvester.resolve_hsapdv --min-age 15
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-hsapdv --min-age 15
-cellxgene-harvester resolve-hsapdv --min-age 15 --output-prefix 2026-08-03-run/hsapdv_adult_15
 
 Output:
-    <run folder>/hsapdv_adult_15.json   - obo_ids for all HsapDv terms with start age >= 15
-    <run folder>/hsapdv_adult_15.csv    - flat table: obo_id, label, start_years_post_birth
+    hsapdv_adult_15.json   - obo_ids for all HsapDv terms with start age >= 15
+    hsapdv_adult_15.csv    - flat table: obo_id, label, start_years_post_birth
 """
 
 import os
@@ -32,7 +31,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
-from harvester.ontology_files import read_min_age, reuse_from_store
+from harvester.ontology_files import read_min_age, already_there
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
 
@@ -200,7 +199,7 @@ def resolve_hsapdv(min_age: float, output_prefix: str, logger):
 # =============================================================================
 
 def run_resolve_hsapdv(min_age: float, output_prefix: str = None,
-                       obo_url: str = None, store: str = None, refresh: bool = False):
+                       obo_url: str = None):
     """Main entry point called by CLI."""
     os.makedirs(run_dir(), exist_ok=True)
 
@@ -216,7 +215,7 @@ def run_resolve_hsapdv(min_age: float, output_prefix: str = None,
     logger.info(f"Min age : {min_age}")
     logger.info(f"Output  : {out_prefix}\n")
 
-    if reuse_from_store(store, out_prefix, lambda data: read_min_age(data) == float(min_age), logger, refresh):
+    if already_there(out_prefix, lambda data: read_min_age(data) == float(min_age), logger):
         log_finish(logger, out_prefix + ".csv")
         return
 

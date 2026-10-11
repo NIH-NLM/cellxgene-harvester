@@ -10,12 +10,12 @@ The file is updated in place. Exit code 1 if the dataset could not be counted.
 
 Usage:
     python -m harvester.count_normal_cells_single \
-        --record  2026-08-03-run/homo_sapiens_kidney_harvester/066943a2-fdac-4b29-b348-40cede398e4e.filtered.json \
-        --uberon  2026-08-03-run/uberon_kidney.json \
-        --disease 2026-08-03-run/disease_normal.json \
-        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-        --assay 2026-08-03-run/assay_published.json \
-        --h5ad-out 2026-08-03-run/homo_sapiens_kidney_harvester_h5ad \
+        --record  homo_sapiens_kidney_harvester/066943a2-fdac-4b29-b348-40cede398e4e.filtered.json \
+        --uberon  uberon_kidney.json \
+        --disease disease_normal.json \
+        --hsapdv  hsapdv_adult_15.json \
+        --assay assay_published.json \
+        --h5ad-out homo_sapiens_kidney_harvester_h5ad \
         --h5ad-url-prefix s3://my-public-bucket/prod/kidney
 
 --h5ad reads a local file instead of the address in the record (the Nextflow

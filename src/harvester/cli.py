@@ -5,18 +5,18 @@ cellxgene-harvester CLI
 Unified command-line interface for all pipeline steps.
 
 Usage:
-    cellxgene-harvester [--run-dir 2026-08-03-run] resolve-uberon kidney
+    cellxgene-harvester [--run-dir DIR] resolve-uberon kidney
     cellxgene-harvester resolve-disease normal
     cellxgene-harvester resolve-hsapdv --min-age 15
     cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2"
     cellxgene-harvester fetch-collections
     cellxgene-harvester generate-metadata
     cellxgene-harvester append-details
-    cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv --output FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...]
+    cellxgene-harvester filter-datasets all_datasets_complete.csv --output FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...]
     cellxgene-harvester count-normal-cells FOLDER --uberon ... --disease ... --hsapdv ... [--assay ...] [--h5ad-out ... --h5ad-url-prefix ...] [--source census --census-version ...]
     cellxgene-harvester final-cleanup FOLDER
     cellxgene-harvester export-datasets-csv FOLDER --output datasets.csv
-    cellxgene-harvester build-gene-mapping --gencode-release 48 [--output-dir DIR] [--gtf FILE]
+    cellxgene-harvester build-gene-mapping [--gencode-release N] [--output-dir DIR] [--gtf FILE]
 """
 
 import os
@@ -54,7 +54,7 @@ app = typer.Typer(
 def options(
     run_folder: Optional[Path] = typer.Option(
         None, "--run-dir",
-        help="Folder for the files of this run (default: <today>-run, for example 2026-08-03-run)"),
+        help="Folder for the files of steps 0a to 3 (default: the current folder)"),
 ):
     """cellxgene-harvester: each run keeps its files in one folder named by its date."""
     if run_folder:
@@ -66,49 +66,41 @@ def resolve_uberon_command(
     queries: List[str] = typer.Argument(..., help="Tissue label(s) or UBERON ID(s)"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
     multi: bool = typer.Option(False, help="Combine multiple queries into single file"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds files made before. A file in it that answers the same question is used instead of making it again"),
-    refresh: bool = typer.Option(False, "--refresh", help="Ignore the store and make the file again"),
     also_relation: Optional[List[str]] = typer.Option(None, "--also-relation", help="Exact label of a relation, for example \"contributes to morphology of\": also add the terms that have it to the root, with their descendants. Can be given more than once"),
 ):
     """Step 0a: Resolve UBERON tissue terms via OLS4 API"""
-    resolve_uberon.run_resolve_uberon(queries, output_prefix, multi, also_relation or None, store, refresh)
+    resolve_uberon.run_resolve_uberon(queries, output_prefix, multi, also_relation or None)
 
 
 @app.command(name="resolve-disease")
 def resolve_disease_command(
     queries: List[str] = typer.Argument(..., help="Disease label(s) or ontology ID(s) e.g. 'normal'"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds files made before. A file in it that answers the same question is used instead of making it again"),
-    refresh: bool = typer.Option(False, "--refresh", help="Ignore the store and make the file again"),
 ):
     """Step 0b: Resolve disease terms (PATO/MONDO) via OLS4 API"""
-    resolve_disease.run_resolve_disease(queries, output_prefix, store, refresh)
+    resolve_disease.run_resolve_disease(queries, output_prefix)
 
 
 @app.command(name="resolve-hsapdv")
 def resolve_hsapdv_command(
     min_age: float = typer.Option(..., help="Minimum age in years (e.g. 15)"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds files made before. A file in it that answers the same question is used instead of making it again"),
-    refresh: bool = typer.Option(False, "--refresh", help="Ignore the store and make the file again"),
     obo_url: str = typer.Option(
         resolve_hsapdv.HSAPDV_OBO_URL,
         help="HsapDv OBO URL (default: OBO Foundry)"
     ),
 ):
     """Step 0c: Resolve HsapDv development stage terms for a minimum age threshold"""
-    resolve_hsapdv.run_resolve_hsapdv(min_age, output_prefix, obo_url, store, refresh)
+    resolve_hsapdv.run_resolve_hsapdv(min_age, output_prefix, obo_url)
 
 
 @app.command(name="resolve-assay")
 def resolve_assay_command(
     queries: List[str] = typer.Argument(..., help="The assay (technique) labels or EFO IDs you want, e.g. \"10x 3' v3\" EFO:0009900. Each is resolved on its own"),
     output_prefix: Optional[str] = typer.Option(None, help="Output file prefix"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds files made before. A file in it that answers the same question is used instead of making it again"),
-    refresh: bool = typer.Option(False, "--refresh", help="Ignore the store and make the file again"),
 ):
     """Step 0d: Resolve the assays (techniques) you want via OLS4 (EFO), for --assay in step 5"""
-    resolve_assay.run_resolve_assay(queries, output_prefix, store, refresh)
+    resolve_assay.run_resolve_assay(queries, output_prefix)
 
 
 @app.command(name="fetch-collections")
@@ -119,18 +111,16 @@ def fetch_collections_command():
 
 @app.command(name="generate-metadata")
 def generate_metadata_command(
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the current files of steps 2 and 3 and api_snapshot.provenance.json. A file in it is used if the API has not changed since it was made"),
 ):
     """Step 2: Generate metadata CSV from collections JSON"""
-    generate_metadata.run_generate_metadata(store)
+    generate_metadata.run_generate_metadata()
 
 
 @app.command(name="append-details")
 def append_details_command(
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds the current files of steps 2 and 3 and api_snapshot.provenance.json. A file in it is used if the API has not changed since it was made"),
 ):
     """Step 3: Append dataset details (titles, cell counts, URLs)"""
-    append_dataset_details.run_append_details(store)
+    append_dataset_details.run_append_details()
 
 
 @app.command(name="filter-datasets")
@@ -218,12 +208,9 @@ if __name__ == "__main__":
 @app.command(name="build-gene-mapping")
 def build_gene_mapping_command(
     gencode_release: int = typer.Option(REQUIRED_GENCODE_RELEASE, help="GENCODE release of the human genes (default: the release of the newest CellxGene schema)"),
-    output_dir: Optional[Path] = typer.Option(None, help="Folder for the table and its provenance file (default: <run folder>/gene_mapping)"),
+    output_dir: Optional[Path] = typer.Option(None, help="Folder for the table and its provenance file (default: gene_mapping)"),
     gtf: Optional[Path] = typer.Option(None, help="A local gencode.vNN.primary_assembly.annotation.gtf.gz to use instead of downloading it (its MD5 is then not checked)"),
-    store: Optional[str] = typer.Option(None, "--store", help="A folder or web address (https://, pinned to a tag or commit) or public s3:// address that holds tables built before. The table of this release is used if it is there and intact"),
-    refresh: bool = typer.Option(False, "--refresh", help="Ignore the store and build the table again"),
 ):
     """Build the gene id to gene name table of one GENCODE release, with its provenance file"""
     build_gene_mapping.run_build_gene_mapping(
-        gencode_release, str(output_dir) if output_dir else None, str(gtf) if gtf else None,
-        store, refresh)
+        gencode_release, str(output_dir) if output_dir else None, str(gtf) if gtf else None)
