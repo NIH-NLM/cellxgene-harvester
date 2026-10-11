@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-The folder that holds the files of one run.
+The folder that the steps 0a to 3 write their files to.
 
-Each run of the pipeline has its own folder, named by the date it was started,
-for example 2026-08-03-run. The folder is made in the current directory.
-
-To use another folder, give --run-dir to the command, or set HARVESTER_RUN_DIR.
+It is the current folder. To use another folder, give --run-dir to the command,
+or set HARVESTER_RUN_DIR.
 
 Usage:
     from harvester.run_dir import run_dir
@@ -14,11 +12,10 @@ Usage:
 """
 
 import os
-from datetime import date
 
 ENV_NAME = "HARVESTER_RUN_DIR"
 
 
 def run_dir():
-    """The run folder: HARVESTER_RUN_DIR if it is set, else <today>-run."""
-    return os.environ.get(ENV_NAME) or f"{date.today().isoformat()}-run"
+    """The folder for the files: HARVESTER_RUN_DIR if it is set, else the current folder."""
+    return os.environ.get(ENV_NAME) or "."

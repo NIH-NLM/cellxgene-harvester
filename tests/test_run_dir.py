@@ -11,7 +11,6 @@ Each test states what it checks, the input, and what counts as a pass.
 import glob
 import os
 import re
-from datetime import date
 
 from typer.testing import CliRunner
 
@@ -23,11 +22,10 @@ from harvester.run_dir import ENV_NAME, run_dir
 SRC = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "harvester")
 
 
-def test_default_run_folder_is_today_with_run_on_the_end(monkeypatch):
-    """Input: HARVESTER_RUN_DIR not set. Pass: <today>-run, for example 2026-08-03-run."""
+def test_default_folder_is_the_current_folder_and_has_no_date(monkeypatch):
+    """Input: HARVESTER_RUN_DIR not set. Pass: the current folder, with no date in the name."""
     monkeypatch.delenv(ENV_NAME, raising=False)
-    assert run_dir() == f"{date.today().isoformat()}-run"
-    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}-run", run_dir())
+    assert run_dir() == "."
 
 
 def test_environment_variable_sets_the_run_folder(monkeypatch):

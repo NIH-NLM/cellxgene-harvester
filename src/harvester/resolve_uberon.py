@@ -19,12 +19,11 @@ python -m harvester.resolve_uberon "kidney"
 
 2. CLI command (after pip install -e .):
 cellxgene-harvester resolve-uberon kidney
-cellxgene-harvester resolve-uberon kidney --output-prefix 2026-08-03-run/uberon_kidney
 cellxgene-harvester resolve-uberon "respiratory system" --also-relation "contributes to morphology of"
 
 Output:
-    <run folder>/uberon_kidney.json   - full term list with metadata
-    <run folder>/uberon_kidney.csv    - flat table: obo_id, label, level
+    uberon_kidney.json   - full term list with metadata
+    uberon_kidney.csv    - flat table: obo_id, label, level
 """
 
 import os
@@ -36,7 +35,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
-from harvester.ontology_files import reuse_from_store
+from harvester.ontology_files import already_there
 
 OLS_BASE   = "https://www.ebi.ac.uk/ols4/api"
 OLS_V2     = "https://www.ebi.ac.uk/ols4/api/v2/ontologies/uberon"
@@ -260,7 +259,7 @@ def resolve_uberon(queries: list, output_prefix: str, logger, relations: list = 
 # run_resolve_uberon
 # =============================================================================
 def run_resolve_uberon(queries: list, output_prefix: str = None, multi: bool = False,
-                       relations: list = None, store: str = None, refresh: bool = False):
+                       relations: list = None):
     """Main entry point called by CLI"""
     os.makedirs(run_dir(), exist_ok=True)
     
@@ -274,8 +273,8 @@ def run_resolve_uberon(queries: list, output_prefix: str = None, multi: bool = F
     logger = setup_logger("0_resolve_uberon", output_csv=log_file)
     log_command(logger)
 
-    # a file made with relations is always built: the stored file would have to match them too
-    if reuse_from_store(store, out_prefix, lambda data: data.get("queries") == list(queries) and "relations" not in data and not relations, logger, refresh):
+    # a file made with relations is always made: the file in place would have to match them too
+    if already_there(out_prefix, lambda data: data.get("queries") == list(queries) and "relations" not in data and not relations, logger):
         log_finish(logger, out_prefix + ".csv")
         return
 

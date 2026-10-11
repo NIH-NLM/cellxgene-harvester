@@ -43,20 +43,20 @@ filtered_cell_count is skipped, so a stopped run can be started again.
 Usage:
 1. Python module execution:
 python -m harvester.count_normal_cells \
-        2026-08-03-run/homo_sapiens_kidney_harvester \
-        --uberon  2026-08-03-run/uberon_kidney.json \
-        --disease 2026-08-03-run/disease_normal.json \
-        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-        --assay 2026-08-03-run/assay_published.json \
-        --h5ad-out 2026-08-03-run/homo_sapiens_kidney_harvester_h5ad \
+        homo_sapiens_kidney_harvester \
+        --uberon  uberon_kidney.json \
+        --disease disease_normal.json \
+        --hsapdv  hsapdv_adult_15.json \
+        --assay assay_published.json \
+        --h5ad-out homo_sapiens_kidney_harvester_h5ad \
         --h5ad-url-prefix s3://my-public-bucket/prod/kidney
 2. CLI command (after pip install -e .):
-cellxgene-harvester count-normal-cells 2026-08-03-run/homo_sapiens_kidney_harvester \
-        --uberon  2026-08-03-run/uberon_kidney.json \
-        --disease 2026-08-03-run/disease_normal.json \
-        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-        --assay 2026-08-03-run/assay_published.json \
-        --h5ad-out 2026-08-03-run/homo_sapiens_kidney_harvester_h5ad \
+cellxgene-harvester count-normal-cells homo_sapiens_kidney_harvester \
+        --uberon  uberon_kidney.json \
+        --disease disease_normal.json \
+        --hsapdv  hsapdv_adult_15.json \
+        --assay assay_published.json \
+        --h5ad-out homo_sapiens_kidney_harvester_h5ad \
         --h5ad-url-prefix s3://my-public-bucket/prod/kidney
 
 --assay is optional: a file from resolve-assay that lists the assays you want.

@@ -12,42 +12,32 @@ one snapshot, made from the same fetch:
 
 api_snapshot.provenance.json holds the date of the fetch, the API address, the harvester
 version, and for each file its SHA-256 and the time it was made. The date is in this file and
-nowhere in a path: a store holds the current files, and git keeps the older ones.
+in no path: the folder holds the current files, and git keeps the older ones.
 
-Step 1 always asks the API (one call, a few seconds). Steps 2 and 3 take --store, a folder or
-web address that holds the current files. If the collections file just fetched has the same
-SHA-256 as the one the stored provenance file lists, nothing in the API has changed: the stored
-file is used and the step is not run again (Step 3 asks the API once for each dataset and takes
-about ten minutes). If it differs, or the store has no such file, the step is run.
+Step 1 always asks the API (one call, a few seconds). If the answer is the same as the
+collections file already in the folder (same SHA-256), nothing has changed: the folder and its
+provenance file are left as they are, and Steps 2 and 3 find their files already there. If the
+answer is different, a new provenance file is started and Steps 2 and 3 are made again (Step 3
+asks the API once for each dataset and takes about ten minutes).
 
 Every dataset file written by Step 4 records the snapshot it came from in
 filter_choices.snapshot, so the date travels with the data.
 
 Usage:
-    snapshot.start(run_dir())                       # Step 1, after a fetch
-    snapshot.record(run_dir(), "all_datasets.csv")  # Steps 2 and 3, after a build
-    snapshot.reuse_if_current(store, "all_datasets.csv", run_dir(), logger)
-    snapshot.filter_choices_entry(run_dir())        # Step 4
+    snapshot.fetched(".", version)            # Step 1, after the fetch
+    snapshot.is_current(".", "all_datasets.csv")   # Steps 2 and 3: True if the file is already there
+    snapshot.record(".", "all_datasets.csv")  # Steps 2 and 3, after making the file
+    snapshot.filter_choices_entry(".")        # Step 4
 """
 
 import hashlib
 import json
 import os
-import shutil
-import tempfile
 from datetime import datetime, timezone
-
-from harvester import store as store_module
 
 PROVENANCE = "api_snapshot.provenance.json"
 API_URL = "https://api.cellxgene.cziscience.com/curation/v1/collections"
 FILES = ("collections_metadata.json", "all_datasets.csv", "all_datasets_complete.csv")
-
-
-class PrintLogger:
-    """The steps 1 to 3 print their messages; this lets reuse() write in the same way."""
-    info = staticmethod(print)
-    warning = staticmethod(print)
 
 
 def now():
@@ -98,38 +88,32 @@ def record(folder, name):
     write(folder, info)
 
 
-def reuse_if_current(store, name, folder, logger):
-    """Take the file called name from the store if the API has not changed since it was made.
+def fetched(folder, version="unknown"):
+    """Step 1, after the fetch. If the collections file is the same as the one the provenance file
+    lists, nothing has changed and the provenance file is left as it is. Otherwise a new snapshot
+    begins, with today's date."""
+    path = os.path.join(folder, "collections_metadata.json")
+    info = read(folder)
+    if info and info.get("files", {}).get("collections_metadata.json", {}).get("sha256") == sha256_of(path):
+        print(f"The API has not changed since {info['date']}")
+        return
+    start(folder, version)
+    record(folder, "collections_metadata.json")
+    print(f"This is the snapshot of {read(folder)['date']}")
 
-    The API has not changed when the collections file in folder (just fetched by Step 1) has the
-    SHA-256 that the stored provenance file lists for collections_metadata.json. The stored file
-    must also be intact: its SHA-256 must be the one the provenance file lists for it.
-    Return True if the file was copied into folder together with the stored provenance file, so
-    the snapshot keeps the date of the fetch that made it. Return False if the step has to run:
-    the store has no such file, or the API has changed.
-    """
-    fresh = os.path.join(folder, "collections_metadata.json")
-    if not os.path.exists(fresh):
-        raise FileNotFoundError(f"{fresh}: run Step 1 first")
-    with tempfile.TemporaryDirectory() as tmp:
-        prov_file = store_module.fetch(store, PROVENANCE, tmp)
-        found = store_module.fetch(store, name, tmp)
-        if prov_file is None or found is None:
-            logger.info(f"The store {store} has no {name} with its provenance file: {name} is built")
-            return False
-        info = json.load(open(prov_file, encoding="utf-8"))
-        files = info.get("files", {})
-        if files.get("collections_metadata.json", {}).get("sha256") != sha256_of(fresh):
-            logger.info(f"The API has changed since the files in the store {store} were made: {name} is built")
-            return False
-        expected = files.get(name, {}).get("sha256")
-        if not expected or sha256_of(found) != expected:
-            raise ValueError(f"{name} in the store {store}: its SHA-256 is not the one in the provenance "
-                             f"file; the file is not used")
-        shutil.copyfile(found, os.path.join(folder, name))
-        shutil.copyfile(prov_file, os.path.join(folder, PROVENANCE))
-    logger.info(f"The API has not changed since {info['date']}: reused {name} from the store {store} (sha256 {expected})")
-    return True
+
+def is_current(folder, name):
+    """True if the file called name is already in folder, is the one the provenance file lists, and
+    was made from the collections file that is in folder now. Then it is not made again."""
+    info = read(folder)
+    path = os.path.join(folder, name)
+    if not info or not os.path.exists(path):
+        return False
+    files = info.get("files", {})
+    collections = os.path.join(folder, "collections_metadata.json")
+    return (os.path.exists(collections)
+            and files.get("collections_metadata.json", {}).get("sha256") == sha256_of(collections)
+            and files.get(name, {}).get("sha256") == sha256_of(path))
 
 
 def filter_choices_entry(folder):

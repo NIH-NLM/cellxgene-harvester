@@ -20,12 +20,12 @@ The JSON file is named like the CSV, with .json in place of .csv, unless
 
 Usage:
 1. Python module execution:
-python -m harvester.export_datasets_csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-        --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
+python -m harvester.export_datasets_csv homo_sapiens_kidney_harvester \
+        --output homo_sapiens_kidney_harvester_final.csv
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester export-datasets-csv 2026-08-03-run/homo_sapiens_kidney_harvester \
-        --output 2026-08-03-run/homo_sapiens_kidney_harvester_final.csv
+cellxgene-harvester export-datasets-csv homo_sapiens_kidney_harvester \
+        --output homo_sapiens_kidney_harvester_final.csv
 """
 
 import glob

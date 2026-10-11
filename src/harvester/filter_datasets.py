@@ -40,24 +40,24 @@ disease. The filtered_ values stay empty until Step 5.
 Usage:
 1. Python module execution:
 python -m harvester.filter_datasets \
-        2026-08-03-run/all_datasets_complete.csv \
-        --uberon  2026-08-03-run/uberon_kidney.json \
-        --disease 2026-08-03-run/disease_normal.json \
-        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-        --assay   2026-08-03-run/assay_published.json \
+        all_datasets_complete.csv \
+        --uberon  uberon_kidney.json \
+        --disease disease_normal.json \
+        --hsapdv  hsapdv_adult_15.json \
+        --assay   assay_published.json \
         --organism "Homo sapiens" \
         --no-preprints \
-        --output  2026-08-03-run/homo_sapiens_kidney_harvester
+        --output  homo_sapiens_kidney_harvester
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester filter-datasets 2026-08-03-run/all_datasets_complete.csv \
-        --uberon  2026-08-03-run/uberon_kidney.json \
-        --disease 2026-08-03-run/disease_normal.json \
-        --hsapdv  2026-08-03-run/hsapdv_adult_15.json \
-        --assay   2026-08-03-run/assay_published.json \
+cellxgene-harvester filter-datasets all_datasets_complete.csv \
+        --uberon  uberon_kidney.json \
+        --disease disease_normal.json \
+        --hsapdv  hsapdv_adult_15.json \
+        --assay   assay_published.json \
         --organism "Homo sapiens" \
         --no-preprints \
-        --output  2026-08-03-run/homo_sapiens_kidney_harvester
+        --output  homo_sapiens_kidney_harvester
 
 The --output value is a folder.
 """
@@ -176,7 +176,7 @@ def make_filter_choices(uberon_json, disease_json, hsapdv_json, organism, no_pre
                        ("hsapdv", hsapdv_json), ("assay", assay_json)):
         if path:
             choices[name] = ontology_files.describe(path)
-    # the dated API snapshot the input CSV came from, if its provenance file is next to it
+    # the API snapshot the input CSV came from, if its provenance file is next to it
     entry = snapshot.filter_choices_entry(os.path.dirname(os.path.abspath(input_csv))) if input_csv else None
     if entry:
         choices["snapshot"] = entry

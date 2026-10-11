@@ -21,11 +21,10 @@ Usage:
 python -m harvester.resolve_assay "10x 3' v3" "Smart-seq2" EFO:0009900
 
 2. CLI command (after pip install -e .):
-cellxgene-harvester resolve-assay "10x 3' v3" "Smart-seq2" EFO:0009900 --output-prefix 2026-08-03-run/assay_published
 
 Output:
-    <run folder>/assay_published.json   - the resolved assays and the unresolved labels
-    <run folder>/assay_published.csv    - flat table: obo_id, label, query
+    assay_published.json   - the resolved assays and the unresolved labels
+    assay_published.csv    - flat table: obo_id, label, query
     (the name is for the set of assays; --output-prefix gives another name)
 """
 
@@ -38,7 +37,7 @@ import pandas as pd
 from harvester.io_utils import write_dataframe_csv
 from harvester.run_dir import run_dir
 from harvester.logger import setup_logger, log_command, log_counts, log_finish
-from harvester.ontology_files import reuse_from_store
+from harvester.ontology_files import already_there
 
 OLS_BASE = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_NAME = "assay_published"
@@ -152,8 +151,7 @@ def resolve_assay(queries: list, output_prefix: str, logger):
 # =============================================================================
 # run_resolve_assay
 # =============================================================================
-def run_resolve_assay(queries: list, output_prefix: str = None,
-                      store: str = None, refresh: bool = False):
+def run_resolve_assay(queries: list, output_prefix: str = None):
     """Main entry point called by CLI"""
     os.makedirs(run_dir(), exist_ok=True)
 
@@ -166,7 +164,7 @@ def run_resolve_assay(queries: list, output_prefix: str = None,
     logger = setup_logger("0d_resolve_assay", output_csv=log_file)
     log_command(logger)
 
-    if reuse_from_store(store, out_prefix, lambda data: data.get("queries") == list(queries), logger, refresh):
+    if already_there(out_prefix, lambda data: data.get("queries") == list(queries), logger):
         log_finish(logger, out_prefix + ".csv")
         return
 

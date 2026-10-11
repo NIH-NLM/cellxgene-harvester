@@ -30,10 +30,8 @@ Usage:
     python -m harvester.build_gene_mapping --gencode-release 48 --output-dir gene_mapping
     cellxgene-harvester build-gene-mapping                       # the release of the newest CellxGene schema
     cellxgene-harvester build-gene-mapping --gencode-release 48 --gtf FILE.gtf.gz
-    cellxgene-harvester build-gene-mapping --store https://raw.githubusercontent.com/NIH-NLM/nlm-ckn/<tag>/data/prod/gencode
 
-With --store, a table of this release that is already there (and intact) is used and nothing is
-downloaded; --refresh builds it again.
+A table of this release that is already in the output folder and is intact is not made again.
 """
 
 import gzip
@@ -41,15 +39,12 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import sys
-import tempfile
 from datetime import datetime, timezone
 
 import requests
 
 from harvester.io_utils import GENCODE_BY_SCHEMA, REQUIRED_GENCODE_RELEASE, write_csv
-from harvester import store as store_module
 from harvester.logger import log_command, log_finish, setup_logger
 from harvester.run_dir import run_dir
 
@@ -166,37 +161,20 @@ def table_names(release):
     return (f"gene_mapping_gencode_v{release}.csv", f"gene_mapping_gencode_v{release}.provenance.json")
 
 
-def reuse_table(store, release, output_dir, logger=None):
-    """Use the table of this release from the store, if it is there and is intact.
-
-    It is intact when its provenance file names this release and holds the SHA-256 of the
-    table that is stored. Return the two paths in output_dir, or None to build the table.
-    """
-    csv_name, prov_name = table_names(release)
-    with tempfile.TemporaryDirectory() as tmp:
-        table = store_module.fetch(store, csv_name, tmp)
-        prov = store_module.fetch(store, prov_name, tmp)
-        if table is None or prov is None:
-            if logger:
-                logger.info(f"Release {release} is not in the store {store}: it is built")
-            return None
-        info = json.load(open(prov, encoding="utf-8"))
-        if info.get("gencode_release") != release or info.get("table_sha256") != file_digest(table, "sha256"):
-            if logger:
-                logger.warning(f"The table in the store {store} does not match its provenance "
-                               f"file; it is not used and a new one is built")
-            return None
-        os.makedirs(output_dir, exist_ok=True)
-        paths = (os.path.join(output_dir, csv_name), os.path.join(output_dir, prov_name))
-        shutil.copyfile(table, paths[0])
-        shutil.copyfile(prov, paths[1])
-    if logger:
-        logger.info(f"Reused GENCODE v{release} from the store {store} "
-                    f"(table sha256 {info['table_sha256']}, built {info['built_at']})")
-    return paths
+def intact_table(release, output_dir):
+    """The two paths of the table of this release if it is already in output_dir and is intact,
+    else None. It is intact when its provenance file names this release and holds the SHA-256 of
+    the table that is there."""
+    csv_path, prov_path = (os.path.join(output_dir, name) for name in table_names(release))
+    if not (os.path.exists(csv_path) and os.path.exists(prov_path)):
+        return None
+    info = json.load(open(prov_path, encoding="utf-8"))
+    if info.get("gencode_release") != release or info.get("table_sha256") != file_digest(csv_path, "sha256"):
+        return None
+    return csv_path, prov_path
 
 
-def build(release, output_dir, gtf=None, logger=None, store=None, refresh=False):
+def build(release, output_dir, gtf=None, logger=None):
     """Build the table and the provenance file for one release. Return their two paths.
 
     gtf is a local annotation file to use instead of downloading it. Its MD5 cannot be
@@ -208,10 +186,11 @@ def build(release, output_dir, gtf=None, logger=None, store=None, refresh=False)
     except PackageNotFoundError:
         script_version = "unknown"
 
-    if store and not refresh and gtf is None:
-        reused = reuse_table(store, release, output_dir, logger)
-        if reused:
-            return reused
+    existing = intact_table(release, output_dir)
+    if existing:
+        if logger:
+            logger.info(f"The table of GENCODE v{release} is already in {output_dir} and is intact: it is not made again")
+        return existing
 
     name = GTF_NAME.format(release=release)
     url = f"{BASE_URL.format(release=release)}/{name}"
@@ -253,15 +232,14 @@ def build(release, output_dir, gtf=None, logger=None, store=None, refresh=False)
     return csv_path, prov_path
 
 
-def run_build_gene_mapping(release=REQUIRED_GENCODE_RELEASE, output_dir=None, gtf=None,
-                           store=None, refresh=False):
+def run_build_gene_mapping(release=REQUIRED_GENCODE_RELEASE, output_dir=None, gtf=None):
     """Main entry point called by the CLI."""
     output_dir = output_dir or os.path.join(run_dir(), "gene_mapping")
     os.makedirs(output_dir, exist_ok=True)
     logger = setup_logger("build_gene_mapping", output_csv=os.path.join(output_dir, f"gene_mapping_gencode_v{release}.csv"))
     log_command(logger)
     try:
-        build(release, output_dir, gtf, logger, store, refresh)
+        build(release, output_dir, gtf, logger)
     except Exception as e:
         logger.error(f"ERROR: {e}")
         sys.exit(1)
