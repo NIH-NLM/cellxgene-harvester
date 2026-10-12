@@ -90,6 +90,18 @@ The CellxGene schema version of a dataset fixes the GENCODE release of its genes
 
 `build-gene-mapping` downloads the GENCODE annotation of the release, checks its MD5 against the one GENCODE publishes, and writes the gene id to gene name table and a provenance file (source, checksums, date, counts). The same release always gives the same table.
 
+### The production table
+
+The table in nlm-ckn is made by the released image, so its provenance file names the released version. In a checkout of nlm-ckn, on a new branch:
+
+```bash
+mkdir -p data/prod/gencode
+docker run --rm --platform linux/amd64 -v "$PWD/data/prod/gencode:/work" -w /work \
+    ghcr.io/nih-nlm/cellxgene-harvester:v1.0 build-gene-mapping --output-dir .
+```
+
+It downloads the GENCODE annotation (about 59 MB), checks its MD5, and writes `gene_mapping_gencode_v48.csv`, `gene_mapping_gencode_v48.provenance.json` and a `.log` file into `data/prod/gencode`. In the provenance file, `source_md5_verified` must be `true`, `gencode_release` must be 48, and `script` names the harvester version. Commit the two files (not the log) and open the pull request. A published table is never overwritten: a new release is a new file. The workflow cellxgene-harvester-nf makes the same table in its step 5b.
+
 ## Docker
 
 The image `ghcr.io/nih-nlm/cellxgene-harvester` is built on every commit. A commit to `main` gives `:latest` and `:1.0.0`.
