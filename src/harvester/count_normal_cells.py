@@ -251,7 +251,7 @@ def count_one_h5ad(path, ids, paths, logger, workdir, out_dir, url_prefix=None, 
         logger.info(f"    Reading {location}")
         local, downloaded = fetch_h5ad(location, workdir)
         adata = open_h5ad(local)
-        messages += set_h5ad_schema(record, adata.uns.get("schema_version"))
+        messages += set_h5ad_schema(record, adata.schema_version())
         obs = read_h5ad_obs(adata)
         logger.info(f"    The file has {len(obs)} cells")
         messages += fill_record(record, obs, ids["uberon"], ids["disease"], ids["hsapdv"],
@@ -275,8 +275,8 @@ def count_one_h5ad(path, ids, paths, logger, workdir, out_dir, url_prefix=None, 
         logger.error(traceback.format_exc())
         return False
     finally:
-        if adata is not None and adata.isbacked:
-            adata.file.close()
+        if adata is not None:
+            adata.close()
         if downloaded and local and os.path.exists(local):
             os.remove(local)
 
