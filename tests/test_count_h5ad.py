@@ -192,3 +192,106 @@ def test_mini_kidney_file_matches_a_pandas_count(tmp_path):
     out = tmp_path / "f.h5ad"
     assert write_filtered(adata, mask.to_numpy(), str(out)) == int(mask.sum())
     assert anndata.read_h5ad(out, backed="r").n_obs == int(mask.sum())
+
+
+# ---- opening lazily and writing the filtered file in blocks -------------------------------------
+
+def big_h5ad(path, cells=47, genes=9, with_raw=True, dense_x=False, layers=True, obsp=True):
+    """A file with everything a CellxGene file can hold, and enough cells for several blocks."""
+    import pandas as pd
+    rng = np.random.default_rng(0)
+    obs = pd.DataFrame({"cell_type": pd.Categorical(rng.integers(0, 5, cells).astype(str)),
+                        "donor_id": rng.integers(0, 3, cells).astype(str)},
+                       index=[f"cell{i}" for i in range(cells)])
+    var = pd.DataFrame({"feature_name": [f"g{i}" for i in range(genes)]},
+                       index=[f"ENSG{i:011d}" for i in range(genes)])
+    random = lambda seed: sparse.random(cells, genes, density=0.4, format="csr", dtype="float32", random_state=seed)
+    x = random(1).toarray() if dense_x else random(1)
+    adata = anndata.AnnData(X=x, obs=obs, var=var, uns={"schema_version": "6.0.0", "title": "t"})
+    adata.obsm["X_umap"] = rng.normal(size=(cells, 2)).astype("float32")
+    adata.varm["PCs"] = rng.normal(size=(genes, 3)).astype("float32")
+    if with_raw:
+        adata.raw = anndata.AnnData(X=random(2), var=var)
+    if layers:
+        adata.layers["counts"] = random(3)                          # sparse
+        adata.layers["scaled"] = random(4).toarray()                # dense
+    if obsp:
+        adata.obsp["connectivities"] = sparse.random(cells, cells, density=0.1, format="csr", random_state=5)
+    adata.write_h5ad(path)
+    return str(path)
+
+
+def assert_same_file(path_a, path_b):
+    a, b = anndata.read_h5ad(path_a), anndata.read_h5ad(path_b)
+    same = lambda x, y: (x != y).nnz == 0 if sparse.issparse(x) else np.array_equal(x, y)
+    assert same(a.X, b.X)
+    assert (a.raw is None) == (b.raw is None)
+    if a.raw is not None:
+        assert same(a.raw.X, b.raw.X) and a.raw.var.equals(b.raw.var)
+    assert sorted(a.layers) == sorted(b.layers)
+    for name in a.layers:
+        assert same(a.layers[name], b.layers[name])
+    assert a.obs.equals(b.obs) and a.var.equals(b.var)
+    assert sorted(a.obsm) == sorted(b.obsm) and sorted(a.varm) == sorted(b.varm)
+    for name in a.obsm:
+        assert np.array_equal(a.obsm[name], b.obsm[name])
+    for name in a.varm:
+        assert np.array_equal(a.varm[name], b.varm[name])
+    assert sorted(a.obsp) == sorted(b.obsp)
+    for name in a.obsp:
+        assert same(a.obsp[name], b.obsp[name])
+    assert str(dict(a.uns)) == str(dict(b.uns))
+
+
+def check_against_anndata(tmp_path, block, **kinds):
+    """The filtered file written in blocks must be the one anndata writes for the same cells in memory."""
+    source = big_h5ad(tmp_path / "big.h5ad", **kinds)
+    mask = np.random.default_rng(5).random(47) < 0.6
+    anndata.read_h5ad(source)[mask].copy().write_h5ad(tmp_path / "expected.h5ad")
+    lazy = open_h5ad(source)
+    try:
+        assert write_filtered(lazy, mask, str(tmp_path / "new.h5ad"), block=block) == int(mask.sum())
+    finally:
+        lazy.close()
+    assert_same_file(str(tmp_path / "expected.h5ad"), str(tmp_path / "new.h5ad"))
+
+
+def test_a_file_written_in_blocks_is_the_one_anndata_writes(tmp_path):
+    check_against_anndata(tmp_path, block=5)                        # X, raw, layers (sparse and dense), obsp, varm
+
+
+def test_a_dense_matrix_is_written_in_blocks_too(tmp_path):
+    check_against_anndata(tmp_path, block=4, dense_x=True)
+
+
+def test_a_file_with_only_x_is_written_in_blocks_too(tmp_path):
+    check_against_anndata(tmp_path, block=7, with_raw=False, layers=False, obsp=False)
+
+
+def test_one_block_gives_the_same_file(tmp_path):
+    check_against_anndata(tmp_path, block=1000)
+
+
+def test_opening_a_file_reads_only_obs_and_var_and_leaves_the_matrices_on_disk(tmp_path):
+    lazy = open_h5ad(big_h5ad(tmp_path / "big.h5ad"))
+    try:
+        assert lazy.n_obs == 47 and lazy.schema_version() == "6.0.0"
+        assert hasattr(lazy.X, "format") and hasattr(lazy.raw["X"], "format")        # backed sparse, not arrays
+        assert set(lazy.layers) == {"counts", "scaled"}
+        assert not isinstance(lazy.layers["counts"], np.ndarray) and not isinstance(lazy.layers["scaled"], np.ndarray)
+    finally:
+        lazy.close()
+
+
+def test_the_matrices_are_written_in_the_given_block_size(tmp_path, monkeypatch):
+    from harvester import h5ad_source
+    sizes = []
+    real = h5ad_source.take_rows
+    monkeypatch.setattr(h5ad_source, "take_rows", lambda source, rows: (sizes.append(len(rows)), real(source, rows))[1])
+    lazy = open_h5ad(big_h5ad(tmp_path / "big.h5ad"))
+    try:
+        write_filtered(lazy, np.ones(47, dtype=bool), str(tmp_path / "new.h5ad"), block=10)
+    finally:
+        lazy.close()
+    assert sizes and max(sizes) == 10                               # never more than a block at once
+    assert sizes.count(10) == 4 * 4 and sizes.count(7) == 4         # X, raw.X, two layers: 4 blocks of 10 and one of 7
