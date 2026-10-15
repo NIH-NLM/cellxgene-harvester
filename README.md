@@ -97,7 +97,7 @@ The table in nlm-ckn is made by the released image, so its provenance file names
 ```bash
 mkdir -p data/prod/gencode
 docker run --rm --platform linux/amd64 -v "$PWD/data/prod/gencode:/work" -w /work \
-    ghcr.io/nih-nlm/cellxgene-harvester:v1.0 build-gene-mapping --output-dir .
+    ghcr.io/nih-nlm/cellxgene-harvester:v1.0 cellxgene-harvester build-gene-mapping --output-dir .
 ```
 
 It downloads the GENCODE annotation (about 59 MB), checks its MD5, and writes `gene_mapping_gencode_v48.csv`, `gene_mapping_gencode_v48.provenance.json` and a `.log` file into `data/prod/gencode`. In the provenance file, `source_md5_verified` must be `true`, `gencode_release` must be 48, and `script` names the harvester version. Commit the two files (not the log) and open the pull request. A published table is never overwritten: a new release is a new file. The workflow cellxgene-harvester-nf makes the same table in its step 5b.
@@ -109,7 +109,7 @@ The image `ghcr.io/nih-nlm/cellxgene-harvester` is built on every commit. A comm
 ```bash
 docker pull --platform linux/amd64 ghcr.io/nih-nlm/cellxgene-harvester:latest
 docker run --platform linux/amd64 -v $(pwd):/work -w /work \
-    ghcr.io/nih-nlm/cellxgene-harvester:latest resolve-uberon kidney
+    ghcr.io/nih-nlm/cellxgene-harvester:latest cellxgene-harvester resolve-uberon kidney
 ```
 
 ## Install and test
