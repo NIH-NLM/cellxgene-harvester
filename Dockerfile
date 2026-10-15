@@ -38,7 +38,8 @@ RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
 
 ENV PYTHONPATH="/app/cellxgene-harvester/src"
 
-# Default entrypoint is the cellxgene-harvester CLI.
-# Nextflow modules override this with explicit command arguments.
-ENTRYPOINT ["cellxgene-harvester"]
-CMD ["--help"]
+# No ENTRYPOINT: platforms such as Lifebit (AWS Batch) start a task as "bash -o pipefail -c ...",
+# and an entrypoint would receive that as arguments ("No such command 'bash'"). The
+# cellxgene-harvester command is on the PATH, so start it by name:
+#   docker run IMAGE cellxgene-harvester resolve-uberon kidney
+CMD ["cellxgene-harvester", "--help"]
