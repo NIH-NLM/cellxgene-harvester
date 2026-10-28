@@ -12,5 +12,5 @@ dependencies:
   - gh
   - pip
   - pip:
-    - typer(all)
+    - typer
   
